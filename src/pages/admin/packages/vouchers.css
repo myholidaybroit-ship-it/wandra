@@ -1,0 +1,19 @@
+.voucher-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 900px) { .voucher-grid { grid-template-columns: 1fr; } }
+.voucher { display: grid; grid-template-columns: 1fr 150px; background: var(--color-surface-dark); color: #fff; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-soft); }
+.v-left { padding: 20px; }
+.v-brand { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
+.v-tag { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: var(--radius-pill); }
+.v-tag-transport { background: #facc15; color: #1a1a1a; }
+.v-tag-hotel { background: #47c2ff; color: #06283d; }
+.v-hotel-name { font-size: 19px; font-weight: 600; margin: 18px 0; }
+.v-route { display: flex; align-items: center; gap: 14px; margin: 18px 0; }
+.v-from, .v-to { font-size: 22px; font-weight: 700; }
+.v-arrow { color: var(--color-on-dark-soft); }
+.v-meta { display: flex; gap: 22px; flex-wrap: wrap; }
+.v-k { display: block; font-size: 9px; letter-spacing: .6px; color: var(--color-on-dark-soft); }
+.v-v { font-size: 12px; font-weight: 600; }
+.v-right { background: #0e0e0e; border-left: 2px dashed #333; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 10px; }
+.v-pass { font-size: 10px; letter-spacing: 1px; color: var(--color-on-dark-soft); }
+.v-logo { width: 46px; height: 46px; border-radius: 9999px; background: #1e88e5; display: grid; place-items: center; font-weight: 700; font-size: 20px; }
+.v-dl { width: 100%; }

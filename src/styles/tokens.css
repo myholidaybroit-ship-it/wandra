@@ -1,0 +1,86 @@
+/* ============================================================
+   Wandra design tokens — sourced verbatim from design.md
+   (Expo-style editorial dev-tool system)
+   ============================================================ */
+:root {
+  /* ---- Brand & Accent ---- */
+  --color-primary: #000000;
+  --color-primary-active: #1a1a1a;
+  --color-text-link: #0d74ce;
+  --color-text-link-secondary: #476cff;
+  --color-accent-link-bright: #47c2ff;
+
+  /* ---- Surface ---- */
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #fafafa;
+  --color-surface-card: #ffffff;
+  --color-surface-strong: #f0f0f3;
+  --color-surface-dark: #171717;
+  --color-surface-dark-elevated: #1a1a1a;
+
+  /* ---- Atmospheric backdrop (hero only) ---- */
+  --color-sky-light: #cfe7ff;
+  --color-sky-mid: #a8c8e8;
+
+  /* ---- Hairlines ---- */
+  --color-hairline: #f0f0f3;
+  --color-hairline-soft: #f5f5f7;
+  --color-hairline-strong: #dcdee0;
+
+  /* ---- Text ---- */
+  --color-ink: #171717;
+  --color-body: #60646c;
+  --color-body-strong: #171717;
+  --color-muted: #999999;
+  --color-muted-soft: #cccccc;
+  --color-on-primary: #ffffff;
+  --color-on-dark: #ffffff;
+  --color-on-dark-soft: #b0b4ba;
+
+  /* ---- Semantic ---- */
+  --color-warning: #ab6400;
+  --color-preview: #8145b5;
+  --color-success: #16a34a;
+  --color-error: #eb8e90;
+  /* tints for badges (kept neutral per system; soft backgrounds) */
+  --color-success-bg: #e9f6ee;
+  --color-warning-bg: #f7efe1;
+  --color-error-bg: #fdecec;
+  --color-info-bg: #e7f0fb;
+  --color-preview-bg: #f1e9f8;
+
+  /* ---- Typography ---- */
+  --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ---- Spacing (4px base) ---- */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-base: 16px;
+  --space-md: 20px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-section: 96px;
+
+  /* ---- Radius ---- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-xxl: 24px;
+  --radius-pill: 9999px;
+
+  /* ---- Elevation ---- */
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.10);
+
+  /* ---- Layout ---- */
+  --container-max: 1200px;
+  --sidebar-width: 248px;
+  --topbar-height: 64px;
+  --footerbar-height: 40px;
+}

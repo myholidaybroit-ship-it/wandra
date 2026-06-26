@@ -1,0 +1,5 @@
+.inv-banner { background: var(--color-surface-dark); color: #fff; padding: 24px 28px; display: flex; align-items: center; justify-content: space-between; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.inv-title { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
+.inv-no { color: var(--color-on-dark-soft); font-size: 13px; margin-top: 2px; }
+.inv-body { padding: 28px; }
+.inv-totals { max-width: 320px; margin-left: auto; margin-top: 20px; }

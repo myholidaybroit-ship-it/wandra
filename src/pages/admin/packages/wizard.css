@@ -1,0 +1,13 @@
+.wizard { display: flex; flex-direction: column; gap: 14px; }
+.wiz-section { display: flex; flex-direction: column; gap: 0; }
+.wiz-body { margin-top: 12px; }
+.alloc-row { display: grid; gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--color-hairline-strong); border-radius: var(--radius-md); margin-bottom: 12px; }
+.cab-row { grid-template-columns: 1.4fr 1fr .8fr .8fr 1fr auto; }
+.hotel-row { grid-template-columns: 1.6fr 1.2fr 1.2fr; }
+.cat-row { grid-template-columns: 1.2fr 1.6fr 1fr auto; }
+@media (max-width: 900px) { .cab-row, .hotel-row, .cat-row { grid-template-columns: 1fr 1fr; } }
+.day-card { border: 1px solid var(--color-hairline-strong); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px; }
+.stop-row { border-left: 3px solid var(--color-hairline-strong); padding-left: 12px; margin-bottom: 12px; }
+.check-line { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--color-body); padding: 7px 0; }
+.check-line input { margin: 0; }
+.sec-banner .badge { flex-shrink: 0; }
