@@ -1,4 +1,5 @@
-.inv-banner { background: var(--color-surface-dark); color: #fff; padding: 24px 28px; display: flex; align-items: center; justify-content: space-between; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.inv-banner { background: var(--color-primary); color: var(--color-on-dark); padding: 24px 28px; display: flex; align-items: center; justify-content: space-between; border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background-image: radial-gradient(120% 90% at 85% -10%, rgba(255,255,255,.12), transparent 60%); }
 .inv-title { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
 .inv-no { color: var(--color-on-dark-soft); font-size: 13px; margin-top: 2px; }
 .inv-body { padding: 28px; }

@@ -1,18 +1,68 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select, DataTable } from '../../../components/ui/UI'
-import '../packages/detail.css'
+import { Button, Badge, Modal, Field, Input, PillSelect, DatePicker } from '../../../components/ui/UI'
+import { Icon } from '../../../components/ui/icons'
+import './booking.css'
+
+const STATUSES = ['Active', 'Muted', 'Completed', 'Cancelled']
+const METHODS = ['Online', 'UPI', 'Bank Transfer', 'Cash']
+
+function addDays(iso, n) {
+  if (!iso) return ''
+  const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+function part(iso, opts) {
+  if (!iso) return ''
+  const d = new Date(iso + 'T00:00:00')
+  return isNaN(d) ? iso : d.toLocaleDateString('en-IN', opts)
+}
+
+function countdown(bk, days) {
+  if (bk.status === 'Completed') return { label: 'Trip completed', cls: 'done' }
+  if (bk.status === 'Cancelled') return { label: 'Cancelled', cls: 'done' }
+  if (!bk.travelDate) return { label: 'Date pending', cls: 'done' }
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const start = new Date(bk.travelDate + 'T00:00:00')
+  const diff = Math.round((start - today) / 86400000)
+  if (diff > 1) return { label: `Starts in ${diff} days`, cls: diff <= 7 ? 'soon' : '' }
+  if (diff === 1) return { label: 'Starts tomorrow', cls: 'soon' }
+  if (diff === 0) return { label: 'Starts today', cls: 'soon' }
+  if (-diff < days) return { label: `On trip — day ${1 - diff}`, cls: 'soon' }
+  return { label: 'Trip over', cls: 'done' }
+}
 
 export default function BookingDetail() {
   const { id } = useParams()
-  const { bookings, packages, addBookingPayment, setBookingStatus, toast } = useApp()
+  const { bookings, packages, clients, addBookingPayment, setBookingStatus, cancelBooking, toast } = useApp()
   const bk = bookings.find((b) => b.id === id)
   const [open, setOpen] = useState(false)
   const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
-  if (!bk) return <div>Booking not found.</div>
-  const pkg = packages.find((p) => p.id === bk.packageId)
-  const balance = bk.value - bk.paid
+
+  const pkg = packages.find((p) => p.id === bk?.packageId)
+
+  const model = useMemo(() => {
+    if (!bk) return null
+    const sectors = (pkg?.sectors || []).filter((s) => s.destination)
+    const destShort = sectors.map((s) => s.destination).join(' · ') || (pkg?.destination || '').split(' - ')[0] || 'Trip'
+    const services = pkg?.builderV2?.options?.[pkg?.activeOption ?? 0]?.services || []
+    const days = (pkg?.itinerary || []).map((d) => ({
+      n: d.day, date: addDays(bk.travelDate, d.day - 1),
+      title: d.title || `Day ${d.day}`, city: d.stops?.[0]?.destination || '',
+      stay: (pkg?.hotelsAlloc || []).find((h) => h.night === d.day) || null,
+      transfers: services.filter((s) => s.kind === 'transport' && (s.days || []).includes(d.day)),
+      acts: services.filter((s) => s.kind === 'activity' && (s.days || []).includes(d.day)),
+    }))
+    return { destShort, days }
+  }, [bk, pkg])
+
+  if (!bk) return <div className="t-body-md">Booking not found. <Link className="c-link" to="/app/bookings">Back to Bookings</Link></div>
+
+  const client = clients.find((c) => c.name === bk.clientName || c.id === pkg?.clientId)
+  const balance = Math.max(0, bk.value - bk.paid)
+  const pct = Math.round((bk.paid / (bk.value || 1)) * 100)
+  const cd = countdown(bk, model.days.length || pkg?.days || 0)
 
   const record = () => {
     if (!pay.amount) return toast('Enter an amount')
@@ -20,70 +70,122 @@ export default function BookingDetail() {
     toast('Payment recorded'); setOpen(false); setPay({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
   }
 
-  const dayRows = (pkg?.itinerary || []).flatMap((d) => (d.stops || []).filter((s) => s.destination).map((s) => ({ id: `${d.day}-${s.destination}`, day: d.day, destination: s.destination, date: s.date, activity: s.activity })))
-
   return (
-    <div>
-      <PageHeader title={bk.code} subtitle={`${bk.clientName} · Travel ${bk.travelDate}`}
-        actions={<>
-          <Link to="/app/bookings"><Button variant="secondary" size="sm">← Back</Button></Link>
-          <Select value={bk.status} onChange={(e) => { setBookingStatus(bk.id, e.target.value); toast(`Booking ${e.target.value}`) }} style={{ height: 32, width: 'auto' }}>
-            <option>Active</option><option>Muted</option><option>Completed</option><option>Cancelled</option>
-          </Select>
-          <Button size="sm" onClick={() => setOpen(true)}>+ Add Payment</Button>
-          <Link to={`/app/invoices/new?booking=${bk.id}`}><Button size="sm" variant="secondary">Create Invoice</Button></Link>
-        </>} />
-
-      <div className="detail-grid">
-        <div className="col gap-lg">
-          <Card>
-            <div className="row-between"><span className="t-title-md">Booking Overview</span><Badge tone={bk.status}>{bk.status}</Badge></div>
-            <hr className="divider" />
-            <div className="fin-line"><span className="c-body">Linked Package</span>{pkg ? <Link className="c-link mono" to={`/app/packages/${pkg.id}`}>{pkg.code}</Link> : '—'}</div>
-            <div className="fin-line"><span className="c-body">Total Value</span><span className="cell-strong">{inr(bk.value)}</span></div>
-            <div className="fin-line"><span className="c-success">Paid</span><span className="c-success">{inr(bk.paid)}</span></div>
-            <div className="fin-line"><span className="c-error">Balance Due</span><span className="c-error">{inr(balance)}</span></div>
-          </Card>
-
-          <Card>
-            <span className="t-title-md">Day-wise Destinations</span>
-            <hr className="divider" />
-            <DataTable columns={[
-              { key: 'day', head: 'Day', render: (r) => <span className="day-badge">Day {r.day}</span> },
-              { key: 'destination', head: 'Destination', render: (r) => <span className="cell-strong">{r.destination}</span> },
-              { key: 'date', head: 'Date', render: (r) => r.date || '—' },
-              { key: 'activity', head: 'Activity', render: (r) => <span className="cell-sub">{r.activity}</span> },
-            ]} rows={dayRows} empty="No itinerary stops." />
-          </Card>
-
-          <Card>
-            <span className="t-title-md">Payment History</span>
-            <hr className="divider" />
-            {(bk.payments || []).length === 0 && <div className="t-body-sm c-muted">No payments recorded yet.</div>}
-            {(bk.payments || []).map((p, i) => (
-              <div className="fin-line" key={i}><span className="c-body">{p.date} · {p.method} <span className="mono cell-sub">{p.reference}</span></span><span className="c-success">{inr(p.amount)}</span></div>
-            ))}
-          </Card>
-        </div>
-
-        <Card className="fin-card">
-          <span className="t-title-md">Collection</span>
-          <hr className="divider" />
-          <div className="fin-bar" style={{ height: 10, background: 'var(--color-surface-strong)', borderRadius: 9999, overflow: 'hidden' }}>
-            <span style={{ display: 'block', height: '100%', width: `${Math.min(100, (bk.paid / (bk.value || 1)) * 100)}%`, background: 'var(--color-success)' }} />
+    <div className="bk">
+      {/* ---------- Header ---------- */}
+      <div className="bk-head">
+        <Link to="/app/bookings" className="bk-back"><Icon name="chevron" size={14} className="bk-back-ic" /> Bookings</Link>
+        <div className="bk-head-row">
+          <div className="bk-head-l">
+            <span className="bk-code">{bk.code}</span>
+            <Badge tone={bk.status}>{bk.status}</Badge>
+            <span className={`bk-countdown ${cd.cls}`}>{cd.label}</span>
           </div>
-          <div className="t-caption c-muted mt-xs">{Math.round((bk.paid / (bk.value || 1)) * 100)}% collected</div>
-          <Button className="w-full mt-base" onClick={() => setOpen(true)}>+ Add Payment</Button>
-        </Card>
+          <div className="pd-toolbar-r">
+            <PillSelect value={bk.status} options={STATUSES} onChange={(v) => {
+              if (v === 'Cancelled') { cancelBooking(bk.id); toast('Booking cancelled — package back to Quoted') }
+              else { setBookingStatus(bk.id, v); toast(`Booking ${v}`) }
+            }} />
+            <Link to={`/app/invoices/new?booking=${bk.id}`}><Button variant="secondary" size="sm">Create Invoice</Button></Link>
+            <Button size="sm" onClick={() => setOpen(true)}>+ Add Payment</Button>
+          </div>
+        </div>
+        <h1 className="bk-title">{model.destShort} <span>— {client ? <Link to={`/app/clients/${client.id}`} className="c-link">{bk.clientName}</Link> : bk.clientName}</span></h1>
       </div>
 
+      {/* ---------- Stat strip ---------- */}
+      <div className="bk-strip">
+        <div className="bk-stat"><div className="bk-stat-k">Travel date</div><div className="bk-stat-v">{part(bk.travelDate, { day: '2-digit', month: 'short', year: 'numeric' })}</div></div>
+        <div className="bk-stat"><div className="bk-stat-k">Duration</div><div className="bk-stat-v">{pkg ? `${pkg.nights}N / ${pkg.days}D` : '—'}</div></div>
+        <div className="bk-stat"><div className="bk-stat-k">Booking value</div><div className="bk-stat-v">{inr(bk.value)}</div></div>
+        <div className="bk-stat"><div className="bk-stat-k">Balance due</div><div className={`bk-stat-v ${balance > 0 ? 'due' : 'ok'}`}>{inr(balance)}</div></div>
+      </div>
+
+      <div className="bk-grid">
+        {/* ---------- Schedule ---------- */}
+        <section className="bk-card">
+          <div className="bk-card-head">
+            <span className="bk-card-title">Schedule</span>
+            <span className="bk-card-sub">{model.days.length} days · day-by-day plan</span>
+          </div>
+          {model.days.length === 0 && <div className="bk-empty">No day-wise plan on the linked package.</div>}
+          <div className="bk-sched">
+            {model.days.map((d) => (
+              <div className="bk-day" key={d.n}>
+                <div className="bk-day-tile">
+                  <span className="bk-tile-dow">{part(d.date, { weekday: 'short' })}</span>
+                  <span className="bk-tile-num">{part(d.date, { day: '2-digit' })}</span>
+                  <span className="bk-tile-mon">{part(d.date, { month: 'short' })}</span>
+                </div>
+                <div className="bk-day-body">
+                  <div className="bk-day-t"><span className="bk-day-tag">Day {d.n}</span>{d.title}{d.city && d.city !== d.title ? <span className="bk-day-city">{d.city}</span> : null}</div>
+                  {d.transfers.map((t, i) => (
+                    <div className="bk-item" key={`t${i}`}>
+                      {t.startTime && <span className="bk-item-time">{t.startTime}</span>}
+                      <span className="bk-item-kind">Transfer</span>
+                      <span>{t.location || '—'}{t.serviceType ? ` · ${t.serviceType}` : ''}</span>
+                    </div>
+                  ))}
+                  {d.acts.map((a, i) => (
+                    <div className="bk-item" key={`a${i}`}>
+                      {a.startTime && <span className="bk-item-time">{a.startTime}</span>}
+                      <span className="bk-item-kind">Activity</span>
+                      <span>{a.location || '—'}</span>
+                    </div>
+                  ))}
+                  {d.stay && (
+                    <div className="bk-item stay">
+                      <Icon name="hotels" size={13} />
+                      <span>Overnight — <strong>{d.stay.name}</strong>{d.stay.roomType ? ` · ${d.stay.roomType}` : ''}{d.stay.mealPlan ? ` · ${d.stay.mealPlan}` : ''}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------- Rail ---------- */}
+        <aside className="bk-rail">
+          <div className="bk-card">
+            <div className="bk-card-head"><span className="bk-card-title">Collection</span><span className="bk-pct">{pct}%</span></div>
+            <div className="bk-money-row"><span>Booking value</span><strong>{inr(bk.value)}</strong></div>
+            <div className="bk-money-row"><span>Paid</span><strong className="ok">{inr(bk.paid)}</strong></div>
+            <div className="bk-money-row"><span>Balance due</span><strong className={balance > 0 ? 'due' : 'ok'}>{inr(balance)}</strong></div>
+            <div className="bk-bar"><span style={{ width: `${Math.min(100, pct)}%` }} /></div>
+            <Button className="w-full mt-base" onClick={() => setOpen(true)}>+ Add Payment</Button>
+          </div>
+
+          {(bk.payments || []).length > 0 && (
+            <div className="bk-card">
+              <div className="bk-card-head"><span className="bk-card-title">Payments</span><span className="bk-card-sub">{bk.payments.length}</span></div>
+              {bk.payments.map((p, i) => (
+                <div className="bk-pay" key={i}>
+                  <span className="bk-pay-m">{p.method}{p.reference && <span className="bk-pay-ref">{p.reference}</span>}
+                    <span className="bk-pay-date">{part(p.date, { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  </span>
+                  <span className="bk-pay-amt">+{inr(p.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pkg && (
+            <div className="bk-card bk-links">
+              <Link to={`/app/packages/${pkg.id}`}><Button variant="secondary" className="w-full">Open package {pkg.code}</Button></Link>
+            </div>
+          )}
+        </aside>
+      </div>
+
+      {/* ---------- Add payment ---------- */}
       <Modal open={open} onClose={() => setOpen(false)} title="Add Payment"
-        footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={record}>Save Payment</Button></>}>
+        footer={<><Button variant="tertiary" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={record}>Save Payment</Button></>}>
         <div className="col gap-base">
-          <Field label="Amount (₹)"><Input value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} /></Field>
-          <Field label="Method"><Select value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })}><option>Online</option><option>Cash</option><option>Bank Transfer</option><option>UPI</option></Select></Field>
-          <Field label="Reference No."><Input value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} /></Field>
-          <Field label="Date"><Input type="date" value={pay.date} onChange={(e) => setPay({ ...pay, date: e.target.value })} /></Field>
+          <Field label="Amount (₹)"><Input type="number" min="0" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} placeholder="e.g. 10000" /></Field>
+          <Field label="Method"><PillSelect value={pay.method} options={METHODS} onChange={(v) => setPay({ ...pay, method: v })} /></Field>
+          <Field label="Reference No."><Input value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} placeholder="UTR / txn id — optional" /></Field>
+          <Field label="Date"><DatePicker value={pay.date} onChange={(v) => setPay({ ...pay, date: v })} /></Field>
         </div>
       </Modal>
     </div>

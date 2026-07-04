@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Modal, Field, Input, Textarea } from '../../../components/ui/UI'
+import { PageHeader, Card, Button, Modal, Field, Input, Textarea, PillSelect } from '../../../components/ui/UI'
+import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
 export default function DestinationDetail() {
   const { id } = useParams()
@@ -20,7 +21,9 @@ export default function DestinationDetail() {
         <Card>
           <span className="t-title-md">Destination Details</span>
           <hr className="divider" />
-          <div className="ip-hero" style={{ height: 180, borderRadius: 'var(--radius-md)' }} />
+          {d.image
+            ? <img src={d.image} alt={d.name} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 'var(--radius-md)' }} />
+            : <div className="ip-hero" style={{ height: 180, borderRadius: 'var(--radius-md)' }} />}
           <div className="t-caption c-muted mt-base">Features & Specialties</div>
           <p className="t-body-md mt-xs">{d.features}</p>
           {d.description && <><div className="t-caption c-muted mt-base">Description</div><p className="t-body-sm c-body mt-xs">{d.description}</p></>}
@@ -37,6 +40,9 @@ export default function DestinationDetail() {
         <div className="form-grid">
           <Field label="Name"><Input value={f.name || ''} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
           <Field label="Location"><Input value={f.location || ''} onChange={(e) => setF({ ...f, location: e.target.value })} /></Field>
+          <Field label="Type"><PillSelect value={f.type || 'Domestic'} options={['Domestic', 'International']} onChange={(v) => setF({ ...f, type: v })} /></Field>
+          <div className="field-full"><ImageInput label="Cover image" hint="Used on quote PDFs" value={f.image || ''} onChange={(v) => setF({ ...f, image: v })} /></div>
+          <div className="field-full"><GalleryInput label="Gallery" hint="PDF day-page collages" value={f.gallery || []} onChange={(v) => setF({ ...f, gallery: v })} /></div>
           <Field label="Features" full><Textarea value={f.features || ''} onChange={(e) => setF({ ...f, features: e.target.value })} /></Field>
           <Field label="Description" full><Textarea value={f.description || ''} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
         </div>

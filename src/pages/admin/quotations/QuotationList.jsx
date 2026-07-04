@@ -1,6 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, DataTable, Badge, Button, Select } from '../../../components/ui/UI'
+import { PageHeader, DataTable, Badge, Button } from '../../../components/ui/UI'
 
 export default function QuotationList() {
   const { quotations, packages, setQuotationStatus, createBookingFromPackage, toast } = useApp()
@@ -21,9 +21,14 @@ export default function QuotationList() {
     { key: 'travelDate', head: 'Travel Date', render: (r) => r.travelDate || '—' },
     { key: 'amount', head: 'Amount', align: 'right', render: (r) => <span className="cell-strong">{inr(r.amount)}</span> },
     { key: 'status', head: 'Status', render: (r) => (
-      <Select value={r.status} onChange={(e) => { setQuotationStatus(r.id, e.target.value); toast(`Marked ${e.target.value}`) }} style={{ height: 32, width: 'auto' }}>
-        <option>Sent</option><option>Pending</option><option>Confirmed</option><option>Cancelled</option>
-      </Select>
+      r.status === 'Confirmed'
+        ? <Badge tone="confirmed">Confirmed</Badge>
+        : <div className="qs-toggle">
+            {['Draft', 'Sent'].map((s) => (
+              <button key={s} className={`qs-pill ${r.status === s ? 'on' : ''}`}
+                onClick={() => { setQuotationStatus(r.id, s); toast(`Quotation marked ${s}`) }}>{s}</button>
+            ))}
+          </div>
     ) },
     { key: 'actions', head: '', align: 'right', render: (r) => (
       <div className="row-actions">

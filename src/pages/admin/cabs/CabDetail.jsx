@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select } from '../../../components/ui/UI'
+import { PageHeader, Card, Button, Badge, Modal, Field, Input, PillSelect } from '../../../components/ui/UI'
+import { ImageInput } from '../../../components/ui/ImageInput'
 
 export default function CabDetail() {
   const { id } = useParams()
@@ -11,7 +12,7 @@ export default function CabDetail() {
   const [f, setF] = useState(c || {})
   if (!c) return <div>Cab not found. <Link className="c-link" to="/app/cabs">Back</Link></div>
   const usedIn = packages.filter((p) => p.cabs?.some((a) => a.cabId === c.id || a.name === c.name))
-  const save = () => { updateCab(c.id, { ...f, capacity: Number(f.capacity), ratePerKm: Number(f.ratePerKm) }); toast('Cab updated'); setEdit(false) }
+  const save = () => { updateCab(c.id, { ...f, capacity: Number(f.capacity), ratePerKm: Number(f.ratePerKm) || 0, ratePerDay: Number(f.ratePerDay) || 0 }); toast('Cab updated'); setEdit(false) }
   return (
     <div>
       <PageHeader title={c.name} subtitle={`${c.type} · ${c.capacity} pax`}
@@ -20,10 +21,12 @@ export default function CabDetail() {
         <Card>
           <span className="t-title-md">Vehicle Information</span>
           <hr className="divider" />
+          {c.image && <img src={c.image} alt={c.name} style={{ width: '100%', height: 170, objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 14 }} />}
           <div className="kv-grid">
             <KV k="Type" v={c.type} /><KV k="AC" v={c.acType} />
             <KV k="Capacity" v={`${c.capacity} pax`} /><KV k="Rate / KM" v={inr(c.ratePerKm)} />
-            <KV k="Contact" v={c.contact} /><KV k="Status" v={c.status} />
+            <KV k="Rate / Day" v={inr(c.ratePerDay || 0)} /><KV k="Status" v={c.status} />
+            <KV k="Contact" v={c.contact} />
           </div>
         </Card>
         <Card className="fin-card">
@@ -37,10 +40,12 @@ export default function CabDetail() {
         footer={<><Button variant="secondary" onClick={() => setEdit(false)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         <div className="form-grid">
           <Field label="Name"><Input value={f.name || ''} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
-          <Field label="Type"><Select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}><option>Sedan</option><option>SUV</option><option>Tempo Traveller</option><option>Universal</option></Select></Field>
-          <Field label="AC Type"><Select value={f.acType} onChange={(e) => setF({ ...f, acType: e.target.value })}><option>AC</option><option>Non-AC</option></Select></Field>
+          <Field label="Type"><PillSelect value={f.type} options={['Sedan', 'SUV', 'Tempo Traveller', 'Universal']} onChange={(v) => setF({ ...f, type: v })} /></Field>
+          <Field label="AC"><PillSelect value={f.acType} options={['AC', 'Non-AC']} onChange={(v) => setF({ ...f, acType: v })} /></Field>
           <Field label="Capacity"><Input value={f.capacity || ''} onChange={(e) => setF({ ...f, capacity: e.target.value })} /></Field>
           <Field label="Rate / KM"><Input value={f.ratePerKm || ''} onChange={(e) => setF({ ...f, ratePerKm: e.target.value })} /></Field>
+          <Field label="Rate / Day" hint="Auto-fills the quote builder"><Input value={f.ratePerDay || ''} onChange={(e) => setF({ ...f, ratePerDay: e.target.value })} /></Field>
+          <div className="field-full"><ImageInput label="Vehicle photo" value={f.image || ''} onChange={(v) => setF({ ...f, image: v })} /></div>
           <Field label="Contact"><Input value={f.contact || ''} onChange={(e) => setF({ ...f, contact: e.target.value })} /></Field>
         </div>
       </Modal>

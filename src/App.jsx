@@ -8,6 +8,10 @@ import Landing from './pages/public/Landing'
 import Login from './pages/public/Login'
 import LeadInquiry from './pages/public/LeadInquiry'
 import ItineraryPreview from './pages/public/ItineraryPreview'
+import PdfDoc from './pages/public/PdfDoc'
+import VoucherDoc from './pages/public/VoucherDoc'
+import BizLanding from './pages/public/BizLanding'
+import LandingBuilder from './pages/admin/LandingBuilder'
 import PublicInvoice from './pages/public/PublicInvoice'
 import PublicGallery from './pages/public/PublicGallery'
 import StorySubmit from './pages/public/StorySubmit'
@@ -17,6 +21,7 @@ import Dashboard from './pages/admin/Dashboard'
 import ClientList from './pages/admin/clients/ClientList'
 import ClientCreate from './pages/admin/clients/ClientCreate'
 import ClientDetail from './pages/admin/clients/ClientDetail'
+import PackageStart from './pages/admin/packages/PackageStart'
 import LeadForm from './pages/admin/clients/LeadForm'
 import DestinationList from './pages/admin/destinations/DestinationList'
 import DestinationCreate from './pages/admin/destinations/DestinationCreate'
@@ -27,9 +32,14 @@ import HotelDetail from './pages/admin/hotels/HotelDetail'
 import CabList from './pages/admin/cabs/CabList'
 import CabCreate from './pages/admin/cabs/CabCreate'
 import CabDetail from './pages/admin/cabs/CabDetail'
+import ServiceLocationList from './pages/admin/services/ServiceLocationList'
+import ServiceLocationCreate from './pages/admin/services/ServiceLocationCreate'
+import ActivityList from './pages/admin/activities/ActivityList'
+import ActivityCreate from './pages/admin/activities/ActivityCreate'
 import PackageList from './pages/admin/packages/PackageList'
-import PackageWizard from './pages/admin/packages/PackageWizard'
+import QuoteBuilder from './pages/admin/packages/QuoteBuilder'
 import PackageDetail from './pages/admin/packages/PackageDetail'
+import PackageShare from './pages/admin/packages/PackageShare'
 import InclusionsExclusions from './pages/admin/packages/InclusionsExclusions'
 import ItineraryTemplates from './pages/admin/packages/ItineraryTemplates'
 import Vouchers from './pages/admin/packages/Vouchers'
@@ -62,6 +72,13 @@ export default function App() {
           <Route path="/share-story/:token" element={<StorySubmit />} />
         </Route>
 
+        {/* Standalone print documents — no site chrome */}
+        <Route path="/pdf/:code" element={<PdfDoc />} />
+        <Route path="/voucher/:id" element={<VoucherDoc />} />
+
+        {/* Business lead-capture landing page (built in /app/landing) */}
+        <Route path="/site/:slug" element={<BizLanding />} />
+
         {/* Admin app */}
         <Route path="/app" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
@@ -69,6 +86,7 @@ export default function App() {
           <Route path="clients/new" element={<ClientCreate />} />
           <Route path="clients/lead-form" element={<LeadForm />} />
           <Route path="clients/:id" element={<ClientDetail />} />
+          <Route path="clients/:id/start" element={<PackageStart />} />
           <Route path="destinations" element={<DestinationList />} />
           <Route path="destinations/new" element={<DestinationCreate />} />
           <Route path="destinations/:id" element={<DestinationDetail />} />
@@ -78,10 +96,16 @@ export default function App() {
           <Route path="cabs" element={<CabList />} />
           <Route path="cabs/new" element={<CabCreate />} />
           <Route path="cabs/:id" element={<CabDetail />} />
+          <Route path="landing" element={<LandingBuilder />} />
+          <Route path="services" element={<ServiceLocationList />} />
+          <Route path="services/new" element={<ServiceLocationCreate />} />
+          <Route path="activities" element={<ActivityList />} />
+          <Route path="activities/new" element={<ActivityCreate />} />
           <Route path="packages" element={<PackageList />} />
-          <Route path="packages/new" element={<PackageWizard />} />
-          <Route path="packages/:id/edit" element={<PackageWizard />} />
+          <Route path="packages/new" element={<QuoteBuilder />} />
+          <Route path="packages/:id/edit" element={<QuoteBuilder />} />
           <Route path="packages/:id" element={<PackageDetail />} />
+          <Route path="packages/:id/share" element={<PackageShare />} />
           <Route path="packages/:id/vouchers" element={<Vouchers />} />
           <Route path="packages/inclusions" element={<InclusionsExclusions />} />
           <Route path="packages/templates" element={<ItineraryTemplates />} />

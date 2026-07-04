@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select } from '../../../components/ui/UI'
+import { downloadElementPdf } from '../../../utils/pdf'
 import './invoice.css'
 
 export default function InvoiceDetail() {
@@ -9,6 +10,9 @@ export default function InvoiceDetail() {
   const { invoices, agency, clients, addPayment, toast } = useApp()
   const inv = invoices.find((i) => i.id === id)
   const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const docRef = useRef(null)
+  const download = async () => { if (!docRef.current) return; setBusy(true); try { await downloadElementPdf(docRef.current, `${inv.code}.pdf`) } finally { setBusy(false) } }
   const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
   if (!inv) return <div>Invoice not found.</div>
   const client = clients.find((c) => c.id === inv.clientId)
@@ -28,11 +32,12 @@ export default function InvoiceDetail() {
       <PageHeader title={inv.code} subtitle={`${inv.clientName} · ${inv.type}`}
         actions={<>
           <Link to="/app/invoices"><Button variant="secondary" size="sm">← Back</Button></Link>
-          <Button variant="secondary" size="sm" onClick={() => window.print()}>Print</Button>
+          <Button variant="secondary" size="sm" onClick={download} disabled={busy}>{busy ? 'Preparing…' : 'Download PDF'}</Button>
           <Link to={`/inv/${inv.code}`} target="_blank"><Button variant="secondary" size="sm">Share Link ↗</Button></Link>
           <Button size="sm" onClick={() => setOpen(true)}>+ Record Payment</Button>
         </>} />
 
+      <div ref={docRef}>
       <Card pad={0}>
         <div className="inv-banner">
           <div><div className="inv-title">INVOICE</div><div className="mono inv-no">{inv.code}</div></div>
@@ -71,6 +76,7 @@ export default function InvoiceDetail() {
           </>}
         </div>
       </Card>
+      </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Record Payment"
         footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={record}>Save Payment</Button></>}>

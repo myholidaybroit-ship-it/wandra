@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Field, Input, Select, Textarea, PlanBanner, Badge } from '../../../components/ui/UI'
+import { PageHeader, Card, Button, Field, Input, Select, Textarea, Badge } from '../../../components/ui/UI'
 import './wizard.css'
 
 const SECTIONS = [
@@ -22,7 +22,9 @@ export default function PackageWizard() {
   const { clients, destinations, hotels, cabs, templates, inclusionPresets, categoryGroups, packages, addPackage, updatePackage, toast } = app
   const nav = useNavigate()
   const { id: editId } = useParams()
+  const [searchParams] = useSearchParams()
   const editing = packages.find((p) => p.id === editId)
+  const preClient = clients.find((x) => x.id === searchParams.get('client'))
   const [active, setActive] = useState(1)
 
   const [pkg, setPkg] = useState(editing ? {
@@ -34,7 +36,8 @@ export default function PackageWizard() {
     hotelIncluded: (editing.hotelsAlloc || []).length > 0,
     pricing: { mode: 'Total', packageCost: '', childCost: '', discount: '', gstPercent: '', ...editing.pricing },
   } : {
-    clientId: '', clientName: '', clientPhone: '', clientEmail: '', clientAddress: '',
+    clientId: preClient?.id || '', clientName: preClient?.name || '', clientPhone: preClient?.phone || '',
+    clientEmail: preClient?.email || '', clientAddress: preClient?.address || '',
     pax: { total: 4, adults: 4, children: 0, childrenNoBed: 0, extraBeds: 0, rooms: 2, roomType: 'Double / Twin', auto: true },
     destination: '', fromLocation: '', days: 1, nights: 0, autoNights: true, startDate: '',
     flightIncluded: false, flight: { airline: '', flightNo: '', depart: '', arrive: '' },
@@ -123,7 +126,6 @@ export default function PackageWizard() {
   return (
     <div>
       <PageHeader title={editing ? `Edit Package · ${editing.code}` : 'Package Creation Wizard'} subtitle="Create a comprehensive travel package with detailed itinerary and pricing." counter="Packages 1 / 20" />
-      <PlanBanner />
 
       <div className="wizard">
         {SECTIONS.map((s) => {

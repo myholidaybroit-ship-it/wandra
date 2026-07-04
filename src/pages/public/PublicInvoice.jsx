@@ -1,12 +1,17 @@
+import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useApp, inr } from '../../store/AppContext'
 import { Card, Button, Badge } from '../../components/ui/UI'
+import { downloadElementPdf } from '../../utils/pdf'
 import '../admin/invoices/invoice.css'
 
 export default function PublicInvoice() {
   const { code } = useParams()
   const { invoices, agency, clients } = useApp()
   const inv = invoices.find((i) => i.code === code) || invoices[0]
+  const docRef = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const download = async () => { if (!docRef.current) return; setBusy(true); try { await downloadElementPdf(docRef.current, `${inv.code}.pdf`) } finally { setBusy(false) } }
   if (!inv) return <div className="section">Invoice not found.</div>
   const client = clients.find((c) => c.id === inv.clientId)
   const subtotal = inv.items.reduce((s, it) => s + it.qty * it.rate, 0)
@@ -15,6 +20,7 @@ export default function PublicInvoice() {
   const paid = (inv.payments || []).reduce((s, p) => s + p.amount, 0)
   return (
     <div className="section" style={{ maxWidth: 820, margin: '0 auto' }}>
+      <div ref={docRef}>
       <Card pad={0}>
         <div className="inv-banner"><div><div className="inv-title">INVOICE</div><div className="mono inv-no">{inv.code}</div></div><Badge tone={inv.status}>{inv.status}</Badge></div>
         <div className="inv-body">
@@ -31,9 +37,10 @@ export default function PublicInvoice() {
             <div className="fin-line"><span className="c-success">Paid</span><span className="c-success">{inr(paid)}</span></div>
             <div className="fin-line"><span className="c-error">Balance</span><span className="c-error">{inr(total - paid)}</span></div>
           </div>
-          <div className="row gap-sm center mt-lg"><Button onClick={() => window.print()}>Print / Download PDF</Button></div>
+          <div className="row gap-sm center mt-lg no-print"><Button onClick={download} disabled={busy}>{busy ? 'Preparing…' : 'Download PDF'}</Button></div>
         </div>
       </Card>
+      </div>
     </div>
   )
 }

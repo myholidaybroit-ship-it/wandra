@@ -1,6 +1,8 @@
+import { useRef, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../store/AppContext'
 import { Button } from '../../components/ui/UI'
+import { preloadAndDownload } from '../../utils/pdf'
 import './itinerary.css'
 
 const THEME_ACCENT = { standard: '#171717', classic: '#0d74ce', modern: '#16a34a', premium: '#8145b5', marine: '#0e7490', extensive: '#000000' }
@@ -11,12 +13,15 @@ export default function ItineraryPreview() {
   const theme = sp.get('theme') || 'classic'
   const { packages, agency } = useApp()
   const pkg = packages.find((p) => p.code === code) || packages[0]
+  const docRef = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const download = async () => { if (!docRef.current) return; setBusy(true); try { await preloadAndDownload(docRef.current, `${pkg.code}-itinerary.pdf`) } finally { setBusy(false) } }
   if (!pkg) return <div className="itin-wrap"><p>Itinerary not found.</p></div>
   const pr = computePricing(pkg)
   const accent = THEME_ACCENT[theme] || '#0d74ce'
 
   return (
-    <div className={`itin itin-${theme}`} style={{ '--accent': accent }}>
+    <div className={`itin itin-${theme}`} style={{ '--accent': accent }} ref={docRef}>
       {/* hero */}
       <div className="itin-hero">
         <div className="itin-hero-overlay" />
@@ -90,9 +95,9 @@ export default function ItineraryPreview() {
           </div>
         </div>
 
-        <div className="row gap-sm center mt-xl itin-actions">
+        <div className="row gap-sm center mt-xl itin-actions no-print">
           <Link to="/"><Button variant="secondary">← Back</Button></Link>
-          <Button onClick={() => window.print()}>Print / Save PDF</Button>
+          <Button onClick={download} disabled={busy}>{busy ? 'Preparing…' : 'Download PDF'}</Button>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ export default function LeadInquiry() {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const submit = () => {
     if (!f.name || !f.phone) return toast('Name and phone are required')
-    addClient({ name: f.name, email: f.email, phone: f.phone, interest: f.interest, budget: Number(f.budget) || 0, note: 'New Inquiry', leadTemp: 'Warm', source: 'Lead Form', address: '', city: '', state: '', country: 'India' })
+    addClient({ name: f.name, email: f.email, phone: f.phone, interest: f.interest, budget: Number(f.budget) || 0, note: 'New Inquiry', source: 'Lead Form', address: '', city: '', state: '', country: 'India' })
     setDone(true); toast('Inquiry sent — the lead is now in the CRM')
   }
   return (

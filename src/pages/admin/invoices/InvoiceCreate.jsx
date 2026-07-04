@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Field, Input, Select, PlanBanner } from '../../../components/ui/UI'
+import { PageHeader, Card, Button, Field, Input, Select } from '../../../components/ui/UI'
 
 export default function InvoiceCreate() {
   const { clients, packages, bookings, addInvoice, toast } = useApp()
@@ -38,7 +38,6 @@ export default function InvoiceCreate() {
   return (
     <div>
       <PageHeader title="Create Invoice" subtitle="Generate invoices for bookings, packages, or services." />
-      <PlanBanner />
       <div className="detail-grid">
         <Card>
           <span className="t-title-md">Invoice Details</span>

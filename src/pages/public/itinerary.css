@@ -13,7 +13,7 @@
 .itin-days { display: flex; flex-direction: column; gap: 18px; }
 .itin-day { display: grid; grid-template-columns: 70px 1fr; gap: 16px; }
 .itin-day-rail { display: flex; justify-content: center; }
-.itin-day-num { background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; padding: 6px 8px; border-radius: var(--radius-md); height: max-content; white-space: nowrap; }
+.itin-day-num { background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: var(--radius-full); height: max-content; white-space: nowrap; }
 .itin-day-card { background: var(--color-surface-card); border: 1px solid var(--color-hairline-strong); border-radius: var(--radius-lg); padding: 20px; }
 .itin-activities { font-size: 13px; color: var(--color-body); background: var(--color-canvas-soft); border-radius: var(--radius-md); padding: 10px 12px; margin-top: 12px; }
 .itin-stops { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
@@ -21,7 +21,8 @@
 .itin-stop-img { width: 42px; height: 42px; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-sky-light), var(--accent)); }
 .incl-card { background: var(--color-surface-card); border: 1px solid var(--color-hairline-strong); border-radius: var(--radius-lg); padding: 22px; }
 .itin-li { padding: 5px 0; }
-.itin-total { display: flex; justify-content: space-between; align-items: center; background: var(--color-surface-dark); color: #fff; border-radius: var(--radius-lg); padding: 22px 28px; margin-top: 32px; font-size: 24px; font-weight: 600; }
+.itin-total { display: flex; justify-content: space-between; align-items: center; background: var(--color-primary); color: var(--color-on-dark); border-radius: var(--radius-xl); padding: 22px 28px; margin-top: 32px; font-size: 24px; font-weight: 600;
+  background-image: radial-gradient(120% 90% at 85% -10%, rgba(255,255,255,.12), transparent 60%); }
 .secure-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; margin-top: 18px; }
 .secure-card { background: var(--color-surface-card); border: 1px solid var(--color-hairline-strong); border-radius: var(--radius-lg); padding: 22px; }
 .bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
