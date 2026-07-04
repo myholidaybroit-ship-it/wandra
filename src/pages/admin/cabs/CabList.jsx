@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, FilterBar, Field, Input, PillSelect, DataTable, Badge } from '../../../components/ui/UI'
+import { PageHeader, Button, PillSelect, DataTable, Badge, ListSearch } from '../../../components/ui/UI'
+import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 
 export default function CabList() {
@@ -33,10 +34,10 @@ export default function CabList() {
       <PageHeader title="Cabs & Vehicles" subtitle="Fleet with per-km and per-day rates — the builder auto-fills from here."
         counter={`Cabs ${cabs.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/cabs/new"><Button>+ Add New Cab</Button></Link></>} />
-      <FilterBar>
-        <Field label="Search"><Input placeholder="Search cabs by name, contact…" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
-        <Field label="Type"><PillSelect value={type} options={['All Types', 'Sedan', 'SUV', 'Tempo Traveller']} onChange={setType} /></Field>
-      </FilterBar>
+      <div className="list-toolbar">
+        <ListSearch value={q} onChange={setQ} placeholder="Search cabs by name, contact…" count={rows.length} />
+        <PillSelect value={type} options={['All Types', 'Sedan', 'SUV', 'Tempo Traveller']} onChange={setType} />
+      </div>
       <DataTable columns={columns} rows={rows} empty="No cabs match." />
     </div>
   )

@@ -14,7 +14,7 @@ export function LandingHeader({ cfg, agency, accent, onCta }) {
     <header className="ls-head">
       <div className="ls-head-inner">
         <div className="ls-head-brand">
-          {cfg.logo && <img src={cfg.logo} alt="" className="ls-head-logo" />}
+          {(cfg.logo || agency.logo) && <img src={cfg.logo || agency.logo} alt="" className="ls-head-logo" />}
           <span className="ls-head-name">{cfg.name || agency.name}</span>
         </div>
         <button className="ls-head-cta" style={{ background: accent }} onClick={onCta}>{cfg.ctaText || 'Enquire now'}</button>
@@ -111,14 +111,23 @@ function LandingDatePicker({ value, onChange, accent }) {
 
 export function LandingForm({ cfg, accent, onSubmit, state }) {
   const fx = cfg.fields || {}
-  const [f, setF] = useState({ name: '', phone: '', email: '', adults: '', children: '', destination: '', startDate: '', days: '', comments: '' })
+  const [f, setF] = useState({ name: '', phone: '', email: '', adults: '', children: '', childAges: [], fromCity: '', destination: '', startDate: '', days: '', comments: '' })
   const [err, setErr] = useState('')
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }))
+  const setChildren = (e) => {
+    const n = Math.max(0, Math.min(10, Number(e.target.value) || 0))
+    setF((p) => ({ ...p, children: e.target.value, childAges: Array.from({ length: n }, (_, i) => p.childAges[i] || '') }))
+  }
+  const setAge = (i, v) => setF((p) => ({ ...p, childAges: p.childAges.map((a, x) => (x === i ? v : a)) }))
 
   const submit = () => {
     if (!f.name.trim()) return setErr('Please enter your name.')
     const digits = f.phone.replace(/\D/g, '')
     if (digits.length < 10 || digits.length > 15) return setErr('Please enter a valid phone number (10–15 digits).')
+    // children's ages are mandatory once children are travelling
+    if (Number(f.children) > 0 && f.childAges.some((a) => !a || Number(a) < 1 || Number(a) > 17)) {
+      return setErr('Please enter each child’s age (1–17 years).')
+    }
     setErr('')
     onSubmit({ ...f, phone: digits })
   }
@@ -144,21 +153,37 @@ export function LandingForm({ cfg, accent, onSubmit, state }) {
         <div className="ls-grid">
           <label className="ls-field wide"><span>Name <em>*</em></span><input value={f.name} onChange={set('name')} placeholder="Mr Kumar" /></label>
           {fx.adults !== false && <label className="ls-field"><span>No. of Adults</span><input type="number" min="0" value={f.adults} onChange={set('adults')} placeholder="4" /></label>}
-          {fx.children !== false && <label className="ls-field"><span>Children</span><input type="number" min="0" value={f.children} onChange={set('children')} placeholder="2" /></label>}
+          {fx.children !== false && <label className="ls-field"><span>Children</span><input type="number" min="0" max="10" value={f.children} onChange={setChildren} placeholder="2" /></label>}
         </div>
+        {Number(f.children) > 0 && (
+          <div className="ls-ages">
+            <span className="ls-ages-k">Children’s ages <em>*</em></span>
+            <div className="ls-ages-row">
+              {f.childAges.map((a, i) => (
+                <label className="ls-age" key={i}>
+                  <span>Child {i + 1}</span>
+                  <input type="number" min="1" max="17" value={a} onChange={(e) => setAge(i, e.target.value)} placeholder="yrs" />
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="ls-grid two">
           <label className="ls-field wide"><span>Phone Number <em>*</em></span><input inputMode="numeric" value={f.phone} onChange={set('phone')} placeholder="e.g. 8888888888" /></label>
           {fx.email !== false && <label className="ls-field wide"><span>Email</span><input type="email" value={f.email} onChange={set('email')} placeholder="e.g. name@example.com" /></label>}
         </div>
-        <div className="ls-grid">
+        <div className="ls-grid two">
+          {fx.fromCity !== false && <label className="ls-field wide"><span>Travelling from</span><input value={f.fromCity} onChange={set('fromCity')} placeholder="e.g. Delhi" /></label>}
           {fx.destination !== false && <label className="ls-field wide"><span>Destination</span><input value={f.destination} onChange={set('destination')} placeholder="e.g. Srinagar" /></label>}
+        </div>
+        <div className="ls-grid two">
           {fx.startDate !== false && (
-            <div className="ls-field">
+            <div className="ls-field wide">
               <span>Start Date</span>
               <LandingDatePicker value={f.startDate} accent={accent} onChange={(v) => setF((p) => ({ ...p, startDate: v }))} />
             </div>
           )}
-          {fx.days !== false && <label className="ls-field"><span>No. of Days</span><input type="number" min="1" value={f.days} onChange={set('days')} placeholder="e.g. 4" /></label>}
+          {fx.days !== false && <label className="ls-field wide"><span>No. of Days</span><input type="number" min="1" value={f.days} onChange={set('days')} placeholder="e.g. 4" /></label>}
         </div>
         {fx.comments !== false && (
           <label className="ls-field full"><span>Requirements / Comments</span>
@@ -223,18 +248,19 @@ export default function BizLanding() {
       name: f.name.trim(),
       email: f.email || '',
       phone: f.phone,
-      city: '',
+      city: f.fromCity?.trim() || '',
       interest: f.destination?.trim() || 'General Inquiry',
       source: 'Landing Page',
       note: f.comments || 'Landing page enquiry',
       budget: 0,
       query: {
         refId: Math.random().toString(36).replace(/[^a-z0-9]/g, '').slice(0, 6).toUpperCase().padEnd(6, '7'),
-        assignee: agency.name,
+        // assignee intentionally omitted — the assignment rules engine routes the lead
         startDate: f.startDate || '',
         nights: days > 0 ? Math.max(1, days - 1) : 0,
         adults: Number(f.adults) || 0,
         children: Number(f.children) || 0,
+        childAges: (f.childAges || []).filter(Boolean),
       },
     })
     setTimeout(() => setState('done'), 500)

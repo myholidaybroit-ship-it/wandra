@@ -31,3 +31,6 @@
 .qr-box { width: 96px; height: 96px; background: #fff; color: #000; display: grid; place-items: center; border-radius: var(--radius-md); margin: 0 auto 8px; font-weight: 700; }
 @media (max-width: 720px) { .itin-summary { grid-template-columns: 1fr 1fr; } .secure-grid, .bank-grid { grid-template-columns: 1fr; } .itin-h1 { font-size: 30px; } }
 @media print { .itin-actions, .wa-float, .public-nav, .public-footer { display: none !important; } }
+
+/* agency logo in the hero (fixed box — safe for PDF capture) */
+.itin-logo { width: 170px; height: 48px; object-fit: contain; object-position: center; display: block; margin: 0 auto 8px; }

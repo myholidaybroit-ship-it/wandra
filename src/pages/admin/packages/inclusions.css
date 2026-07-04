@@ -1,0 +1,56 @@
+/* ============================================================
+   Inclusions & Exclusions — spacious premium presets
+   ============================================================ */
+.ie { max-width: 1100px; margin: 0 auto; }
+.ie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+@media (max-width: 860px) { .ie-grid { grid-template-columns: 1fr; } }
+
+.ie-col { background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-xxl); overflow: hidden; }
+
+/* header strip */
+.ie-col-head { display: flex; align-items: center; gap: 14px; padding: 20px 22px; border-bottom: 1px solid var(--color-hairline-soft); }
+.ie-col-mark { width: 40px; height: 40px; border-radius: var(--radius-full); display: grid; place-items: center; font-size: 16px; font-weight: 800; flex-shrink: 0; }
+.ie-col.inc .ie-col-mark { background: var(--color-success-bg); color: var(--color-success-text); }
+.ie-col.exc .ie-col-mark { background: var(--color-error-bg); color: #b91c1c; }
+.ie-col-meta { flex: 1; min-width: 0; }
+.ie-col-title { display: block; font-size: 17px; font-weight: 800; letter-spacing: -0.2px; }
+.ie-col.inc .ie-col-title { color: var(--color-success-text); }
+.ie-col.exc .ie-col-title { color: #b91c1c; }
+.ie-col-sub { display: block; font-size: 12.5px; color: var(--color-stone); margin-top: 2px; }
+.ie-col-count { font-size: 13px; font-weight: 800; color: var(--color-steel); background: var(--color-surface); border-radius: var(--radius-full); padding: 5px 14px; font-variant-numeric: tabular-nums; }
+
+/* items */
+.ie-items { padding: 10px 12px; }
+.ie-empty { font-size: 13px; color: var(--color-stone); padding: 18px 10px; }
+.ie-item { display: flex; align-items: center; gap: 12px; padding: 12px 12px; border-radius: var(--radius-lg); transition: background var(--ease-ui); }
+.ie-item:hover { background: var(--color-surface-soft); }
+.ie-item-mark { width: 22px; height: 22px; border-radius: var(--radius-full); display: grid; place-items: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.ie-col.inc .ie-item-mark { background: var(--color-success-bg); color: var(--color-success-text); }
+.ie-col.exc .ie-item-mark { background: var(--color-error-bg); color: #b91c1c; }
+.ie-item-txt { flex: 1; font-size: 14px; color: var(--color-charcoal); line-height: 1.5; }
+.ie-item-x {
+  width: 30px; height: 30px; border-radius: var(--radius-full); display: grid; place-items: center;
+  color: var(--color-muted-soft); cursor: pointer; opacity: 0; transition: all var(--ease-ui); flex-shrink: 0;
+}
+.ie-item:hover .ie-item-x { opacity: 1; }
+.ie-item-x:hover { background: var(--color-error-bg); color: #b91c1c; }
+
+/* composer */
+.ie-composer {
+  display: flex; align-items: center; gap: 10px; margin: 8px 16px 18px;
+  border: 1px solid var(--color-hairline); border-radius: var(--radius-full);
+  background: var(--color-surface-soft); padding: 5px 5px 5px 18px;
+  transition: border-color var(--ease-ui), background var(--ease-ui), box-shadow var(--ease-ui);
+}
+.ie-composer:focus-within { background: var(--color-canvas); border-color: var(--color-hairline-strong); box-shadow: var(--shadow-1); }
+.ie-composer input { flex: 1; border: none; outline: none; background: none; font-family: inherit; font-size: 13.5px; color: var(--color-ink); min-width: 0; }
+.ie-composer input::placeholder { color: var(--color-muted); }
+.ie-add {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  height: 36px; padding: 0 16px; border-radius: var(--radius-full);
+  background: var(--color-primary); color: var(--color-on-primary);
+  font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+  transition: opacity var(--ease-ui), transform var(--ease-ui);
+}
+.ie-add:hover:not(:disabled) { transform: translateY(-1px); }
+.ie-add:disabled { opacity: .35; cursor: default; }

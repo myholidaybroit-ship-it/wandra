@@ -256,9 +256,64 @@ textarea.control:focus { padding: 9px 13px; }
 .field .pill-select { width: 100%; justify-content: space-between; }
 .field .pill-menu { left: 0; right: 0; min-width: 0; }
 
+/* Interactive star rating picker */
+.star-pick { display: flex; align-items: center; gap: 2px; }
+.star-btn {
+  border: none; background: none; padding: 2px 3px; cursor: pointer;
+  font-size: 30px; line-height: 1; color: var(--color-hairline);
+  transition: color .12s ease, transform .12s ease;
+}
+.star-btn.on { color: #d99a1b; }
+.star-btn:hover { transform: scale(1.12); }
+.star-val { margin-left: 10px; font-size: 13px; font-weight: 700; color: var(--color-stone); font-variant-numeric: tabular-nums; }
+
+/* Story photo upload preview */
+.story-photo { position: relative; border-radius: var(--radius-xl); overflow: hidden; }
+.story-photo img { display: block; width: 100%; height: 200px; object-fit: cover; }
+.story-photo-acts { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 6px; }
+.story-photo-acts button {
+  border: none; background: rgba(17, 17, 19, .72); color: #fff; font-family: inherit;
+  font-size: 11.5px; font-weight: 700; padding: 6px 12px; border-radius: var(--radius-full); cursor: pointer;
+}
+.story-photo-acts button:hover { background: var(--color-ink); }
+
+/* Agency brand fallbacks (no logo uploaded yet) */
+.ag-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 34px; padding: 4px 8px;
+  border: 2px solid currentColor; border-radius: 10px;
+  font-weight: 800; font-size: 15px; letter-spacing: .5px; color: var(--color-ink);
+}
+.ag-mark.light { color: #fff; }
+.ag-name { font-weight: 800; letter-spacing: .3px; color: var(--color-ink); }
+.ag-name.light { color: #fff; }
+
 /* List page toolbar (search + pill filters, no chrome) */
 .list-toolbar { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 20px; }
-.list-search { flex: 0 1 340px; min-width: 240px; }
+.list-search { flex: 0 1 380px; min-width: 260px; }
+
+/* premium list search pill */
+.lsx {
+  display: flex; align-items: center; gap: 10px;
+  height: 44px; padding: 0 8px 0 16px;
+  background: var(--color-canvas); border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-full); cursor: text;
+  transition: border-color var(--ease-ui), box-shadow var(--ease-ui);
+}
+.lsx:hover { border-color: var(--color-muted-soft); }
+.lsx:focus-within { border-color: var(--color-ink); box-shadow: 0 0 0 3.5px rgba(17, 17, 19, .07); }
+.lsx-ic { flex: 0 0 auto; display: grid; place-items: center; color: var(--color-muted-soft); transition: color var(--ease-ui); }
+.lsx:focus-within .lsx-ic { color: var(--color-ink); }
+.lsx input { border: none; outline: none; background: transparent; flex: 1; min-width: 0; font-family: inherit; font-size: 14px; color: var(--color-ink); }
+.lsx input::placeholder { color: var(--color-muted-soft); }
+.lsx-count { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--color-stone); background: var(--color-surface-soft); border-radius: var(--radius-full); padding: 4px 10px; white-space: nowrap; }
+.lsx-clear {
+  flex: 0 0 auto; border: none; background: var(--color-surface-soft); color: var(--color-steel);
+  width: 28px; height: 28px; border-radius: var(--radius-full);
+  display: grid; place-items: center; cursor: pointer; font-size: 10px; font-family: inherit;
+  transition: background var(--ease-ui), color var(--ease-ui);
+}
+.lsx-clear:hover { background: var(--color-ink); color: #fff; }
 
 /* Quotation Draft/Sent toggle */
 .qs-toggle { display: inline-flex; gap: 3px; padding: 3px; background: var(--color-surface); border-radius: var(--radius-full); }
@@ -380,3 +435,7 @@ textarea.control:focus { padding: 9px 13px; }
 .gal-add { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 84px; height: 60px; border-radius: var(--radius-md); border: 1.5px dashed var(--color-hairline-strong); background: var(--color-canvas); font-size: 11px; font-weight: 700; color: var(--color-steel); cursor: pointer; font-family: inherit; transition: background var(--ease-ui), color var(--ease-ui); }
 .gal-add:hover:not(:disabled) { background: var(--color-surface); color: var(--color-ink); }
 .gal-add:disabled { opacity: .6; }
+
+/* Master-data create/edit pages — centered, comfortable measure */
+.master-page { max-width: 880px; margin: 0 auto; }
+.master-page .card { padding: 28px 30px; }

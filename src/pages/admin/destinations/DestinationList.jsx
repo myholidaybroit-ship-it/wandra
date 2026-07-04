@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
-import { PageHeader, Button, FilterBar, Field, Input, DataTable, Badge, PillSelect } from '../../../components/ui/UI'
+import { PageHeader, Button, DataTable, Badge, PillSelect, ListSearch } from '../../../components/ui/UI'
+import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 
 export default function DestinationList() {
@@ -32,10 +33,10 @@ export default function DestinationList() {
       <PageHeader title="Destinations" subtitle="The places your agency sells — photos flow into PDFs & the landing page."
         counter={`Destinations ${destinations.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/destinations/new"><Button>+ Add New Destination</Button></Link></>} />
-      <FilterBar>
-        <Field label="Search"><Input placeholder="Search destinations…" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
-        <Field label="Type"><PillSelect value={type} options={['All', 'Domestic', 'International']} onChange={setType} format={(v) => (v === 'All' ? 'All types' : v)} /></Field>
-      </FilterBar>
+      <div className="list-toolbar">
+        <ListSearch value={q} onChange={setQ} placeholder="Search destinations…" count={rows.length} />
+        <PillSelect value={type} options={['All', 'Domestic', 'International']} onChange={setType} format={(v) => (v === 'All' ? 'All types' : v)} />
+      </div>
       <DataTable columns={columns} rows={rows} empty="No destinations match." />
     </div>
   )

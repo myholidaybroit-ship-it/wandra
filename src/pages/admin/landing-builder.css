@@ -6,10 +6,16 @@
 .lb-editor { display: flex; flex-direction: column; gap: 12px; }
 
 /* publish pill */
-.lb-publish { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: var(--radius-full); border: 1px solid var(--color-hairline); background: var(--color-canvas); font-size: 13px; font-weight: 700; color: var(--color-steel); cursor: pointer; font-family: inherit; transition: all var(--ease-ui); }
+.lb-publish { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: var(--radius-full); border: 1px solid var(--color-hairline); background: var(--color-canvas); font-size: 13px; font-weight: 700; color: var(--color-steel); cursor: pointer; font-family: inherit; white-space: nowrap; transition: all var(--ease-ui); }
 .lb-publish-dot { width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-muted-soft); }
 .lb-publish.on { border-color: var(--color-success); color: var(--color-success-text); background: var(--color-success-bg); }
 .lb-publish.on .lb-publish-dot { background: var(--color-success); }
+
+/* unsaved-changes banner */
+.lb-dirty { display: flex; align-items: center; gap: 9px; margin: -6px 0 16px; padding: 10px 16px; border: 1px solid var(--color-warning, #d6a243); border-radius: var(--radius-lg); background: var(--color-warning-bg, #fdf6e7); font-size: 12.5px; font-weight: 600; color: var(--color-warning-text, #8a6116); }
+.lb-dirty-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-warning, #d6a243); animation: lb-dirty-pulse 1.6s ease-in-out infinite; }
+@keyframes lb-dirty-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .lb-dirty-dot { animation: none; } }
 
 /* cards */
 .lb-card { background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-xl); padding: 16px 18px; }

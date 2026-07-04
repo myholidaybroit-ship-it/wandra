@@ -25,7 +25,7 @@ export default function PublicInvoice() {
         <div className="inv-banner"><div><div className="inv-title">INVOICE</div><div className="mono inv-no">{inv.code}</div></div><Badge tone={inv.status}>{inv.status}</Badge></div>
         <div className="inv-body">
           <div className="grid grid-2">
-            <div><div className="t-caption-upper c-muted">From</div><div className="t-title-sm mt-xs">{agency.name}</div><div className="t-body-sm c-body">{agency.address}</div></div>
+            <div>{agency.logo && <img src={agency.logo} alt={agency.name} className="inv-agency-logo" />}<div className="t-caption-upper c-muted">From</div><div className="t-title-sm mt-xs">{agency.name}</div><div className="t-body-sm c-body">{agency.address}</div></div>
             <div><div className="t-caption-upper c-muted">Bill To</div><div className="t-title-sm mt-xs">{inv.clientName}</div><div className="t-body-sm c-body">{client?.phone}</div></div>
           </div>
           <table className="data-table mt-lg" style={{ border: '1px solid var(--color-hairline)', borderRadius: 8 }}>
@@ -37,6 +37,7 @@ export default function PublicInvoice() {
             <div className="fin-line"><span className="c-success">Paid</span><span className="c-success">{inr(paid)}</span></div>
             <div className="fin-line"><span className="c-error">Balance</span><span className="c-error">{inr(total - paid)}</span></div>
           </div>
+          <div className="pdf-powered" style={{ marginTop: 24 }}>Powered by <strong>Wandra</strong></div>
           <div className="row gap-sm center mt-lg no-print"><Button onClick={download} disabled={busy}>{busy ? 'Preparing…' : 'Download PDF'}</Button></div>
         </div>
       </Card>

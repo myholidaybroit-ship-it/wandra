@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AgencyLogo } from '../../../components/ui/AgencyBrand'
 import { useParams, Link } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
 import { PageHeader, Button, Modal, Field, Input, PillSelect, DatePicker, Textarea } from '../../../components/ui/UI'
@@ -137,7 +138,7 @@ export default function Vouchers() {
               </div>
               <div className="v-right">
                 <div className="v-pass">{meta.pass}</div>
-                <div className="v-logo"><img src="/brand/wandra-logo.png" alt="Wandra" /></div>
+                <div className="v-logo"><AgencyLogo /></div>
                 <span className="v-code">{v.code}</span>
                 <div className="v-acts">
                   <Link to={`/voucher/${v.id}`} target="_blank" className="v-act" title="Preview"><Icon name="upload" size={13} className="v-open-ic" /></Link>

@@ -15,7 +15,7 @@ export default function CabCreate() {
     toast('Cab added'); nav('/app/cabs')
   }
   return (
-    <div>
+    <div className="master-page">
       <PageHeader title="Add New Cab" subtitle="Vehicle with per-km and per-day rates — the builder auto-fills from here." />
       <Card>
         <div className="form-grid">

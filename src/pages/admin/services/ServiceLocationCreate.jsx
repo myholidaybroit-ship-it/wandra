@@ -16,7 +16,7 @@ export default function ServiceLocationCreate() {
     toast('Service location added'); nav('/app/services')
   }
   return (
-    <div>
+    <div className="master-page">
       <PageHeader title="Add Service Location" subtitle="A transport route the builder can pick — rates auto-fill the quote." />
       <Card>
         <div className="form-grid">

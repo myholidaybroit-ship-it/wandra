@@ -107,3 +107,13 @@
 .ls-foot-brand { font-weight: 800; color: #fff; }
 .ls-powered { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.5); }
 .ls-powered strong { color: #fff; }
+
+/* children's ages (mandatory when children > 0) */
+.ls-ages { margin-top: 16px; border: 1px dashed #dcdce2; border-radius: 14px; padding: 14px 16px; }
+.ls-ages-k { font-size: 13px; font-weight: 700; color: #26262e; }
+.ls-ages-k em { color: #dc2626; font-style: normal; }
+.ls-ages-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.ls-age { display: flex; flex-direction: column; gap: 5px; width: 84px; }
+.ls-age span { font-size: 11px; font-weight: 700; color: #7a7a84; }
+.ls-age input { border: 1px solid #dcdce2; border-radius: 10px; padding: 9px 10px; font-family: inherit; font-size: 14px; text-align: center; outline: none; }
+.ls-age input:focus { border-color: #9a9aa2; }

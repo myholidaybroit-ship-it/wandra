@@ -26,7 +26,9 @@ export default function ItineraryPreview() {
       <div className="itin-hero">
         <div className="itin-hero-overlay" />
         <div className="itin-hero-text">
-          <div className="t-caption-upper" style={{ color: '#fff', opacity: .9 }}>{agency.name}</div>
+          {agency.logo
+            ? <img src={agency.logo} alt={agency.name} className="itin-logo" />
+            : <div className="t-caption-upper" style={{ color: '#fff', opacity: .9 }}>{agency.name}</div>}
           <h1 className="itin-h1">Your Journey to {pkg.destination?.split(' ')[0]}</h1>
           <div className="itin-hero-meta">
             <span>{pkg.days} Days / {pkg.nights} Nights</span>
@@ -94,6 +96,8 @@ export default function ItineraryPreview() {
             <div className="t-caption" style={{ color: '#fff', opacity: .85 }}>Scan to Pay</div>
           </div>
         </div>
+
+        <div className="pdf-powered" style={{ marginTop: 28 }}>Powered by <strong>Wandra</strong></div>
 
         <div className="row gap-sm center mt-xl itin-actions no-print">
           <Link to="/"><Button variant="secondary">← Back</Button></Link>

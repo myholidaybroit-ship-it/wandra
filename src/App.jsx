@@ -12,6 +12,8 @@ import PdfDoc from './pages/public/PdfDoc'
 import VoucherDoc from './pages/public/VoucherDoc'
 import BizLanding from './pages/public/BizLanding'
 import LandingBuilder from './pages/admin/LandingBuilder'
+import Roles from './pages/admin/Roles'
+import AssignmentRules from './pages/admin/AssignmentRules'
 import PublicInvoice from './pages/public/PublicInvoice'
 import PublicGallery from './pages/public/PublicGallery'
 import StorySubmit from './pages/public/StorySubmit'
@@ -55,6 +57,7 @@ import Gallery from './pages/admin/Gallery'
 import Settings from './pages/admin/Settings'
 import UserManagement from './pages/admin/UserManagement'
 import Billing from './pages/admin/Billing'
+import UpgradePro from './pages/admin/UpgradePro'
 import HelpSupport from './pages/admin/HelpSupport'
 
 export default function App() {
@@ -62,14 +65,14 @@ export default function App() {
     <>
       <Routes>
         {/* Public marketing + client-facing */}
+        {/* Standalone full-screen auth (no marketing chrome) */}
+        <Route path="/login" element={<Login />} />
+
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
           <Route path="/inquiry" element={<LeadInquiry />} />
           <Route path="/i/:code" element={<ItineraryPreview />} />
           <Route path="/inv/:code" element={<PublicInvoice />} />
-          <Route path="/stories/:agency" element={<PublicGallery />} />
-          <Route path="/share-story/:token" element={<StorySubmit />} />
         </Route>
 
         {/* Standalone print documents — no site chrome */}
@@ -78,6 +81,10 @@ export default function App() {
 
         {/* Business lead-capture landing page (built in /app/landing) */}
         <Route path="/site/:slug" element={<BizLanding />} />
+
+        {/* Agency-branded public testimonial pages — no Wandra site chrome */}
+        <Route path="/stories/:agency" element={<PublicGallery />} />
+        <Route path="/share-story/:token" element={<StorySubmit />} />
 
         {/* Admin app */}
         <Route path="/app" element={<AdminLayout />}>
@@ -97,6 +104,8 @@ export default function App() {
           <Route path="cabs/new" element={<CabCreate />} />
           <Route path="cabs/:id" element={<CabDetail />} />
           <Route path="landing" element={<LandingBuilder />} />
+          <Route path="roles" element={<Roles />} />
+          <Route path="assignment" element={<AssignmentRules />} />
           <Route path="services" element={<ServiceLocationList />} />
           <Route path="services/new" element={<ServiceLocationCreate />} />
           <Route path="activities" element={<ActivityList />} />
@@ -121,6 +130,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="billing" element={<Billing />} />
+          <Route path="upgrade" element={<UpgradePro />} />
           <Route path="support" element={<HelpSupport />} />
         </Route>
 

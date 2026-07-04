@@ -16,7 +16,7 @@ export const agency = {
     accountNumber: '0082040100001735',
     ifsc: 'JAKA0MALROO',
   },
-  plan: { name: 'Free Trial', limit: 100 },
+  plan: { name: 'Free', limit: 100 },
 }
 
 // stock photo helper — master forms accept any full image URL
@@ -33,6 +33,7 @@ export const destinations = [
   { id: 'd8', name: 'Thailand', type: 'International', location: 'Bangkok, Phuket, Krabi', features: 'Islands, Temples, Street food, Nightlife', image: img('1552465011-b4e21bf6e79a'), gallery: [img('1528181304800-259b08848526'), img('1507525428034-b723cf961d3e')] },
   { id: 'd9', name: 'Bali', type: 'International', location: 'Indonesia', features: 'Beaches, Rice terraces, Temples, Water sports', image: img('1537996194471-e657df975ab4'), gallery: [img('1512343879784-a960bf40e7f2'), img('1519046904884-53103b34b206')] },
   { id: 'd10', name: 'Maldives', type: 'International', location: 'Indian Ocean', features: 'Water villas, Snorkeling, Honeymoon resorts', image: img('1514282401047-d79a71a590e8'), gallery: [img('1519046904884-53103b34b206'), img('1507525428034-b723cf961d3e')] },
+  { id: 'd11', name: 'Kerala', type: 'Domestic', location: 'Munnar, Alleppey, Kochi', features: 'Backwaters, Houseboats, Tea gardens, Ayurveda', image: img('1602216056096-3b40cc0c9944'), gallery: [img('1593693397690-362cb9666fc2'), img('1580619305218-8423a7ef79b4')] },
 ]
 
 /* ------------------------------------------------------------------
@@ -334,7 +335,7 @@ export const landingDefault = {
     sub: 'Tell us about your trip — we usually reply within 30 minutes.',
     buttonText: 'Send Enquiry',
     successMsg: 'Thank you! Your enquiry is with our travel experts — expect a call shortly.',
-    fields: { adults: true, children: true, email: true, destination: true, startDate: true, days: true, comments: true },
+    fields: { adults: true, children: true, email: true, fromCity: true, destination: true, startDate: true, days: true, comments: true },
   },
 }
 
@@ -410,12 +411,44 @@ export const galleryStories = [
 export const users = [
   { id: 'u1', name: 'Wandra Admin', email: 'admin@wandra.travel', role: 'Admin', phone: '+91 78898 04942', department: 'Management', designation: 'Owner', status: 'Active' },
   { id: 'u2', name: 'Aamir Sales', email: 'aamir@wandra.travel', role: 'Sales', phone: '+91 90000 12345', department: 'Sales', designation: 'Sales Executive', status: 'Active' },
+  { id: 'u3', name: 'Rika Sharma', email: 'rika@wandra.travel', role: 'Sales', phone: '+91 98220 44311', department: 'Sales', designation: 'Sales Executive', status: 'Active' },
+  { id: 'u4', name: 'Rohit Verma', email: 'rohit@wandra.travel', role: 'Sales', phone: '+91 97110 20455', department: 'Sales', designation: 'Sales Executive', status: 'Active' },
 ]
 
+/* ------------------------------------------------------------------
+   Lead assignment — conditional rules + round robin.
+   First enabled rule whose condition matches the incoming lead wins;
+   its members take turns (round robin). If nothing matches, the
+   fallback decides (whole-team rotation / chosen members / unassigned).
+   ------------------------------------------------------------------ */
+export const assignmentDefault = {
+  enabled: true,
+  rules: [
+    { id: 'ar1', name: 'Kerala specialists', enabled: true, field: 'destination', values: ['Kerala'], members: ['Rika Sharma', 'Rohit Verma'], next: 0 },
+  ],
+  fallback: { mode: 'all', members: [], next: 0 },
+}
+
+/* ------------------------------------------------------------------
+   Feature roles — which role can use which part of the product.
+   Admin is a system role and always has everything.
+   ------------------------------------------------------------------ */
+export const rolesDefault = [
+  { id: 'r1', name: 'Admin', system: true, perms: { dashboard: true, clients: true, builder: true, bookings: true, invoices: true, vouchers: true, master: true, reports: true, landing: true, settings: true } },
+  { id: 'r2', name: 'Sales', perms: { dashboard: true, clients: true, builder: true, bookings: true, invoices: false, vouchers: true, master: false, reports: true, landing: true, settings: false } },
+  { id: 'r3', name: 'Operations', perms: { dashboard: true, clients: true, builder: false, bookings: true, invoices: false, vouchers: true, master: true, reports: false, landing: false, settings: false } },
+  { id: 'r4', name: 'Accounts', perms: { dashboard: true, clients: false, builder: false, bookings: true, invoices: true, vouchers: false, master: false, reports: true, landing: false, settings: false } },
+]
+
+/* Two plans only: Free to start, Pro for everything. Custom needs are
+   handled as a tailored Pro conversation, not a third plan card. */
 export const plans = [
-  { id: 'free', name: 'Free Trial', price: 0, period: 'forever', limit: 100, featured: false, perks: ['100 clients / month (resets monthly)', 'Itineraries & quotations', '6 itinerary themes', 'Shareable links & PDF', 'Email support'] },
-  { id: 'growth', name: 'Growth', price: 1499, oldPrice: 4999, period: 'mo', limit: 100, featured: true, perks: ['100 clients / month', 'GST & non-GST invoices', 'Vouchers & payment tracking', 'Reports & profit analytics', 'WhatsApp support', 'Team accounts'] },
-  { id: 'scale', name: 'Scale', price: 3999, oldPrice: 12999, period: 'mo', limit: 500, featured: false, perks: ['500 clients / month', 'Everything in Growth', 'Lead capture forms', 'Custom branding', 'Priority support'] },
+  { id: 'free', name: 'Free', price: 0, period: 'forever', limit: 100, featured: false,
+    tagline: 'Everything you need to start selling trips.',
+    perks: ['Up to 100 clients', 'Quote builder with markup pricing', 'Itineraries, quotations & PDF downloads', 'WhatsApp & email sharing', 'Basic reports', 'Email support'] },
+  { id: 'pro', name: 'Pro', price: 2999, priceYear: 1999, oldPrice: 9999, period: 'mo', limit: 0, featured: true,
+    tagline: 'The complete engine for a growing agency.', plus: 'Everything in Free, plus:',
+    perks: ['Unlimited clients & enquiries', 'Bookings, invoices & payment tracking', 'Vouchers — hotel, transport & activity', 'Lead-capture landing page', 'Auto lead assignment (round robin)', 'In-depth reports with Excel / CSV export', 'Team accounts with roles & permissions', 'Your branding on every document', 'Priority WhatsApp support'] },
 ]
 
 export const dashboardSeries = {

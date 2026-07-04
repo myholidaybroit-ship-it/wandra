@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, FilterBar, Field, Input, DataTable, Badge, Modal, Textarea } from '../../../components/ui/UI'
+import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, Textarea, ListSearch } from '../../../components/ui/UI'
+import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 import { ImageInput } from '../../../components/ui/ImageInput'
 
@@ -34,12 +35,12 @@ export default function ActivityList() {
   ]
   return (
     <div>
-      <PageHeader title="Activities & Tickets" subtitle="Experiences with cost & selling price — picked straight into quotes."
+      <PageHeader title="Activities" subtitle="Experiences with cost & selling price — picked straight into quotes."
         counter={`Activities ${activities.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/activities/new"><Button>+ Add Activity</Button></Link></>} />
-      <FilterBar>
-        <Field label="Search"><Input placeholder="Search by name, category, city…" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
-      </FilterBar>
+      <div className="list-toolbar">
+        <ListSearch value={q} onChange={setQ} placeholder="Search by name, category, city…" count={rows.length} />
+      </div>
       <DataTable columns={columns} rows={rows} empty="No activities yet." />
 
       <Modal open={!!edit} onClose={() => setEdit(null)} title="Edit Activity" width={620}

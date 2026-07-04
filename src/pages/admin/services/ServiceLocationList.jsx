@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, FilterBar, Field, Input, DataTable, Badge, Modal, PillSelect } from '../../../components/ui/UI'
+import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, PillSelect, ListSearch } from '../../../components/ui/UI'
+import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 
 const SERVICE_TYPES = ['Arrival Transfer', 'Departure Transfer', 'Intercity Transfer', 'Sightseeing', 'Excursion', 'Half-day Transfer', 'Full-day Transfer']
@@ -35,9 +36,9 @@ export default function ServiceLocationList() {
       <PageHeader title="Service Locations" subtitle="Transport routes — type, duration & rates auto-fill the quote builder."
         counter={`Locations ${serviceLocations.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/services/new"><Button>+ Add Service Location</Button></Link></>} />
-      <FilterBar>
-        <Field label="Search"><Input placeholder="Search by route, type, city…" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
-      </FilterBar>
+      <div className="list-toolbar">
+        <ListSearch value={q} onChange={setQ} placeholder="Search by route, type, city…" count={rows.length} />
+      </div>
       <DataTable columns={columns} rows={rows} empty="No service locations yet." />
 
       <Modal open={!!edit} onClose={() => setEdit(null)} title="Edit Service Location" width={560}

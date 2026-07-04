@@ -14,7 +14,7 @@ const SECTION_META = {
 }
 const FORM_FIELDS = [
   ['adults', 'No. of Adults'], ['children', 'Children'], ['email', 'Email'],
-  ['destination', 'Destination'], ['startDate', 'Start Date'], ['days', 'No. of Days'], ['comments', 'Requirements / Comments'],
+  ['fromCity', 'Travelling from'], ['destination', 'Destination'], ['startDate', 'Start Date'], ['days', 'No. of Days'], ['comments', 'Requirements / Comments'],
 ]
 
 export default function LandingBuilder() {
@@ -23,20 +23,27 @@ export default function LandingBuilder() {
   const dragIdx = useRef(null)
   const [overIdx, setOverIdx] = useState(null)
 
-  const patch = (key, p) => updateLanding({ [key]: { ...landing[key], ...p } })
-  const url = `${window.location.origin}/site/${landing.slug}`
-  const copy = () => { navigator.clipboard?.writeText(url); toast('Landing page link copied') }
+  /* ---------- draft model: nothing goes live until Save ---------- */
+  const [draft, setDraft] = useState(landing)
+  const dirty = JSON.stringify(draft) !== JSON.stringify(landing)
+  const setTop = (p) => setDraft((d) => ({ ...d, ...p }))
+  const patch = (key, p) => setDraft((d) => ({ ...d, [key]: { ...d[key], ...p } }))
+  const save = () => { updateLanding(draft); toast('Landing page saved — changes are live') }
+  const discard = () => { setDraft(landing); toast('Changes discarded') }
 
-  /* ---------- drag & drop section reorder ---------- */
+  // the LIVE site always uses the last saved slug
+  const liveUrl = `${window.location.origin}/site/${landing.slug}`
+  const copy = () => { navigator.clipboard?.writeText(liveUrl); toast('Landing page link copied') }
+
+  /* ---------- drag & drop section reorder (draft only) ---------- */
   const onDrop = (i) => {
     const from = dragIdx.current
     if (from == null || from === i) { setOverIdx(null); return }
-    const order = [...landing.order]
+    const order = [...draft.order]
     const [moved] = order.splice(from, 1)
     order.splice(i, 0, moved)
-    updateLanding({ order })
+    setTop({ order })
     dragIdx.current = null; setOverIdx(null)
-    toast('Sections reordered')
   }
 
   const formRef = useRef(null)
@@ -46,12 +53,16 @@ export default function LandingBuilder() {
     <div className="lb">
       <PageHeader title="Landing Page" subtitle="Your lead-capture site — every enquiry lands in Trips & Clients automatically."
         actions={<>
-          <button className={`lb-publish ${landing.published ? 'on' : ''}`} onClick={() => updateLanding({ published: !landing.published })}>
-            <span className="lb-publish-dot" />{landing.published ? 'Live' : 'Unpublished'}
+          <button className={`lb-publish ${draft.published ? 'on' : ''}`} onClick={() => setTop({ published: !draft.published })}>
+            <span className="lb-publish-dot" />{draft.published ? 'Live' : 'Unpublished'}
           </button>
           <Button variant="secondary" onClick={copy}><Icon name="copy" size={14} /> Copy link</Button>
-          <a href={url} target="_blank" rel="noreferrer"><Button>Open ↗</Button></a>
+          <a href={liveUrl} target="_blank" rel="noreferrer"><Button variant="secondary">Open ↗</Button></a>
+          {dirty && <Button variant="tertiary" onClick={discard}>Discard</Button>}
+          <Button onClick={save} disabled={!dirty}>{dirty ? 'Save changes' : 'Saved'}</Button>
         </>} />
+
+      {dirty && <div className="lb-dirty"><span className="lb-dirty-dot" />You have unsaved changes — the public page still shows the last saved version.</div>}
 
       <div className="lb-grid">
         {/* ================= Editor ================= */}
@@ -63,12 +74,12 @@ export default function LandingBuilder() {
               <span className="lb-k">Accent colour</span>
               <div className="lb-swatches">
                 {ACCENTS.map((c) => (
-                  <button key={c} className={`lb-swatch ${landing.accent === c ? 'on' : ''}`} style={{ background: c }}
-                    onClick={() => updateLanding({ accent: c })} aria-label={c} />
+                  <button key={c} className={`lb-swatch ${draft.accent === c ? 'on' : ''}`} style={{ background: c }}
+                    onClick={() => setTop({ accent: c })} aria-label={c} />
                 ))}
                 <label className="lb-swatch-custom" title="Custom colour">
-                  <input type="color" value={landing.accent} onChange={(e) => updateLanding({ accent: e.target.value })} />
-                  <span style={{ background: landing.accent }} />
+                  <input type="color" value={draft.accent} onChange={(e) => setTop({ accent: e.target.value })} />
+                  <span style={{ background: draft.accent }} />
                 </label>
               </div>
             </div>
@@ -76,7 +87,7 @@ export default function LandingBuilder() {
               <span className="lb-k">Page address</span>
               <div className="lb-slug">
                 <span className="lb-slug-pre">/site/</span>
-                <input value={landing.slug} onChange={(e) => updateLanding({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} />
+                <input value={draft.slug} onChange={(e) => setTop({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} />
               </div>
             </div>
           </div>
@@ -90,18 +101,18 @@ export default function LandingBuilder() {
                 <span className="lb-sec-desc">Logo, business name & enquiry button — always on top</span>
               </div>
               <label className="lb-switch" onClick={(e) => e.stopPropagation()}>
-                <input type="checkbox" checked={landing.header?.enabled !== false} onChange={(e) => patch('header', { enabled: e.target.checked })} />
+                <input type="checkbox" checked={draft.header?.enabled !== false} onChange={(e) => patch('header', { enabled: e.target.checked })} />
                 <span className="lb-switch-track"><span className="lb-switch-thumb" /></span>
               </label>
               <span className={`lb-chev ${openSec === 'header' ? 'up' : ''}`}><Icon name="chevron" size={14} /></span>
             </div>
             {openSec === 'header' && (
               <div className="lb-sec-body">
-                <ImageInput label="Logo" value={landing.header?.logo} maxW={400}
+                <ImageInput label="Logo" value={draft.header?.logo} maxW={400}
                   onChange={(v) => patch('header', { logo: v })} hint="PNG with transparency looks best" />
                 <div className="lb-two">
-                  <Lbi label="Business name" v={landing.header?.name} on={(v) => patch('header', { name: v })} />
-                  <Lbi label="Button text" v={landing.header?.ctaText} on={(v) => patch('header', { ctaText: v })} />
+                  <Lbi label="Business name" v={draft.header?.name} on={(v) => patch('header', { name: v })} />
+                  <Lbi label="Button text" v={draft.header?.ctaText} on={(v) => patch('header', { ctaText: v })} />
                 </div>
               </div>
             )}
@@ -109,9 +120,9 @@ export default function LandingBuilder() {
 
           {/* Sections — drag to reorder */}
           <div className="lb-hint"><Icon name="panel" size={13} /> Drag sections to reorder · click to edit</div>
-          {landing.order.map((key, i) => {
+          {draft.order.map((key, i) => {
             const meta = SECTION_META[key]
-            const sec = landing[key]
+            const sec = draft[key]
             const open = openSec === key
             return (
               <div key={key}
@@ -173,16 +184,19 @@ export default function LandingBuilder() {
               </div>
             )
           })}
-          <p className="lb-note">Changes save automatically — the public page updates instantly.</p>
+          <p className="lb-note">Nothing goes live until you hit <strong>Save changes</strong> — experiment freely.</p>
         </div>
 
-        {/* ================= Live preview ================= */}
+        {/* ================= Live preview (of the draft) ================= */}
         <div className="lb-preview">
-          <div className="lb-preview-bar"><span>Live preview</span><span className="lb-preview-url">{url.replace(/^https?:\/\//, '')}</span></div>
+          <div className="lb-preview-bar">
+            <span>Preview{dirty ? ' · unsaved draft' : ''}</span>
+            <span className="lb-preview-url">{liveUrl.replace(/^https?:\/\//, '')}</span>
+          </div>
           <div className="lb-frame">
             <div className="lb-scale">
               <div className="ls">
-                <LandingRender landing={landing} agency={agency} onSubmit={previewSubmit} state="idle" formRef={formRef} />
+                <LandingRender landing={draft} agency={agency} onSubmit={previewSubmit} state="idle" formRef={formRef} />
                 <LandingFooter agency={agency} />
               </div>
             </div>

@@ -9,7 +9,7 @@ const nid = (p) => `${p}${++idc}`
 
 /* ---- persistence: keep entity data across tabs/reloads so public
    pages (/i, /pdf, /inv) opened in a NEW document can find records ---- */
-const LS_KEY = 'wandra-data-v4' // v4: cab ratePerDay+image, service-location cost/sell
+const LS_KEY = 'wandra-data-v5' // v5: Kerala destination + lead-assignment rules; v4: cab ratePerDay+image, service-location cost/sell
 const stored = (() => {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null') } catch { return null }
 })()
@@ -57,8 +57,13 @@ export function computePricing(pkg) {
 export const inr = (n) =>
   '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
 
+// sentinel: "let the assignment rules decide" (used by the New Query form)
+export const AUTO_ASSIGNEE = '__auto__'
+
 export function AppProvider({ children }) {
-  const [agency, setAgency] = useState(seed.agency)
+  // merged over seed so older saves gain new fields (e.g. logo);
+  // plan always comes from seed — it's product config, not a user edit
+  const [agency, setAgency] = useState(stored?.agency ? { ...seed.agency, ...stored.agency, plan: seed.agency.plan, bank: { ...seed.agency.bank, ...(stored.agency.bank || {}) } } : seed.agency)
   const [destinations, setDestinations] = useState(stored?.destinations || seed.destinations)
   const [hotels, setHotels] = useState(stored?.hotels || seed.hotels)
   const [cabs, setCabs] = useState(stored?.cabs || seed.cabs)
@@ -68,13 +73,15 @@ export function AppProvider({ children }) {
   const [vouchers, setVouchers] = useState(stored?.vouchers || [])
   // merge over defaults so configs saved before new sections (e.g. header) pick them up
   const [landing, setLanding] = useState(stored?.landing ? { ...seed.landingDefault, ...stored.landing } : seed.landingDefault)
+  const [roles, setRoles] = useState(stored?.roles || seed.rolesDefault)
+  const [assignment, setAssignment] = useState(stored?.assignment ? { ...seed.assignmentDefault, ...stored.assignment } : seed.assignmentDefault)
   const [clients, setClients] = useState(stored?.clients || seed.clients)
   const [packages, setPackages] = useState(stored?.packages || seed.packages)
   const [bookings, setBookings] = useState(stored?.bookings || seed.bookings)
   const [invoices, setInvoices] = useState(stored?.invoices || seed.invoices)
   const [quotations, setQuotations] = useState(stored?.quotations || seed.quotations)
   const [gallery, setGallery] = useState(seed.galleryStories)
-  const [users, setUsers] = useState(seed.users)
+  const [users, setUsers] = useState(stored?.users || seed.users)
   const [templates] = useState(seed.itineraryTemplates)
   const [packageTemplates, setPackageTemplates] = useState(seed.packageTemplates)
   const [themes, setThemes] = useState(seed.previewThemes)
@@ -83,9 +90,9 @@ export function AppProvider({ children }) {
   // persist entity data so fresh documents (new tab / print preview iframe) see it
   useEffect(() => {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ destinations, hotels, cabs, serviceLocations, activities, inclusionPresets, vouchers, landing, clients, packages, bookings, invoices, quotations }))
+      localStorage.setItem(LS_KEY, JSON.stringify({ agency, users, destinations, hotels, cabs, serviceLocations, activities, inclusionPresets, vouchers, landing, roles, assignment, clients, packages, bookings, invoices, quotations }))
     } catch { /* storage full/unavailable — app still works in-memory */ }
-  }, [destinations, hotels, cabs, serviceLocations, activities, inclusionPresets, vouchers, landing, clients, packages, bookings, invoices, quotations])
+  }, [agency, users, destinations, hotels, cabs, serviceLocations, activities, inclusionPresets, vouchers, landing, roles, assignment, clients, packages, bookings, invoices, quotations])
 
   // cross-tab sync: when another document writes (e.g. a lead submitted on the
   // public landing page in its own tab), pull the fresh data into this tab's state
@@ -101,6 +108,9 @@ export function AppProvider({ children }) {
         if (d.quotations) setQuotations(d.quotations)
         if (d.vouchers) setVouchers(d.vouchers)
         if (d.landing) setLanding((prev) => ({ ...prev, ...d.landing }))
+        if (d.assignment) setAssignment((prev) => ({ ...prev, ...d.assignment }))
+        if (d.agency) setAgency((prev) => ({ ...prev, ...d.agency }))
+        if (d.users) setUsers(d.users)
       } catch { /* ignore malformed writes */ }
     }
     window.addEventListener('storage', onStorage)
@@ -113,8 +123,55 @@ export function AppProvider({ children }) {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2600)
   }, [])
 
+  // ---- lead assignment: conditional rules + round robin ----
+  // First enabled rule whose condition matches wins; its members take turns.
+  // Rotation pointers (rule.next / fallback.next) persist so the robin survives reloads.
+  const runAssignment = (draft) => {
+    if (!assignment.enabled) return { assignee: '', via: '' }
+    const activeNames = users.filter((u) => u.status === 'Active').map((u) => u.name)
+    const hay = {
+      destination: (draft.interest || '').toLowerCase(),
+      source: (draft.source || '').toLowerCase(),
+      city: (draft.city || '').toLowerCase(),
+    }
+    for (const r of assignment.rules) {
+      if (!r.enabled || !r.values?.length || !r.members?.length) continue
+      if (!r.values.some((v) => (hay[r.field] || '').includes(v.toLowerCase()))) continue
+      const pool = r.members.filter((m) => activeNames.includes(m))
+      if (!pool.length) continue
+      const name = pool[(r.next || 0) % pool.length]
+      setAssignment((s) => ({ ...s, rules: s.rules.map((x) => (x.id === r.id ? { ...x, next: ((x.next || 0) + 1) % pool.length } : x)) }))
+      return { assignee: name, via: r.name }
+    }
+    const fb = assignment.fallback || { mode: 'all' }
+    if (fb.mode === 'unassigned') return { assignee: '', via: '' }
+    const pool = (fb.mode === 'members' && fb.members?.length ? fb.members : activeNames).filter((m) => activeNames.includes(m))
+    if (!pool.length) return { assignee: '', via: '' }
+    const name = pool[(fb.next || 0) % pool.length]
+    setAssignment((s) => ({ ...s, fallback: { ...s.fallback, next: ((s.fallback?.next || 0) + 1) % pool.length } }))
+    return { assignee: name, via: 'Round robin' }
+  }
+  const updateAssignment = (patch) => setAssignment((a) => ({ ...a, ...patch }))
+  const addAssignRule = () => {
+    const rec = { id: nid('ar'), name: 'New rule', enabled: true, field: 'destination', values: [], members: [], next: 0 }
+    setAssignment((a) => ({ ...a, rules: [...a.rules, rec] }))
+    return rec
+  }
+  const updateAssignRule = (id, patch) => setAssignment((a) => ({ ...a, rules: a.rules.map((r) => (r.id === id ? { ...r, ...patch } : r)) }))
+  const removeAssignRule = (id) => setAssignment((a) => ({ ...a, rules: a.rules.filter((r) => r.id !== id) }))
+
   // ---- generic add/update/remove factories ----
-  const addClient = (c) => { const code = `CLI-202602-${String(clients.length + 1).padStart(3, '0')}`; const rec = { id: nid('cl'), code, tripStatus: 'New Query', createdAt: '2026-06-26', ...c }; setClients((l) => [rec, ...l]); return rec }
+  const addClient = (c) => {
+    const code = `CLI-202602-${String(clients.length + 1).padStart(3, '0')}`
+    const rec = { id: nid('cl'), code, tripStatus: 'New Query', createdAt: '2026-06-26', ...c }
+    const q = rec.query || {}
+    if (!q.assignee || q.assignee === AUTO_ASSIGNEE) {
+      const { assignee, via } = runAssignment(rec)
+      rec.query = { ...q, assignee, assignedVia: via }
+    }
+    setClients((l) => [rec, ...l])
+    return rec
+  }
   const addClientDoc = (clientId, doc) => setClients((l) => l.map((c) => (c.id === clientId ? { ...c, docs: [{ id: nid('doc'), uploadedAt: new Date().toISOString().slice(0, 10), ...doc }, ...(c.docs || [])] } : c)))
   const removeClientDoc = (clientId, docId) => setClients((l) => l.map((c) => (c.id === clientId ? { ...c, docs: (c.docs || []).filter((d) => d.id !== docId) } : c)))
   const addDestination = (d) => setDestinations((l) => [{ id: nid('d'), ...d }, ...l])
@@ -133,6 +190,9 @@ export function AppProvider({ children }) {
   const removeInclusionPreset = (type, text) => setInclusionPresets((p) => ({ ...p, [type]: p[type].filter((x) => x !== text) }))
   // vouchers: { type: 'Hotel'|'Transport'|'Activity', clientId, clientName, packageId, title, fields: [{k,v}], notes }
   const updateLanding = (patch) => setLanding((l) => ({ ...l, ...patch }))
+  const addRole = (name) => { const rec = { id: nid('r'), name, perms: { dashboard: true, clients: true } }; setRoles((l) => [...l, rec]); return rec }
+  const removeRole = (id) => setRoles((l) => l.filter((r) => r.id !== id || r.system))
+  const setRolePerm = (id, key, val) => setRoles((l) => l.map((r) => (r.id === id && !r.system ? { ...r, perms: { ...r.perms, [key]: val } } : r)))
   const addVoucher = (v) => {
     const rec = { id: nid('v'), code: `VCH-${String(vouchers.length + 1).padStart(4, '0')}`, createdAt: '2026-06-26', ...v }
     setVouchers((l) => [rec, ...l]); return rec
@@ -232,7 +292,33 @@ export function AppProvider({ children }) {
 
   const approveStory = (id) => setGallery((l) => l.map((g) => (g.id === id ? { ...g, status: 'Published' } : g)))
   const addStory = (s) => setGallery((l) => [{ id: nid('g'), status: 'Pending', date: 'June 2026', ...s }, ...l])
-  const addUser = (u) => setUsers((l) => [{ id: nid('u'), status: 'Active', ...u }, ...l])
+  const addUser = (u) => { const rec = { id: nid('u'), status: 'Active', ...u }; setUsers((l) => [rec, ...l]); return rec }
+  // Renaming a member cascades everywhere the name is referenced:
+  // assignment rotations (rules + fallback) and each lead's assignee.
+  const updateUser = (id, patch) => {
+    const prev = users.find((u) => u.id === id)
+    setUsers((l) => l.map((u) => (u.id === id ? { ...u, ...patch } : u)))
+    if (prev && patch.name && patch.name !== prev.name) {
+      const from = prev.name, to = patch.name
+      setAssignment((a) => ({
+        ...a,
+        rules: a.rules.map((r) => (r.members.includes(from) ? { ...r, members: r.members.map((m) => (m === from ? to : m)) } : r)),
+        fallback: { ...a.fallback, members: (a.fallback?.members || []).map((m) => (m === from ? to : m)) },
+      }))
+      setClients((l) => l.map((c) => (c.query?.assignee === from ? { ...c, query: { ...c.query, assignee: to } } : c)))
+    }
+  }
+  // Deleting removes them from every assignment rotation; lead history keeps the name.
+  const removeUser = (id) => {
+    const u = users.find((x) => x.id === id)
+    if (!u || u.designation === 'Owner') return
+    setUsers((l) => l.filter((x) => x.id !== id))
+    setAssignment((a) => ({
+      ...a,
+      rules: a.rules.map((r) => (r.members.includes(u.name) ? { ...r, members: r.members.filter((m) => m !== u.name), next: 0 } : r)),
+      fallback: { ...a.fallback, members: (a.fallback?.members || []).filter((m) => m !== u.name), next: 0 },
+    }))
+  }
   const toggleTheme = (id, key) => setThemes((l) => l.map((t) => (t.id === id ? { ...t, [key]: !t[key] } : t)))
 
   const value = {
@@ -249,11 +335,13 @@ export function AppProvider({ children }) {
     invoices, addInvoice, addPayment,
     quotations, setQuotationStatus,
     gallery, approveStory, addStory,
-    users, addUser,
+    users, addUser, updateUser, removeUser,
     templates, themes, toggleTheme,
     inclusionPresets, addInclusionPreset, removeInclusionPreset, categoryGroups: seed.categoryGroups,
     vouchers, addVoucher, removeVoucher,
     landing, updateLanding,
+    roles, addRole, removeRole, setRolePerm,
+    assignment, updateAssignment, addAssignRule, updateAssignRule, removeAssignRule,
     dashboardSeries: seed.dashboardSeries, recentActivity: seed.recentActivity, plans: seed.plans,
     dashboardAnalytics: seed.dashboardAnalytics,
     toast, toasts,

@@ -14,8 +14,8 @@ const MASTER_DATA = [
   { to: '/app/hotels', label: 'Hotels', icon: 'hotels' },
   { to: '/app/cabs', label: 'Cabs', icon: 'cabs' },
   { to: '/app/services', label: 'Service Locations', icon: 'destinations' },
-  { to: '/app/activities', label: 'Activities & Tickets', icon: 'gallery' },
-  { to: '/app/packages/inclusions', label: 'Inclusions & Exclusions', icon: 'check' },
+  { to: '/app/activities', label: 'Activities', icon: 'gallery' },
+  { to: '/app/packages/inclusions', label: 'Incl. & Excl.', icon: 'check' },
 ]
 const NAV_END = [
   { to: '/app/landing', label: 'Landing Page', icon: 'wand' },
@@ -25,6 +25,8 @@ const NAV_END = [
 const NAV_BOTTOM = [
   { to: '/app/settings', label: 'Settings', icon: 'settings' },
   { to: '/app/users', label: 'User Management', icon: 'users' },
+  { to: '/app/roles', label: 'Roles & Permissions', icon: 'check' },
+  { to: '/app/assignment', label: 'Lead Assignment', icon: 'refresh' },
   { to: '/app/billing', label: 'Billing & Subscription', icon: 'billing' },
   { to: '/app/support', label: 'Help & Support', icon: 'help' },
 ]

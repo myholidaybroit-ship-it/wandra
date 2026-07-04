@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, FilterBar, Field, Input, DataTable } from '../../../components/ui/UI'
+import { PageHeader, Button, DataTable, ListSearch } from '../../../components/ui/UI'
+import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 
 export default function HotelList() {
@@ -31,7 +32,9 @@ export default function HotelList() {
       <PageHeader title="Hotels" subtitle="Affiliated hotels — base & bed rates feed straight into quote pricing."
         counter={`Hotels ${hotels.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/hotels/new"><Button>+ Add New Hotel</Button></Link></>} />
-      <FilterBar><Field label="Search"><Input placeholder="Search hotels…" value={q} onChange={(e) => setQ(e.target.value)} /></Field></FilterBar>
+      <div className="list-toolbar">
+        <ListSearch value={q} onChange={setQ} placeholder="Search hotels…" count={rows.length} />
+      </div>
       <DataTable columns={columns} rows={rows} empty="No hotels match." />
     </div>
   )

@@ -1,0 +1,30 @@
+/* ============================================================
+   User Management — CRUD row actions
+   ============================================================ */
+.um-avatar {
+  flex: 0 0 auto; display: inline-grid; place-items: center; width: 36px; height: 36px;
+  border-radius: var(--radius-full); background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline-soft); font-size: 12px; font-weight: 800; letter-spacing: .4px;
+}
+.um-owner {
+  display: inline-block; margin-left: 8px; vertical-align: 1px;
+  font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px;
+  color: #fff; background: var(--color-ink); border-radius: var(--radius-full); padding: 2.5px 8px;
+}
+
+.um-acts { display: inline-flex; align-items: center; gap: 4px; opacity: 0; transition: opacity var(--ease-ui); }
+tr:hover .um-acts { opacity: 1; }
+.um-act {
+  border: none; background: none; font-family: inherit; font-size: 12.5px; font-weight: 700;
+  color: var(--color-steel); cursor: pointer; padding: 7px 10px; border-radius: var(--radius-full);
+  transition: background var(--ease-ui), color var(--ease-ui); white-space: nowrap;
+}
+.um-act:hover { background: var(--color-surface-soft); color: var(--color-ink); }
+.um-act.danger { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; }
+.um-act.danger:hover { background: var(--color-error-bg); color: #b91c1c; }
+
+.um-locked { opacity: .45; }
+.um-locked .lb-switch-track { cursor: default; }
+
+.um-reset-note { font-size: 13.5px; line-height: 1.55; color: var(--color-charcoal); }
+.um-reset-note strong { font-weight: 800; }

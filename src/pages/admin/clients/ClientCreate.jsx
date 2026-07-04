@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useApp } from '../../../store/AppContext'
+import { useApp, AUTO_ASSIGNEE } from '../../../store/AppContext'
 import { Card, Button, Field, Input, Textarea, PillSelect, PillMultiSelect, DatePicker, formatDate } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import './query.css'
@@ -26,7 +26,7 @@ export default function ClientCreate() {
   const [step, setStep] = useState(1)
 
   const [f, setF] = useState({
-    source: 'Website', refId: '', assignee: users[0]?.name || 'You',
+    source: 'Website', refId: '', assignee: AUTO_ASSIGNEE,
     dests: [], startDate: '', nights: 1, adults: 2, children: 0, childAges: [],
     salutation: 'Mr.', name: '', email: '', city: '', comments: '',
     phones: [{ code: '+91 IN', number: '' }],
@@ -98,7 +98,7 @@ export default function ClientCreate() {
         children: f.children, childAges: f.childAges.filter(Boolean),
       },
     })
-    toast('Query captured — now build their package')
+    toast(rec.query?.assignee ? `Query captured — assigned to ${rec.query.assignee}` : 'Query captured — now build their package')
     nav(`/app/clients/${rec.id}/start`)
   }
 
@@ -130,8 +130,9 @@ export default function ClientCreate() {
               <Field label="Query Source">
                 <PillSelect value={f.source} options={SOURCES} onChange={set('source')} />
               </Field>
-              <Field label="Sales Team">
-                <PillSelect value={f.assignee} options={users.map((u) => u.name)} onChange={set('assignee')} />
+              <Field label="Sales Team" hint="Auto follows your assignment rules — round robin between matching members">
+                <PillSelect value={f.assignee} options={[AUTO_ASSIGNEE, ...users.map((u) => u.name)]}
+                  format={(v) => (v === AUTO_ASSIGNEE ? 'Auto — assignment rules' : v)} onChange={set('assignee')} />
               </Field>
               <Field label="Reference ID" hint="6 characters, for your own tracking — hit generate or type your own">
                 <div className="input-action-row">
@@ -256,7 +257,7 @@ export default function ClientCreate() {
               </div>
               <div className="q-review-grid">
                 <ReviewRow k="Query Source" v={f.source} />
-                <ReviewRow k="Sales Team" v={f.assignee} />
+                <ReviewRow k="Sales Team" v={f.assignee === AUTO_ASSIGNEE ? 'Auto — assignment rules' : f.assignee} />
                 <ReviewRow k="Reference ID" v={f.refId} />
               </div>
             </div>

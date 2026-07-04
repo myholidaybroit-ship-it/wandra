@@ -15,7 +15,7 @@ export default function DestinationCreate() {
     toast('Destination added'); nav('/app/destinations')
   }
   return (
-    <div>
+    <div className="master-page">
       <PageHeader title="Add New Destination" subtitle="Create a new travel destination." />
       <Card>
         <div className="form-grid">

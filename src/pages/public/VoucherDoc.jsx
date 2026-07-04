@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { AgencyLogo } from '../../components/ui/AgencyBrand'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useApp } from '../../store/AppContext'
 import { preloadAndDownload } from '../../utils/pdf'
@@ -63,7 +64,7 @@ export default function VoucherDoc() {
           </div>
           <div className="vd-stub">
             <span className="vd-pass">{meta.pass}</span>
-            <span className="vd-logo"><img src="/brand/wandra-logo.png" alt="" /></span>
+            <span className="vd-logo"><AgencyLogo /></span>
             <span className="vd-code">{v.code}</span>
           </div>
         </div>

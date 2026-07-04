@@ -14,7 +14,7 @@ export default function ActivityCreate() {
     addActivity({ ...f, durationMins: Number(f.durationMins) || 0, cost: Number(f.cost) || 0, sell: Number(f.sell) || 0 }); toast('Activity added'); nav('/app/activities')
   }
   return (
-    <div>
+    <div className="master-page">
       <PageHeader title="Add Activity / Ticket" subtitle="An activity, ticket or experience for the builder — with its cost & selling price." />
       <Card>
         <div className="form-grid">

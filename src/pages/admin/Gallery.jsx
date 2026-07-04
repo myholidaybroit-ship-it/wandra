@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { useApp } from '../../store/AppContext'
-import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select } from '../../components/ui/UI'
+import { PageHeader, Card, Button, Badge, Modal, Field, PillSelect } from '../../components/ui/UI'
+import '../public/stories.css'
 
 export default function Gallery() {
   const { gallery, approveStory, clients, bookings, toast } = useApp()
   const [tab, setTab] = useState('queue')
   const [open, setOpen] = useState(false)
+  const [selClient, setSelClient] = useState(clients[0]?.name || '')
+  const [selBooking, setSelBooking] = useState(bookings[0]?.code || '')
   const pending = gallery.filter((g) => g.status === 'Pending')
   const published = gallery.filter((g) => g.status === 'Published')
+  const avg = published.length ? published.reduce((s, g) => s + (g.rating || 0), 0) / published.length : 0
   const link = `${window.location.origin}/share-story/abc123`
 
   return (
@@ -18,7 +22,7 @@ export default function Gallery() {
       <div className="grid grid-3">
         <Card pad={20}><div className="t-caption-upper c-muted">Pending Reviews</div><div className="t-display-sm mt-xs">{pending.length}</div></Card>
         <Card pad={20}><div className="t-caption-upper c-muted">Published Stories</div><div className="t-display-sm mt-xs">{published.length}</div></Card>
-        <Card pad={20}><div className="t-caption-upper c-muted">Cloud Storage</div><div className="t-display-sm mt-xs">0.4 <span className="t-body-sm c-muted">/ 200 MB</span></div></Card>
+        <Card pad={20}><div className="t-caption-upper c-muted">Average Rating</div><div className="t-display-sm mt-xs">{published.length ? avg.toFixed(1) : '—'} <span className="t-body-sm" style={{ color: '#d99a1b' }}>★</span></div></Card>
       </div>
 
       <div className="tabs mt-lg">
@@ -28,22 +32,24 @@ export default function Gallery() {
 
       <div className="grid grid-3 mt-base">
         {(tab === 'queue' ? pending : published).map((g) => (
-          <Card key={g.id}>
-            <div className="row-between"><span className="t-title-sm">{g.client}</span><Badge tone={g.status}>{g.status}</Badge></div>
-            <div className="c-warning mt-xs">{'★'.repeat(g.rating)}</div>
-            <p className="t-body-sm c-body mt-xs">“{g.text}”</p>
-            <div className="t-caption c-muted mt-sm">{g.date}</div>
+          <article className="st-card" key={g.id}>
+            <div className="row-between"><span className="st-stars">{'★'.repeat(g.rating)}<span className="dim">{'★'.repeat(5 - g.rating)}</span></span><Badge tone={g.status}>{g.status}</Badge></div>
+            <p className="st-text">{g.text}</p>
+            <footer className="st-byline">
+              <span className="st-avatar">{g.client[0]}</span>
+              <span className="st-who"><strong>{g.client}</strong><em>{g.date}</em></span>
+            </footer>
             {g.status === 'Pending' && <Button size="sm" className="mt-base" onClick={() => { approveStory(g.id); toast('Story published') }}>Approve & Publish</Button>}
-          </Card>
+          </article>
         ))}
-        {(tab === 'queue' ? pending : published).length === 0 && <Card><div className="t-body-sm c-muted">Nothing here yet.</div></Card>}
+        {(tab === 'queue' ? pending : published).length === 0 && <div className="st-empty">Nothing here yet.</div>}
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Create Story Link"
         footer={<Button onClick={() => { navigator.clipboard?.writeText(link); toast('Story link copied'); setOpen(false) }}>Copy Link</Button>}>
         <div className="col gap-base">
-          <Field label="Client"><Select>{clients.map((c) => <option key={c.id}>{c.name}</option>)}</Select></Field>
-          <Field label="Related Booking"><Select>{bookings.map((b) => <option key={b.id}>{b.code}</option>)}</Select></Field>
+          <Field label="Client"><PillSelect value={selClient} options={clients.map((c) => c.name)} onChange={setSelClient} /></Field>
+          <Field label="Related Booking"><PillSelect value={selBooking} options={bookings.map((b) => b.code)} onChange={setSelBooking} /></Field>
           <div className="mono t-caption c-muted" style={{ wordBreak: 'break-all', background: 'var(--color-surface-strong)', padding: 12, borderRadius: 8 }}>{link}</div>
         </div>
       </Modal>

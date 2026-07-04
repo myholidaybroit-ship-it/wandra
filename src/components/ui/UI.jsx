@@ -55,6 +55,21 @@ export function FilterBar({ children }) {
   return <div className="filter-bar">{children}</div>
 }
 
+/* ---------- List-page search (premium pill w/ focus ring + clear) ---------- */
+export function ListSearch({ value, onChange, placeholder = 'Search…', count }) {
+  return (
+    <label className="lsx list-search">
+      <span className="lsx-ic"><Icon name="search" size={15} /></span>
+      <input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      {value !== '' && count != null && <span className="lsx-count">{count} match{count === 1 ? '' : 'es'}</span>}
+      {value !== '' && (
+        <button className="lsx-clear" aria-label="Clear search"
+          onClick={(e) => { e.preventDefault(); onChange('') }}>✕</button>
+      )}
+    </label>
+  )
+}
+
 /* ---------- Form controls ---------- */
 export function Field({ label, hint, required, children, full }) {
   return (

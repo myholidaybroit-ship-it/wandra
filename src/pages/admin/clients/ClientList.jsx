@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, DataTable, Badge, PillSelect, formatDate } from '../../../components/ui/UI'
+import { PageHeader, Button, DataTable, Badge, PillSelect, formatDate, ListSearch } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 
 const STATUSES = ['All', 'New Query', 'In Progress', 'Converted', 'On Trip', 'Past Trips', 'Canceled', 'Dropped']
@@ -87,10 +87,7 @@ export default function ClientList() {
       />
 
       <div className="list-toolbar">
-        <label className="search-pill list-search">
-          <Icon name="search" size={15} />
-          <input placeholder="Search name, phone, interest…" value={q} onChange={(e) => setQ(e.target.value)} />
-        </label>
+        <ListSearch value={q} onChange={setQ} placeholder="Search name, phone, interest…" count={rows.length} />
         <PillSelect value={status} options={STATUSES} onChange={setStatus} format={(s) => (s === 'All' ? 'All statuses' : s)} />
       </div>
 

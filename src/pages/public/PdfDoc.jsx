@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useApp, inr } from '../../store/AppContext'
 import { preloadAndDownload } from '../../utils/pdf'
+import { AgencyLogo } from '../../components/ui/AgencyBrand'
 import './pdf.css'
 
 /* ============================================================
@@ -241,7 +242,7 @@ function Classic({ m }) {
   return (
     <div className="pdf-page">
       <header className="cl-head">
-        <img src="/brand/wandra-logo.png" alt="" className="cl-logo" />
+        <AgencyLogo className="cl-logo" />
         <div className="cl-head-mid">
           <h1 className="cl-title">{m.destTitle.toUpperCase()}</h1>
           <div className="cl-meta">Duration: {m.nights} Nights / {m.daysCount} Days</div>
@@ -302,7 +303,7 @@ function Vivid({ m }) {
         <div className="vv-cover-script">Explore {m.sectors[0]?.destination || m.destTitle}<br />with {m.agency.name}</div>
       </Img>
       <div className="vv-band"><span>{m.agency.website}</span><span>✆ {m.agency.phone}</span><span>✉ {m.agency.email}</span></div>
-      <div className="vv-logo-wrap"><img src="/brand/wandra-mark.png" alt="" className="vv-logo" /></div>
+      <div className="vv-logo-wrap"><AgencyLogo className="vv-logo" /></div>
       <div className="vv-cover-meta">
         <div className="vv-cm"><span>Guest</span><strong>{m.client}</strong></div>
         <div className="vv-cm"><span>Duration</span><strong>{m.nights}N / {m.daysCount}D</strong></div>
@@ -365,7 +366,7 @@ function Vivid({ m }) {
 function Mono({ m }) {
   return <>
     <div className="pdf-page mn-cover">
-      <img src="/brand/wandra-logo.png" alt="" className="mn-logo" />
+      <AgencyLogo className="mn-logo" />
       <div className="mn-kicker">Travel Quote · {m.code}</div>
       <h1 className="mn-title">{m.destTitle}</h1>
       <div className="mn-sub">{m.nights} Nights / {m.daysCount} Days — prepared for {m.client}</div>
@@ -415,7 +416,7 @@ function Luxe({ m }) {
     <div className="pdf-page lx-cover">
       {m.cover && <Img src={m.cover} className="lx-cover-bg" />}
       <div className="lx-frame">
-        <img src="/brand/wandra-logo.png" alt="" className="lx-logo" />
+        <AgencyLogo className="lx-logo" light />
         <div className="lx-kicker">A bespoke journey for</div>
         <div className="lx-client">{m.client}</div>
         <h1 className="lx-title">{m.destTitle}</h1>
@@ -471,7 +472,7 @@ function Compact({ m }) {
   return (
     <div className="pdf-page cp-page">
       <header className="cp-head">
-        <img src="/brand/wandra-logo.png" alt="" className="cp-logo" />
+        <AgencyLogo className="cp-logo" />
         <div className="cp-head-m">
           <div className="cp-title">{m.destTitle} — {m.nights}N/{m.daysCount}D</div>
           <div className="cp-sub">{m.client} · {m.paxLine} · {fmtD(m.start, { day: '2-digit', month: 'short' })}–{fmtD(m.end, { day: '2-digit', month: 'short', year: 'numeric' })} · {m.code}</div>

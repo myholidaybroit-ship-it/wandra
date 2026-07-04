@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useApp } from '../../store/AppContext'
 import { PageHeader, Card, Button, Field, Input } from '../../components/ui/UI'
+import { ImageInput } from '../../components/ui/ImageInput'
 
 export default function Settings() {
   const { agency, setAgency, toast } = useApp()
   const [f, setF] = useState({ ...agency, ...agency.bank })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
-    setAgency({ ...agency, name: f.name, email: f.email, phone: f.phone, website: f.website, address: f.address, gstin: f.gstin,
+    setAgency({ ...agency, name: f.name, logo: f.logo || '', email: f.email, phone: f.phone, website: f.website, address: f.address, gstin: f.gstin,
       bank: { accountName: f.accountName, bankName: f.bankName, accountNumber: f.accountNumber, ifsc: f.ifsc } })
     toast('Settings saved — these details now appear on all itineraries, vouchers & invoices')
   }
@@ -19,6 +20,9 @@ export default function Settings() {
           <span className="t-title-md">Agency Profile</span>
           <hr className="divider" />
           <div className="col gap-base">
+            <ImageInput label="Agency logo" value={f.logo || ''} maxW={400}
+              onChange={(v) => setF({ ...f, logo: v })}
+              hint="PNG with transparency looks best — shows on every itinerary, PDF, voucher & invoice" />
             <Field label="Brand / Company Name"><Input value={f.name} onChange={set('name')} /></Field>
             <Field label="Email"><Input value={f.email} onChange={set('email')} /></Field>
             <Field label="Phone"><Input value={f.phone} onChange={set('phone')} /></Field>

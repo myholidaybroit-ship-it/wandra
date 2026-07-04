@@ -1,0 +1,51 @@
+/* ============================================================
+   Login / Sign up — full-height split: image | minimal form
+   ============================================================ */
+.lg { display: grid; grid-template-columns: 1fr 1fr; min-height: 100dvh; background: var(--color-canvas); }
+
+/* ---- left: visual ---- */
+.lg-visual { position: relative; overflow: hidden; }
+.lg-visual img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lg-visual::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(10, 12, 16, .55) 0%, rgba(10, 12, 16, 0) 45%); }
+.lg-quote { position: absolute; left: 40px; right: 40px; bottom: 36px; z-index: 1; color: #fff; }
+.lg-quote-line { font-size: clamp(22px, 2.4vw, 32px); font-weight: 700; letter-spacing: -.02em; line-height: 1.15; text-wrap: balance; }
+.lg-quote-sub { margin-top: 8px; font-size: 13px; font-weight: 500; opacity: .82; }
+
+/* ---- right: form panel ---- */
+.lg-panel {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 32px;
+  background-image: radial-gradient(circle, rgba(17, 17, 19, .06) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+.lg-box { width: 100%; max-width: 350px; display: flex; flex-direction: column; }
+.lg-logo { height: 64px; width: auto; align-self: flex-start; margin-bottom: 36px; }
+.lg-title { font-size: 27px; font-weight: 800; letter-spacing: -.02em; }
+.lg-sub { font-size: 13.5px; color: var(--color-stone); margin: 6px 0 28px; }
+
+.lg-form { display: flex; flex-direction: column; gap: 16px; }
+.lg-field { display: flex; flex-direction: column; gap: 7px; }
+.lg-field span { font-size: 12px; font-weight: 700; color: var(--color-charcoal); }
+.lg-field input {
+  height: 46px; padding: 0 16px; font-family: inherit; font-size: 14px; color: var(--color-ink);
+  background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-lg);
+  outline: none; transition: border-color var(--ease-ui), box-shadow var(--ease-ui);
+}
+.lg-field input:focus { border-color: var(--color-ink); box-shadow: 0 0 0 3.5px rgba(17, 17, 19, .07); }
+.lg-field input::placeholder { color: var(--color-muted-soft); }
+
+.lg-submit {
+  height: 48px; margin-top: 6px; border: none; border-radius: var(--radius-full);
+  background: var(--color-ink); color: #fff; font-family: inherit; font-size: 14.5px; font-weight: 700;
+  cursor: pointer; transition: opacity var(--ease-ui), transform var(--ease-ui);
+}
+.lg-submit:hover { opacity: .88; }
+.lg-submit:active { transform: scale(.99); }
+
+/* ---- responsive ---- */
+@media (max-width: 900px) {
+  .lg { grid-template-columns: 1fr; }
+  .lg-visual { height: 240px; }
+  .lg-quote { left: 24px; right: 24px; bottom: 20px; }
+  .lg-panel { padding: 36px 24px 56px; }
+  .lg-logo { margin-bottom: 28px; }
+}

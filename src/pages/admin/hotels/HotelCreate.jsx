@@ -14,7 +14,7 @@ export default function HotelCreate() {
     addHotel({ ...f, rating: Number(f.rating), buyingPrice: Number(f.buyingPrice) || 0, extraBedAdult: Number(f.extraBedAdult) || 0, extraBedChild: Number(f.extraBedChild) || 0, childNoBed: Number(f.childNoBed) || 0 }); toast('Hotel added'); nav('/app/hotels')
   }
   return (
-    <div>
+    <div className="master-page">
       <PageHeader title="Add New Hotel" subtitle="Add an affiliated hotel with its base buying price." />
       <Card>
         <div className="form-grid">

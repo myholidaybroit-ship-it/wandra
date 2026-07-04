@@ -4,3 +4,6 @@
 .inv-no { color: var(--color-on-dark-soft); font-size: 13px; margin-top: 2px; }
 .inv-body { padding: 28px; }
 .inv-totals { max-width: 320px; margin-left: auto; margin-top: 20px; }
+
+/* agency logo on invoices (fixed box — safe for PDF capture) */
+.inv-agency-logo { width: 150px; height: 44px; object-fit: contain; object-position: left center; display: block; margin-bottom: 10px; }
