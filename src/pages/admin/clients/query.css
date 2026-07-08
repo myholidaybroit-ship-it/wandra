@@ -111,3 +111,54 @@
 @media (max-width: 640px) {
   .phone-row { grid-template-columns: 110px 1fr 36px; }
 }
+
+/* ===== Trips & Clients: comprehensive lead filter ===== */
+.filter-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 44px; padding: 0 18px;
+  background: var(--color-canvas); border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-full); cursor: pointer;
+  font-size: 14px; font-weight: 600; color: var(--color-ink);
+  transition: border-color var(--ease-ui), background var(--ease-ui), box-shadow var(--ease-ui);
+}
+.filter-btn:hover { background: var(--color-surface-soft); border-color: #dcdce2; }
+.filter-btn.on { border-color: var(--color-ink); }
+.filter-btn-count {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px;
+  background: var(--color-ink); color: #fff; border-radius: var(--radius-full);
+  font-size: 12px; font-weight: 700;
+}
+
+.filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: -6px 0 18px; }
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 10px 6px 12px; border-radius: var(--radius-full);
+  background: var(--color-surface-soft); border: 1px solid var(--color-hairline);
+  font-size: 12.5px; font-weight: 500; color: var(--color-ink); cursor: pointer;
+  transition: border-color var(--ease-ui), background var(--ease-ui);
+}
+.filter-chip:hover { border-color: #d0d0d8; background: var(--color-canvas); }
+.filter-chip-x { color: var(--color-steel); font-size: 11px; }
+.filter-chip-clear {
+  padding: 6px 12px; border: none; background: none; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--color-brand-blue);
+}
+.filter-chip-clear:hover { text-decoration: underline; }
+
+.cf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px; }
+.cf-grid .field-full { grid-column: 1 / -1; }
+.cf-grid .pill-select-wrap, .cf-grid .pill-select { width: 100%; }
+.cf-grid .pill-select { justify-content: space-between; }
+.cf-hint {
+  display: flex; align-items: center; gap: 7px; margin-top: 18px;
+  font-size: 12.5px; color: var(--color-stone);
+}
+.cf-foot { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.cf-reset {
+  border: none; background: none; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--color-steel);
+}
+.cf-reset:hover:not(:disabled) { color: var(--color-ink); text-decoration: underline; }
+.cf-reset:disabled { opacity: .4; cursor: not-allowed; }
+
+@media (max-width: 560px) { .cf-grid { grid-template-columns: 1fr; } }

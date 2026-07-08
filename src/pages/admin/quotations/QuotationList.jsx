@@ -1,10 +1,20 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, DataTable, Badge, Button } from '../../../components/ui/UI'
+import { downloadCsv } from '../../../utils/csv'
 
 export default function QuotationList() {
   const { quotations, packages, setQuotationStatus, createBookingFromPackage, toast, canSeePricing } = useApp()
   const nav = useNavigate()
+
+  const exportCsv = () => {
+    const headers = ['Package ID', 'Client', 'Travel Date', ...(canSeePricing ? ['Amount'] : []), 'Status']
+    const data = quotations.map((r) => [
+      r.packageCode || '', r.client || '', r.travelDate || '',
+      ...(canSeePricing ? [r.amount || 0] : []), r.status || '',
+    ])
+    downloadCsv('quotations', headers, data)
+  }
 
   const convert = async (q) => {
     const pkg = packages.find((p) => p.id === q.packageId)
@@ -42,7 +52,7 @@ export default function QuotationList() {
   return (
     <div>
       <PageHeader title="Quotations" subtitle="Manage client quotations generated from packages."
-        actions={<Button variant="secondary">Export CSV</Button>} />
+        actions={<Button variant="secondary" onClick={exportCsv} disabled={!quotations.length}>Export CSV</Button>} />
       <DataTable columns={columns} rows={quotations} />
     </div>
   )

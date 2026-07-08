@@ -2,12 +2,22 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../../store/AppContext'
 import { PageHeader, Button, FilterBar, Field, Input, Select, DataTable, Badge } from '../../../components/ui/UI'
+import { downloadCsv } from '../../../utils/csv'
 
 export default function PackageList() {
   const { packages, canSeePricing } = useApp()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('All')
   const rows = packages.filter((p) => (status === 'All' || p.status === status) && (p.code + p.clientName + p.destination).toLowerCase().includes(q.toLowerCase()))
+
+  const exportCsv = () => {
+    const headers = ['Package ID', 'Client', 'Destination', 'Days', 'Nights', 'Status', ...(canSeePricing ? ['Total'] : [])]
+    const data = rows.map((r) => [
+      r.code || '', r.clientName || '', r.destination || '', r.days || '', r.nights || '', r.status || '',
+      ...(canSeePricing ? [computePricing(r).grandTotal] : []),
+    ])
+    downloadCsv('packages', headers, data)
+  }
   const columns = [
     { key: 'code', head: 'Package ID', render: (r) => <Link to={`/app/packages/${r.id}`} className="cell-strong c-link mono">{r.code}</Link> },
     { key: 'clientName', head: 'Client' },
@@ -30,8 +40,7 @@ export default function PackageList() {
         <Field label="Search"><Input placeholder="Search packages…" value={q} onChange={(e) => setQ(e.target.value)} /></Field>
         <Field label="Status"><Select value={status} onChange={(e) => setStatus(e.target.value)}><option>All</option><option>Draft</option><option>Quoted</option><option>Confirmed</option><option>Cancelled</option><option>Completed</option></Select></Field>
         <Field label="Destination"><Select><option>All Destinations</option></Select></Field>
-        <Button variant="ghost">Filter</Button>
-        <Button variant="secondary">Export CSV</Button>
+        <Button variant="secondary" onClick={exportCsv} disabled={!rows.length}>Export CSV</Button>
       </FilterBar>
       <DataTable columns={columns} rows={rows} />
     </div>
