@@ -8,8 +8,8 @@ const VISUAL = 'https://res.cloudinary.com/dyxxkrq8r/image/upload/w_1600,q_auto,
 export default function Login() {
   const nav = useNavigate()
   const { login } = useApp()
-  const [email, setEmail] = useState('admin@wandra.travel')
-  const [password, setPassword] = useState('demo1234')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
