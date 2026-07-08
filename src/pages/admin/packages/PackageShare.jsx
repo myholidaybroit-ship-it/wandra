@@ -5,6 +5,14 @@ import { Button, Modal } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import './share.css'
 
+/* per-destination inclusion / exclusion groups (falls back to the flat lists) */
+function ieGroupsOf(pkg) {
+  const raw = (pkg.inclusionGroups && pkg.inclusionGroups.length)
+    ? pkg.inclusionGroups
+    : [{ destination: '', inclusions: pkg.inclusions || [], exclusions: pkg.exclusions || [] }]
+  return raw.filter((g) => (g.inclusions?.length || g.exclusions?.length))
+}
+
 export default function PackageShare() {
   const { id } = useParams()
   const { packages, clients, agency, toast } = useApp()
@@ -33,11 +41,13 @@ export default function PackageShare() {
   const copyMail = () => { navigator.clipboard?.writeText(`Subject: ${mail.subject}\n\n${mail.body}`); toast('Email copied') }
   const onPdf = () => setPdfOpen(true)
   const pdfUrl = (variant, dl) => `/pdf/${pkg.code}?v=${variant}${dl ? '&download=1' : ''}`
+  const activeVariant = PDF_VARIANTS.find((v) => v.key === pdfV)
+  const isPremium = !!activeVariant?.pro
 
   const ACTIONS = [
     { key: 'whatsapp', label: 'WhatsApp', sub: 'Send on WhatsApp', tone: 'wa', onClick: onWhatsApp, icon: <WhatsAppIcon /> },
     { key: 'email', label: 'Email', sub: 'Send via email', tone: 'email', onClick: onEmail, icon: <MailIcon /> },
-    { key: 'pdf', label: 'PDF', sub: '5 layouts · preview & download', tone: 'pdf', onClick: onPdf, icon: <PdfIcon /> },
+    { key: 'pdf', label: 'PDF', sub: '6 layouts · customise & download', tone: 'pdf', onClick: onPdf, icon: <PdfIcon /> },
   ]
 
   return (
@@ -84,27 +94,29 @@ export default function PackageShare() {
         <div className="wa-preview">{mail.body}</div>
       </Modal>
 
-      <Modal open={pdfOpen} onClose={() => setPdfOpen(false)} title="Download PDF" width={960}
+      <Modal open={pdfOpen} onClose={() => setPdfOpen(false)} title="PDF layouts" width={960}
         footer={<>
           <Button variant="tertiary" onClick={() => setPdfOpen(false)}>Close</Button>
-          <Button variant="secondary" onClick={() => window.open(pdfUrl(pdfV), '_blank')}>Open full preview ↗</Button>
+          {isPremium
+            ? <Button variant="secondary" onClick={() => window.open(pdfUrl(pdfV), '_blank')}><Icon name="wand" size={14} /> Customize in Studio ↗</Button>
+            : <Button variant="secondary" onClick={() => window.open(pdfUrl(pdfV), '_blank')}>Open full preview ↗</Button>}
           <Button onClick={() => window.open(pdfUrl(pdfV, true), '_blank')}><Icon name="upload" size={14} className="pdf-dl-ic" /> Download PDF</Button>
         </>}>
         <div className="pdfm">
           <div className="pdfm-list">
             {PDF_VARIANTS.map((va) => (
-              <button key={va.key} className={`pdfm-item ${pdfV === va.key ? 'on' : ''}`} onClick={() => setPdfV(va.key)}>
+              <button key={va.key} className={`pdfm-item ${pdfV === va.key ? 'on' : ''} ${va.pro ? 'is-pro' : ''}`} onClick={() => setPdfV(va.key)}>
                 <span className={`pdfm-thumb th-${va.key}`}><i /><i /><i /></span>
                 <span className="pdfm-item-b">
-                  <span className="pdfm-item-t">{va.name}</span>
+                  <span className="pdfm-item-t">{va.name}{va.pro && <span className="pdfm-pro">PRO</span>}</span>
                   <span className="pdfm-item-d">{va.desc}</span>
                 </span>
               </button>
             ))}
-            <p className="pdfm-hint">Download saves a real PDF file of the selected layout.</p>
+            <p className="pdfm-hint">{isPremium ? '✦ Premium layouts open in the PDF Studio — recolour, restyle and drag-to-reorder every section.' : 'Download saves a real PDF file of the selected layout.'}</p>
           </div>
           <div className="pdfm-preview">
-            <iframe key={pdfV} title="PDF preview" src={pdfUrl(pdfV)} className="pdfm-frame" />
+            <iframe key={pdfV} title="PDF preview" src={`${pdfUrl(pdfV)}${isPremium ? '&studio=0' : ''}`} className="pdfm-frame" />
           </div>
         </div>
       </Modal>
@@ -113,11 +125,12 @@ export default function PackageShare() {
 }
 
 const PDF_VARIANTS = [
+  { key: 'holiday', name: 'Holiday', pro: true, desc: 'Fully customisable — colours, travel patterns, frames & drag-to-reorder sections' },
+  { key: 'coastal', name: 'Coastal', pro: true, desc: 'Fully customisable letter & banners — palettes, patterns & live studio' },
   { key: 'classic', name: 'Classic Document', desc: 'Agent-style quote — red headings, tables, day-wise detail' },
   { key: 'vivid', name: 'Vivid Cover', desc: 'Full-bleed cover, hotel cards, day badges with colour' },
   { key: 'mono', name: 'Wandra Minimal', desc: 'Black & white brand look — clean grids, big type' },
   { key: 'luxe', name: 'Luxe Dark', desc: 'Premium dark pages with gold serif accents' },
-  { key: 'compact', name: 'Compact One-Pager', desc: 'The whole quote on a single A4 page' },
 ]
 
 function WhatsAppIcon() {
@@ -168,31 +181,31 @@ export function buildWaMessage(pkg, client, agency) {
   const sectors = (pkg.sectors || []).filter((s) => s.destination)
   const destTitle = sectors.map((s) => s.destination).join(' ') || (pkg.destination || '').split(' - ')[0]
 
-  L.push(`🌿 ${B(`${destTitle} Package ${pkg.nights} Night ${pkg.days} Days`)} - ${B(agency.name)} 🌿`)
+  L.push(`${B(`${destTitle} Package ${pkg.nights} Night ${pkg.days} Days`)} - ${B(agency.name)} `)
   L.push('')
-  L.push(`✨ ${B('Your Trip Itinerary')} ✨`)
-  L.push(`👤 ${B('Package Code')}: ${pkg.code}`)
-  L.push(`📅 ${B(`${fmtD(start)} – ${fmtD(end)}`)}, ${B('Days:')} ${pkg.days}`)
-  L.push(`👤 ${B('Traveler')}: ${total}`)
-  L.push(`👤 ${B('Adults')}: ${N(pax.adults)} 👶 ${B('Children')}: ${N(pax.children)} 👶 ${B('Infants')}: ${N(pax.infants)}`)
-  L.push(`📍 ${B('Destinations')}: ${sectors.map((s) => B(s.destination)).join(' ') || B(destTitle)}`)
+  L.push(`${B('Your Trip Itinerary')} `)
+  L.push(`${B('Package Code')}: ${pkg.code}`)
+  L.push(`${B(`${fmtD(start)} – ${fmtD(end)}`)}, ${B('Days:')} ${pkg.days}`)
+  L.push(`${B('Traveler')}: ${total}`)
+  L.push(`${B('Adults')}: ${N(pax.adults)} ${B('Children')}: ${N(pax.children)} ${B('Infants')}: ${N(pax.infants)}`)
+  L.push(`${B('Destinations')}: ${sectors.map((s) => B(s.destination)).join(' ') || B(destTitle)}`)
 
   // Hotels — per option
   if (opts.some((o) => o.stays && o.stays.length)) {
-    L.push('', `🏨 ${B('Hotel Details')}`)
+    L.push('', `${B('Hotel Details')}`)
     opts.forEach((o, oi) => {
       if (!o.stays || !o.stays.length) return
-      L.push('', `🏷️ ${B(`Option ${oi + 1}${o.name ? `: ${o.name}` : ''}`)}`)
+      L.push('', `${B(`Option ${oi + 1}${o.name ? `: ${o.name}` : ''}`)}`)
       o.stays.forEach((st, hi) => {
         const ns = st.nights && st.nights.length ? st.nights : [1]
         L.push('')
-        L.push(`📍 ${B(`Hotel ${hi + 1}`)}`)
-        L.push(`🏨 ${B('Hotel Name')}: ${st.hotelName || '—'}`)
-        L.push(`📌 ${B('Location')}: ${st.hotelCity || '—'}`)
-        L.push(`🛬 ${B('Check-in')}: ${fmtD(addDays(start, Math.min(...ns) - 1))}`)
-        L.push(`🛫 ${B('Check-out')}: ${fmtD(addDays(start, Math.max(...ns)))}`)
-        L.push(`🍽️ ${B('Meal')}: ${st.mealPlan || '—'}`)
-        if (st.hotelStar) L.push(`⭐️ ${B('Hotel type')}: ${st.hotelStar} Star`)
+        L.push(`${B(`Hotel ${hi + 1}`)}`)
+        L.push(`${B('Hotel Name')}: ${st.hotelName || '—'}`)
+        L.push(`${B('Location')}: ${st.hotelCity || '—'}`)
+        L.push(`${B('Check-in')}: ${fmtD(addDays(start, Math.min(...ns) - 1))}`)
+        L.push(`${B('Check-out')}: ${fmtD(addDays(start, Math.max(...ns)))}`)
+        L.push(`${B('Meal')}: ${st.mealPlan || '—'}`)
+        if (st.hotelStar) L.push(`${B('Hotel type')}: ${st.hotelStar} Star`)
       })
     })
   }
@@ -200,18 +213,18 @@ export function buildWaMessage(pkg, client, agency) {
   // Flights — active option
   const flights = activeOpt.flights || []
   if (flights.length) {
-    L.push('', `✈️ ${B('Flight Details')}`)
+    L.push('', `${B('Flight Details')}`)
     flights.forEach((f, fi) => {
       L.push('')
-      L.push(`📍 ${B('Flight')} ${fi + 1}`)
-      L.push(`🛫 ${B('Airline')}: ${f.airline || '—'}`)
-      L.push(`🔢 ${B('Flight No')}: ${f.flightNo || '—'}`)
-      L.push(`🌍 ${B('From')}: ${f.fromCity || f.fromCode || '—'}`)
-      L.push(`📍 ${B('To')}: ${f.toCity || f.toCode || '—'}`)
-      if (f.depDate || f.depTime) L.push(`🕓 ${B('Departure')}: ${fmtD(f.depDate)}${f.depTime ? ` ${f.depTime}` : ''}`)
-      if (f.arrDate || f.arrTime) L.push(`🕔 ${B('Arrival')}: ${fmtD(f.arrDate)}${f.arrTime ? ` ${f.arrTime}` : ''}`)
-      L.push(`💺 ${B('Class')}: ${f.cabinClass || 'Economy'}`)
-      L.push(`💰 ${B('Price')}: ₹${N(f.sell)}`)
+      L.push(`${B('Flight')} ${fi + 1}`)
+      L.push(`${B('Airline')}: ${f.airline || '—'}`)
+      L.push(`${B('Flight No')}: ${f.flightNo || '—'}`)
+      L.push(`${B('From')}: ${f.fromCity || f.fromCode || '—'}`)
+      L.push(`${B('To')}: ${f.toCity || f.toCode || '—'}`)
+      if (f.depDate || f.depTime) L.push(`${B('Departure')}: ${fmtD(f.depDate)}${f.depTime ? ` ${f.depTime}` : ''}`)
+      if (f.arrDate || f.arrTime) L.push(`${B('Arrival')}: ${fmtD(f.arrDate)}${f.arrTime ? ` ${f.arrTime}` : ''}`)
+      L.push(`${B('Class')}: ${f.cabinClass || 'Economy'}`)
+      L.push(`${B('Price')}: ₹${N(f.sell)}`)
     })
   }
 
@@ -220,41 +233,46 @@ export function buildWaMessage(pkg, client, agency) {
   ;(pkg.itinerary || []).forEach((d) => {
     const city = d.stops?.[0]?.destination || d.title
     L.push('')
-    L.push(`📆 ${B(`Day – ${d.day}`)}`)
-    if (city) L.push(`🛬 ${B(city)}`)
-    if (d.title) L.push(`🕒 ${B('Name')}: ${d.title}`)
-    if (d.description) L.push(`🕒 ${B('Description')}: ${d.description}`)
+    L.push(`${B(`Day – ${d.day}`)}`)
+    if (city) L.push(`${B(city)}`)
+    if (d.title) L.push(`${B('Name')}: ${d.title}`)
+    if (d.description) L.push(`${B('Description')}: ${d.description}`)
     services.filter((s) => s.kind === 'transport' && (s.days || []).includes(d.day)).forEach((tr) => {
-      L.push(`🚗 ${B('Transfer Details')}`)
-      L.push(`📍 ${B('Service')}: ${tr.location || '—'}${tr.serviceType ? ` (${tr.serviceType})` : ''}`)
-      if (tr.cabName) L.push(`🚖 ${B('Vehicle')}: ${tr.cabName}`)
-      L.push(`👥 ${B('Quantity')}: ${N(tr.qty) || 1}`)
-      if (tr.description) L.push(`📝 ${B('Remarks')}: ${tr.description}`)
+      L.push(`${B('Transfer Details')}`)
+      L.push(`${B('Service')}: ${tr.location || '—'}${tr.serviceType ? ` (${tr.serviceType})` : ''}`)
+      if (tr.cabName) L.push(`${B('Vehicle')}: ${tr.cabName}`)
+      L.push(`${B('Quantity')}: ${N(tr.qty) || 1}`)
+      if (tr.description) L.push(`${B('Remarks')}: ${tr.description}`)
     })
     services.filter((s) => s.kind === 'activity' && (s.days || []).includes(d.day)).forEach((a) => {
-      L.push(`🎯 ${B('Activity Details')}`)
-      L.push(`🎟 ${B('Activity')}: ${a.location || '—'}`)
-      if (a.serviceType) L.push(`🔖 ${B('Type')}: ${a.serviceType}`)
-      L.push(`👥 ${B('Quantity')}: ${N(a.qty) || 1}`)
-      L.push(`💰 ${B('Price')}: ₹${N(a.given)}`)
-      if (a.description) L.push(`📝 ${B('Description')}: ${a.description}`)
+      L.push(`${B('Activity Details')}`)
+      L.push(`${B('Activity')}: ${a.location || '—'}`)
+      if (a.serviceType) L.push(`${B('Type')}: ${a.serviceType}`)
+      L.push(`${B('Quantity')}: ${N(a.qty) || 1}`)
+      L.push(`${B('Price')}: ₹${N(a.given)}`)
+      if (a.description) L.push(`${B('Description')}: ${a.description}`)
     })
   })
 
-  // Inclusions / Exclusions
-  if ((pkg.inclusions || []).length) { L.push('', `✅ ${B('Inclusion')}`, ''); pkg.inclusions.forEach((x) => L.push(`🔸 ${x}`)) }
-  if ((pkg.exclusions || []).length) { L.push('', `❌ ${B('Exclusion')}`, ''); pkg.exclusions.forEach((x) => L.push(`🔸 ${x}`)) }
-  if (pkg.customerRemarks) { L.push('', `📃 ${B('Remarks')}`, pkg.customerRemarks) }
+  // Inclusions / Exclusions — per destination
+  {
+    const groups = ieGroupsOf(pkg), multi = groups.length > 1
+    groups.forEach((g) => {
+      if (g.inclusions.length) { L.push('', `${B(multi && g.destination ? `Inclusions — ${g.destination}` : 'Inclusion')}`, ''); g.inclusions.forEach((x) => L.push(`${x}`)) }
+      if (g.exclusions.length) { L.push('', `${B(multi && g.destination ? `Exclusions — ${g.destination}` : 'Exclusion')}`, ''); g.exclusions.forEach((x) => L.push(`${x}`)) }
+    })
+  }
+  if (pkg.customerRemarks) { L.push('', `${B('Remarks')}`, pkg.customerRemarks) }
 
   // Contact
   L.push('')
   L.push("Feel free to reach out with any questions or if you'd like to book your trip.")
-  L.push(`📞 ${B('Emergency Contact')}:`)
-  L.push(`🏢 ${agency.name}`)
-  if (agency.phone) L.push(`📱 ${agency.phone}`)
-  if (agency.email) L.push(`📧 ${agency.email}`)
-  L.push(`🌟 ${B('Wishing you a wonderful journey!')}`)
-  L.push('Let us know if you need anything. 😊')
+  L.push(`${B('Emergency Contact')}:`)
+  L.push(`${agency.name}`)
+  if (agency.phone) L.push(`${agency.phone}`)
+  if (agency.email) L.push(`${agency.email}`)
+  L.push(`${B('Wishing you a wonderful journey!')}`)
+  L.push('Let us know if you need anything. ')
 
   return L.join('\n')
 }
@@ -328,8 +346,13 @@ export function buildEmail(pkg, client, agency) {
     })
   }
 
-  if ((pkg.inclusions || []).length) { L.push('', 'INCLUSIONS'); pkg.inclusions.forEach((x) => L.push(`  - ${x}`)) }
-  if ((pkg.exclusions || []).length) { L.push('', 'EXCLUSIONS'); pkg.exclusions.forEach((x) => L.push(`  - ${x}`)) }
+  {
+    const groups = ieGroupsOf(pkg), multi = groups.length > 1
+    groups.forEach((g) => {
+      if (g.inclusions.length) { L.push('', multi && g.destination ? `INCLUSIONS — ${g.destination.toUpperCase()}` : 'INCLUSIONS'); g.inclusions.forEach((x) => L.push(`  - ${x}`)) }
+      if (g.exclusions.length) { L.push('', multi && g.destination ? `EXCLUSIONS — ${g.destination.toUpperCase()}` : 'EXCLUSIONS'); g.exclusions.forEach((x) => L.push(`  - ${x}`)) }
+    })
+  }
   if (pkg.pricing?.grandTotal) { L.push('', 'PACKAGE PRICE'); L.push(`  ${money(pkg.pricing.grandTotal)}${activeOpt.name ? ` (${activeOpt.name})` : ''}`) }
   if (pkg.customerRemarks) { L.push('', 'NOTES'); L.push(`  ${pkg.customerRemarks}`) }
 

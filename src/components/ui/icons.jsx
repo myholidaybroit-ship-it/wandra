@@ -165,6 +165,13 @@ const PATHS = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  edit: (
+    <>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </>
+  ),
+  x: <path d="M18 6 6 18M6 6l12 12" />,
   calendar: (
     <>
       <rect x="3" y="5" width="18" height="16" rx="2" />

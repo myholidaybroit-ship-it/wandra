@@ -1,19 +1,22 @@
 import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useApp, inr } from '../../store/AppContext'
+import { inr } from '../../store/AppContext'
+import { usePublic } from '../../hooks/usePublic'
 import { Card, Button, Badge } from '../../components/ui/UI'
 import { downloadElementPdf } from '../../utils/pdf'
 import '../admin/invoices/invoice.css'
 
 export default function PublicInvoice() {
   const { code } = useParams()
-  const { invoices, agency, clients } = useApp()
-  const inv = invoices.find((i) => i.code === code) || invoices[0]
+  const { data, loading } = usePublic(`/invoice/${code}`)
+  const inv = data?.invoice
+  const agency = data?.agency || {}
   const docRef = useRef(null)
   const [busy, setBusy] = useState(false)
   const download = async () => { if (!docRef.current) return; setBusy(true); try { await downloadElementPdf(docRef.current, `${inv.code}.pdf`) } finally { setBusy(false) } }
+  if (loading) return <div className="section">Loading invoice…</div>
   if (!inv) return <div className="section">Invoice not found.</div>
-  const client = clients.find((c) => c.id === inv.clientId)
+  const client = { name: inv.clientName }
   const subtotal = inv.items.reduce((s, it) => s + it.qty * it.rate, 0)
   const tax = inv.items.reduce((s, it) => s + it.qty * it.rate * (it.tax / 100), 0)
   const total = subtotal + tax

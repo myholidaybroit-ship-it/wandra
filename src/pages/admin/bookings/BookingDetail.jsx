@@ -35,7 +35,7 @@ function countdown(bk, days) {
 
 export default function BookingDetail() {
   const { id } = useParams()
-  const { bookings, packages, clients, addBookingPayment, setBookingStatus, cancelBooking, toast } = useApp()
+  const { bookings, packages, clients, addBookingPayment, setBookingStatus, cancelBooking, toast, canSeePricing } = useApp()
   const bk = bookings.find((b) => b.id === id)
   const [open, setOpen] = useState(false)
   const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
@@ -86,8 +86,10 @@ export default function BookingDetail() {
               if (v === 'Cancelled') { cancelBooking(bk.id); toast('Booking cancelled — package back to Quoted') }
               else { setBookingStatus(bk.id, v); toast(`Booking ${v}`) }
             }} />
-            <Link to={`/app/invoices/new?booking=${bk.id}`}><Button variant="secondary" size="sm">Create Invoice</Button></Link>
-            <Button size="sm" onClick={() => setOpen(true)}>+ Add Payment</Button>
+            {canSeePricing && <>
+              <Link to={`/app/invoices/new?booking=${bk.id}`}><Button variant="secondary" size="sm">Create Invoice</Button></Link>
+              <Button size="sm" onClick={() => setOpen(true)}>+ Add Payment</Button>
+            </>}
           </div>
         </div>
         <h1 className="bk-title">{model.destShort} <span>— {client ? <Link to={`/app/clients/${client.id}`} className="c-link">{bk.clientName}</Link> : bk.clientName}</span></h1>
@@ -97,8 +99,10 @@ export default function BookingDetail() {
       <div className="bk-strip">
         <div className="bk-stat"><div className="bk-stat-k">Travel date</div><div className="bk-stat-v">{part(bk.travelDate, { day: '2-digit', month: 'short', year: 'numeric' })}</div></div>
         <div className="bk-stat"><div className="bk-stat-k">Duration</div><div className="bk-stat-v">{pkg ? `${pkg.nights}N / ${pkg.days}D` : '—'}</div></div>
-        <div className="bk-stat"><div className="bk-stat-k">Booking value</div><div className="bk-stat-v">{inr(bk.value)}</div></div>
-        <div className="bk-stat"><div className="bk-stat-k">Balance due</div><div className={`bk-stat-v ${balance > 0 ? 'due' : 'ok'}`}>{inr(balance)}</div></div>
+        {canSeePricing && <>
+          <div className="bk-stat"><div className="bk-stat-k">Booking value</div><div className="bk-stat-v">{inr(bk.value)}</div></div>
+          <div className="bk-stat"><div className="bk-stat-k">Balance due</div><div className={`bk-stat-v ${balance > 0 ? 'due' : 'ok'}`}>{inr(balance)}</div></div>
+        </>}
       </div>
 
       <div className="bk-grid">
@@ -121,14 +125,12 @@ export default function BookingDetail() {
                   <div className="bk-day-t"><span className="bk-day-tag">Day {d.n}</span>{d.title}{d.city && d.city !== d.title ? <span className="bk-day-city">{d.city}</span> : null}</div>
                   {d.transfers.map((t, i) => (
                     <div className="bk-item" key={`t${i}`}>
-                      {t.startTime && <span className="bk-item-time">{t.startTime}</span>}
                       <span className="bk-item-kind">Transfer</span>
                       <span>{t.location || '—'}{t.serviceType ? ` · ${t.serviceType}` : ''}</span>
                     </div>
                   ))}
                   {d.acts.map((a, i) => (
                     <div className="bk-item" key={`a${i}`}>
-                      {a.startTime && <span className="bk-item-time">{a.startTime}</span>}
                       <span className="bk-item-kind">Activity</span>
                       <span>{a.location || '—'}</span>
                     </div>
@@ -147,6 +149,7 @@ export default function BookingDetail() {
 
         {/* ---------- Rail ---------- */}
         <aside className="bk-rail">
+          {canSeePricing && (<>
           <div className="bk-card">
             <div className="bk-card-head"><span className="bk-card-title">Collection</span><span className="bk-pct">{pct}%</span></div>
             <div className="bk-money-row"><span>Booking value</span><strong>{inr(bk.value)}</strong></div>
@@ -169,6 +172,7 @@ export default function BookingDetail() {
               ))}
             </div>
           )}
+          </>)}
 
           {pkg && (
             <div className="bk-card bk-links">

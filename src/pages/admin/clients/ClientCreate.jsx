@@ -76,14 +76,16 @@ export default function ClientCreate() {
   }
   const back = () => setStep((s) => Math.max(1, s - 1))
 
-  const save = () => {
+  const save = async () => {
     if (!f.name.trim()) { setStep(3); return toast('Guest name is required') }
     if (!phonesOk()) {
       setStep(3)
       setPhoneTouched(Object.fromEntries(f.phones.map((_, i) => [i, true])))
       return toast('Enter a valid phone number — 10 to 15 digits')
     }
-    const rec = addClient({
+    let rec
+    try {
+      rec = await addClient({
       name: `${f.salutation} ${f.name.trim()}`,
       email: f.email,
       city: f.city.trim(),
@@ -97,7 +99,8 @@ export default function ClientCreate() {
         startDate: f.startDate, nights, adults: Number(f.adults) || 0,
         children: f.children, childAges: f.childAges.filter(Boolean),
       },
-    })
+      })
+    } catch (ex) { return toast(ex.message || 'Could not save the query') }
     toast(rec.query?.assignee ? `Query captured — assigned to ${rec.query.assignee}` : 'Query captured — now build their package')
     nav(`/app/clients/${rec.id}/start`)
   }

@@ -1,3 +1,20 @@
+/* Read any file → base64 data-URL as-is (no resize). For PDFs/docs. */
+export function fileToRawDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = reject
+    reader.onload = () => resolve(reader.result)
+    reader.readAsDataURL(file)
+  })
+}
+
+/* Read a picked file → data-URL. Images are downscaled; other files
+   (PDF/doc) are read as-is. Returns a data-URL string. */
+export async function fileToUploadable(file, maxW = 1600, quality = 0.82) {
+  if (file.type?.startsWith('image/')) return fileToDataUrl(file, maxW, quality)
+  return fileToRawDataUrl(file)
+}
+
 /* Read a picked image file → downscaled JPEG/PNG data-URL.
    Data-URLs persist in localStorage (blob: URLs die on reload)
    and canvas-resizing keeps them small enough to store. */

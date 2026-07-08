@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { useApp, inr, computePricing } from '../../store/AppContext'
+import { inr, computePricing } from '../../store/AppContext'
+import { usePublic } from '../../hooks/usePublic'
 import { Button } from '../../components/ui/UI'
 import { preloadAndDownload } from '../../utils/pdf'
 import './itinerary.css'
@@ -11,13 +12,15 @@ export default function ItineraryPreview() {
   const { code } = useParams()
   const [sp] = useSearchParams()
   const theme = sp.get('theme') || 'classic'
-  const { packages, agency } = useApp()
-  const pkg = packages.find((p) => p.code === code) || packages[0]
+  const { data, loading } = usePublic(`/itinerary/${code}`)
+  const pkg = data?.package
+  const agency = data?.agency || {}
   const docRef = useRef(null)
   const [busy, setBusy] = useState(false)
   const download = async () => { if (!docRef.current) return; setBusy(true); try { await preloadAndDownload(docRef.current, `${pkg.code}-itinerary.pdf`) } finally { setBusy(false) } }
+  if (loading) return <div className="itin-wrap"><p>Loading itinerary…</p></div>
   if (!pkg) return <div className="itin-wrap"><p>Itinerary not found.</p></div>
-  const pr = computePricing(pkg)
+  const pr = pkg.computed || computePricing(pkg)
   const accent = THEME_ACCENT[theme] || '#0d74ce'
 
   return (
@@ -81,7 +84,7 @@ export default function ItineraryPreview() {
         {/* secure booking */}
         <div className="secure-grid">
           <div className="secure-card">
-            <div className="t-title-md">🔒 Secure Your Booking</div>
+            <div className="t-title-md">Secure Your Booking</div>
             <div className="bank-grid mt-base">
               <KV k="Account Name" v={agency.bank.accountName} />
               <KV k="Bank Name" v={agency.bank.bankName} />

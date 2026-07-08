@@ -15,6 +15,7 @@ const FEATURES = [
   { key: 'reports', label: 'Reports', desc: 'Lead & revenue analytics, exports' },
   { key: 'landing', label: 'Landing Page', desc: 'Lead-capture site builder' },
   { key: 'settings', label: 'Settings & Billing', desc: 'Agency profile, plan, users' },
+  { key: 'viewPricing', label: 'Pricing & Profit', desc: 'See cost, selling price, markup & profit everywhere', pricing: true },
 ]
 
 export default function Roles() {
@@ -63,13 +64,14 @@ export default function Roles() {
             </thead>
             <tbody>
               {FEATURES.map((f) => (
-                <tr key={f.key}>
+                <tr key={f.key} className={f.pricing ? 'rl-row-pricing' : ''}>
                   <td className="rl-feat">
                     <span className="rl-feat-name">{f.label}</span>
                     <span className="rl-feat-desc">{f.desc}</span>
                   </td>
                   {roles.map((r) => {
-                    const on = r.system || r.perms?.[f.key] === true
+                    // pricing visibility defaults ON — it's opt-out; every other perm is opt-in
+                    const on = f.pricing ? (r.system || r.perms?.viewPricing !== false) : (r.system || r.perms?.[f.key] === true)
                     return (
                       <td key={r.id} className="rl-cell">
                         <label className={`lb-switch ${r.system ? 'rl-locked' : ''}`}>
@@ -85,7 +87,7 @@ export default function Roles() {
             </tbody>
           </table>
         </div>
-        <p className="rl-note">Admin is a system role and always has full access. Changes apply instantly to everyone with that role.</p>
+        <p className="rl-note">Admin is a system role and always has full access. <strong>Pricing &amp; Profit</strong> is on by default — turn it off for a role (e.g. Operations) and everyone with that role stops seeing cost, selling price, markup &amp; profit across quotes, packages, bookings, dashboard &amp; reports. Changes apply instantly.</p>
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="New Role" width={440}

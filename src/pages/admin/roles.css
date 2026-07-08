@@ -31,5 +31,10 @@
 .rl-locked { opacity: .55; cursor: default; }
 .rl-locked .lb-switch-track { cursor: default; }
 
+/* pricing visibility is a special opt-out toggle — set it apart from the page perms */
+.rl-row-pricing td { border-top: 2px solid var(--color-hairline); background: var(--color-surface-soft); }
+.rl-row-pricing:hover td { background: var(--color-surface-soft); }
+.rl-row-pricing .rl-feat-name { display: inline-flex; align-items: center; gap: 6px; }
+
 .rl-note { font-size: 12px; color: var(--color-stone); padding: 14px 22px; border-top: 1px solid var(--color-hairline-soft); background: var(--color-surface-soft); }
 .rl-modal-note { font-size: 12.5px; color: var(--color-stone); margin-top: 14px; line-height: 1.5; }

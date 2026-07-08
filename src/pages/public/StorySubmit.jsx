@@ -1,36 +1,43 @@
 import { useRef, useState } from 'react'
-import { useApp } from '../../store/AppContext'
+import { useParams } from 'react-router-dom'
+import { publicApi } from '../../api'
+import { usePublic } from '../../hooks/usePublic'
 import { Card, Button, Field, Input, Textarea } from '../../components/ui/UI'
-import { AgencyLogo } from '../../components/ui/AgencyBrand'
 import { fileToDataUrl } from '../../utils/image'
 import './stories.css'
 
-/* Sent by the agency to their traveller — their brand, no Wandra chrome. */
+/* Sent by the agency to their traveller — their brand, no Wandra chrome.
+   The :token in the URL is the agency's landing slug. */
 export default function StorySubmit() {
-  const { addStory, agency, toast } = useApp()
+  const { token } = useParams()
+  const { data } = usePublic(`/stories/${token}`)
+  const agency = data?.agency || {}
   const [f, setF] = useState({ client: '', rating: 5, text: '', image: '' })
   const [hover, setHover] = useState(0)
   const [done, setDone] = useState(false)
+  const [msg, setMsg] = useState('')
   const fileRef = useRef(null)
 
   const pick = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     try { setF({ ...f, image: await fileToDataUrl(file, 1200) }) }
-    catch { toast('Could not read that image — try another one') }
+    catch { setMsg('Could not read that image — try another one') }
     e.target.value = ''
   }
 
-  const submit = () => {
-    if (!f.client || !f.text) return toast('Please add your name and story')
-    addStory({ client: f.client, rating: f.rating, text: f.text, image: f.image })
-    setDone(true); toast('Story submitted — pending approval')
+  const submit = async () => {
+    if (!f.client || !f.text) return setMsg('Please add your name and story')
+    try {
+      await publicApi.post(`/stories/${token}`, { client: f.client, rating: f.rating, text: f.text, image: f.image })
+      setDone(true)
+    } catch (ex) { setMsg(ex.message || 'Could not submit your story') }
   }
 
   return (
     <div className="st">
       <header className="st-head" style={{ padding: '52px 24px 8px' }}>
-        <AgencyLogo className="st-logo" fallback="name" />
+        {agency.logo && <img className="st-logo" src={agency.logo} alt={agency.name} />}
       </header>
       <div className="st-submit">
       <Card pad={32} style={{ maxWidth: 520, width: '100%' }}>
@@ -73,6 +80,7 @@ export default function StorySubmit() {
                 </div>
               </Field>
               <Field label="Your Testimonial"><Textarea value={f.text} onChange={(e) => setF({ ...f, text: e.target.value })} /></Field>
+              {msg && <div style={{ color: '#dc2626', fontSize: 13 }}>{msg}</div>}
               <Button className="w-full" onClick={submit}>Submit Story</Button>
             </div>
           </>

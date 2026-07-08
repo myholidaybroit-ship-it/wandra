@@ -1,63 +1,86 @@
 import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
-import { PageHeader } from '../../../components/ui/UI'
+import { PageHeader, Button, DataTable, Badge, ListSearch, Modal, Field, PillSelect } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import './inclusions.css'
 
+/* Listing of destinations — each keeps its OWN inclusion / exclusion list.
+   CRUD from here: + Add (create), Manage (edit), trash (clear that list). */
 export default function InclusionsExclusions() {
-  const { inclusionPresets, addInclusionPreset, removeInclusionPreset, toast } = useApp()
+  const { inclusionPresets, destinations, clearDestinationPresets, toast } = useApp()
+  const nav = useNavigate()
+  const [q, setQ] = useState('')
+  const term = q.trim().toLowerCase()
+
+  const rows = destinations
+    .filter((d) => (d.name + ' ' + (d.location || '')).toLowerCase().includes(term))
+    .map((d) => {
+      const ie = inclusionPresets.byDest?.[d.name] || { inclusions: [], exclusions: [] }
+      return { id: d.name, name: d.name, location: d.location, slug: encodeURIComponent(d.name), inc: ie.inclusions.length, exc: ie.exclusions.length, image: d.image }
+    })
+
+  const go = (r) => nav(`/app/packages/inclusions/${r.slug}`)
+
+  /* ---- add: pick a destination, then build its lists on its page ---- */
+  const [open, setOpen] = useState(false)
+  const [dest, setDest] = useState(destinations[0]?.name || '')
+  const openAdd = () => { setDest(destinations[0]?.name || ''); setOpen(true) }
+  const proceed = () => { if (!dest) return; setOpen(false); nav(`/app/packages/inclusions/${encodeURIComponent(dest)}`) }
+
+  /* ---- delete: clear a destination's whole list ---- */
+  const [confirm, setConfirm] = useState(null)
+  const doClear = () => { clearDestinationPresets(confirm.name); toast(`Cleared ${confirm.name}`); setConfirm(null) }
+
+  const columns = [
+    { key: 'name', head: 'Destination', render: (r) => (
+      <div className="row gap-sm">
+        <span className="master-thumb" style={r.image ? { backgroundImage: `url("${r.image}")` } : undefined} />
+        <div><span className="cell-strong">{r.name}</span><div className="cell-sub">{r.location}</div></div>
+      </div>
+    ) },
+    { key: 'inc', head: 'Inclusions', render: (r) => <span className="ie-count-chip inc">{r.inc}</span> },
+    { key: 'exc', head: 'Exclusions', render: (r) => <span className="ie-count-chip exc">{r.exc}</span> },
+    { key: 'status', head: '', render: (r) => (r.inc + r.exc === 0 ? <Badge tone="neutral">Not set up</Badge> : null) },
+    { key: 'actions', head: '', align: 'right', render: (r) => (
+      <div className="ie-row-acts" onClick={(e) => e.stopPropagation()}>
+        <Link to={`/app/packages/inclusions/${r.slug}`}><Button variant="secondary" size="sm">{r.inc + r.exc === 0 ? 'Add' : 'Manage'}</Button></Link>
+        <button className="ie-row-del" title="Clear this list" disabled={r.inc + r.exc === 0} onClick={() => setConfirm(r)}>
+          <Icon name="trash" size={15} />
+        </button>
+      </div>
+    ) },
+  ]
+
   return (
     <div className="ie">
-      <PageHeader title="Inclusions & Exclusions"
-        subtitle="Master presets — new quotes start with these ticked, and you toggle them per quote in the builder." />
-      <div className="ie-grid">
-        <PresetCol type="inclusions" title="Inclusions" tone="inc" mark="✓"
-          sub="What every package includes by default"
-          items={inclusionPresets.inclusions} onAdd={addInclusionPreset} onRemove={removeInclusionPreset} toast={toast} />
-        <PresetCol type="exclusions" title="Exclusions" tone="exc" mark="✕"
-          sub="Standard disclaimers — what's never included"
-          items={inclusionPresets.exclusions} onAdd={addInclusionPreset} onRemove={removeInclusionPreset} toast={toast} />
+      <div className="ie-head">
+        <PageHeader title="Inclusions & Exclusions"
+          subtitle="Each destination keeps its own inclusion & exclusion list."
+          actions={<Button onClick={openAdd}>+ Add Inclusion / Exclusion</Button>} />
       </div>
-    </div>
-  )
-}
+      <div className="list-toolbar">
+        <ListSearch value={q} onChange={setQ} placeholder="Search destinations…" count={rows.length} />
+      </div>
+      <DataTable columns={columns} rows={rows} onRowClick={go} empty="No destinations match." />
 
-function PresetCol({ type, title, tone, mark, sub, items, onAdd, onRemove, toast }) {
-  const [draft, setDraft] = useState('')
-  const add = () => {
-    const t = draft.trim()
-    if (!t) return
-    onAdd(type, t); setDraft(''); toast(`Added to ${title.toLowerCase()}`)
-  }
-  return (
-    <section className={`ie-col ${tone}`}>
-      <header className="ie-col-head">
-        <span className="ie-col-mark">{mark}</span>
-        <div className="ie-col-meta">
-          <span className="ie-col-title">{title}</span>
-          <span className="ie-col-sub">{sub}</span>
+      {/* add */}
+      <Modal open={open} onClose={() => setOpen(false)} title="Add inclusions & exclusions" width={460}
+        footer={<><Button variant="tertiary" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={proceed} disabled={!dest}>Continue</Button></>}>
+        <div className="ie-add-form">
+          <Field label="Which destination?" hint="You'll add its inclusions & exclusions on the next screen">
+            <PillSelect value={dest || 'Select destination'} options={destinations.map((d) => d.name)} onChange={setDest} />
+          </Field>
         </div>
-        <span className="ie-col-count">{items.length}</span>
-      </header>
+      </Modal>
 
-      <div className="ie-items">
-        {items.length === 0 && <div className="ie-empty">Nothing here yet — add your first preset below.</div>}
-        {items.map((x) => (
-          <div className="ie-item" key={x}>
-            <span className="ie-item-mark">{mark}</span>
-            <span className="ie-item-txt">{x}</span>
-            <button className="ie-item-x" title="Remove preset" onClick={() => { onRemove(type, x); toast('Preset removed') }}>
-              <Icon name="trash" size={13} />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="ie-composer">
-        <input value={draft} placeholder={`Add ${type === 'inclusions' ? 'an inclusion' : 'an exclusion'}…`}
-          onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
-        <button className="ie-add" onClick={add} disabled={!draft.trim()}><Icon name="plus" size={14} /> Add</button>
-      </div>
-    </section>
+      {/* delete */}
+      <Modal open={!!confirm} onClose={() => setConfirm(null)} title="Clear this list" width={440}
+        footer={<><Button variant="tertiary" onClick={() => setConfirm(null)}>Cancel</Button><Button variant="danger" onClick={doClear}>Clear list</Button></>}>
+        {confirm && (
+          <p className="ie-confirm">Remove all <strong>{confirm.inc} inclusion{confirm.inc === 1 ? '' : 's'}</strong> and <strong>{confirm.exc} exclusion{confirm.exc === 1 ? '' : 's'}</strong> from <strong>{confirm.name}</strong>? This can't be undone.</p>
+        )}
+      </Modal>
+    </div>
   )
 }

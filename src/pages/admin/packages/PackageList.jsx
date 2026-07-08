@@ -4,7 +4,7 @@ import { useApp, inr, computePricing } from '../../../store/AppContext'
 import { PageHeader, Button, FilterBar, Field, Input, Select, DataTable, Badge } from '../../../components/ui/UI'
 
 export default function PackageList() {
-  const { packages } = useApp()
+  const { packages, canSeePricing } = useApp()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('All')
   const rows = packages.filter((p) => (status === 'All' || p.status === status) && (p.code + p.clientName + p.destination).toLowerCase().includes(q.toLowerCase()))
@@ -14,7 +14,7 @@ export default function PackageList() {
     { key: 'destination', head: 'Destination', render: (r) => <span className="cell-sub">{r.destination}</span> },
     { key: 'days', head: 'Duration', render: (r) => `${r.days}D / ${r.nights}N` },
     { key: 'status', head: 'Status', render: (r) => <Badge tone={r.status}>{r.status}</Badge> },
-    { key: 'total', head: 'Total', align: 'right', render: (r) => <span className="cell-strong">{inr(computePricing(r).grandTotal)}</span> },
+    ...(canSeePricing ? [{ key: 'total', head: 'Total', align: 'right', render: (r) => <span className="cell-strong">{inr(computePricing(r).grandTotal)}</span> }] : []),
     { key: 'actions', head: '', align: 'right', render: (r) => <Link to={`/app/packages/${r.id}`}><Button variant="secondary" size="sm">View</Button></Link> },
   ]
   return (

@@ -63,9 +63,12 @@
 .pdfm-item:hover { background: var(--color-surface-soft); }
 .pdfm-item.on { border-color: var(--color-primary); background: var(--color-surface-soft); box-shadow: inset 3px 0 0 var(--color-primary); }
 .pdfm-item-b { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.pdfm-item-t { font-size: 13px; font-weight: 700; }
+.pdfm-item-t { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
 .pdfm-item-d { font-size: 11px; color: var(--color-stone); line-height: 1.35; }
-.pdfm-hint { font-size: 11px; color: var(--color-stone); margin-top: 6px; }
+.pdfm-hint { font-size: 11px; color: var(--color-stone); margin-top: 6px; line-height: 1.4; }
+.pdfm-pro { font-size: 8.5px; font-weight: 800; letter-spacing: .5px; color: #7a4a12; background: linear-gradient(135deg, #ffe08a, #f7b955); padding: 2px 6px; border-radius: 5px; }
+.pdfm-item.is-pro { border-color: #f0d9a8; background: linear-gradient(180deg, #fffdf7, var(--color-canvas)); }
+.pdfm-item.is-pro.on { border-color: #e6b455; box-shadow: inset 3px 0 0 #e6a821; }
 .pdf-dl-ic { transform: rotate(180deg); }
 
 /* mini style thumbnails */
@@ -80,8 +83,12 @@
 .th-mono i:first-child { background: #111113; width: 80%; height: 6px; }
 .th-luxe { background: #101014; border-color: #b99b5f; }
 .th-luxe i { background: #b99b5f; opacity: .8; }
-.th-compact i { height: 3px; }
-.th-compact i:first-child { background: #111113; }
+.th-holiday { background: linear-gradient(150deg, #f84f39, #ff8a5c 70%); border: none; justify-content: flex-end; }
+.th-holiday i { background: rgba(255,255,255,.85); }
+.th-holiday i:first-child { background: #fff; width: 55%; height: 8px; margin-bottom: auto; }
+.th-coastal { background: #fff; border-color: #bcd4ff; }
+.th-coastal i:first-child { background: #1a73e8; width: 80%; height: 6px; }
+.th-coastal i { background: #cfe0ff; }
 
 /* iframe preview — A4 scaled down */
 .pdfm-preview { background: var(--color-surface); border: 1px solid var(--color-hairline-soft); border-radius: var(--radius-lg); overflow: hidden; height: 560px; }

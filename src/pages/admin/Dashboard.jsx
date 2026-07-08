@@ -37,7 +37,7 @@ function Kpi({ label, value, series, deltaPct }) {
 }
 
 export default function Dashboard() {
-  const { packages, bookings, clients, invoices, dashboardSeries, dashboardAnalytics: A } = useApp()
+  const { packages, bookings, clients, invoices, dashboardSeries, dashboardAnalytics: A, canSeePricing } = useApp()
   const revenue = invoices.flatMap((i) => i.payments || []).reduce((s, p) => s + p.amount, 0)
   const grossRevenue = packages.reduce((s, p) => s + computePricing(p).grandTotal, 0)
   const activePackages = packages.filter((p) => p.status !== 'Cancelled').length
@@ -55,14 +55,15 @@ export default function Dashboard() {
   return (
     <div className="dash">
       {/* KPI row */}
-      <div className="grid grid-4">
-        <Kpi label="Total Revenue" value={inr(revenue)} series={dashboardSeries.revenue} deltaPct={delta(A.collectedByMonth)} />
+      <div className={`grid ${canSeePricing ? 'grid-4' : 'grid-3'}`}>
+        {canSeePricing && <Kpi label="Total Revenue" value={inr(revenue)} series={dashboardSeries.revenue} deltaPct={delta(A.collectedByMonth)} />}
         <Kpi label="Total Bookings" value={bookings.length} series={dashboardSeries.bookings} deltaPct={delta(A.bookingsByMonth)} />
         <Kpi label="Active Packages" value={activePackages} series={dashboardSeries.packages} deltaPct={delta(A.grossByMonth)} />
         <Kpi label="Total Clients" value={clients.length} series={dashboardSeries.clients} deltaPct={delta(A.weeklyInquiries)} />
       </div>
 
-      {/* Revenue trend + target / collection */}
+      {/* Revenue trend + target / collection — hidden without pricing access */}
+      {canSeePricing && (
       <div className="dash-row-main mt-lg">
         <Card pad={24}>
           <div className="chart-head">
@@ -115,6 +116,7 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+      )}
 
       {/* Funnel / sources / status mix */}
       <div className="dash-row-3 mt-lg">
@@ -146,7 +148,8 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Cashflow + invoice aging */}
+      {/* Cashflow + invoice aging — hidden without pricing access */}
+      {canSeePricing && (
       <div className="dash-row-main mt-lg">
         <Card pad={24}>
           <div className="chart-head">
@@ -177,9 +180,11 @@ export default function Dashboard() {
           <div className="t-caption c-muted mt-base">outstanding receivables by age bucket</div>
         </Card>
       </div>
+      )}
 
       {/* Profit & margin / bookings / destinations */}
       <div className="dash-row-mix mt-lg">
+        {canSeePricing && (
         <Card pad={24}>
           <div className="chart-head">
             <div>
@@ -195,6 +200,7 @@ export default function Dashboard() {
             <ComboChart labels={A.months} bars={A.profitByMonth} line={A.marginPctByMonth} barColor={MONO.silver} lineColor={MONO.ink} formatY={(v) => `${v}k`} />
           </div>
         </Card>
+        )}
         <Card pad={24}>
           <div className="row-between">
             <span className="t-title-sm">Bookings by Month</span>

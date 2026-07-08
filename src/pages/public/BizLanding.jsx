@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useApp } from '../../store/AppContext'
+import { publicApi } from '../../api'
+import { usePublic } from '../../hooks/usePublic'
 import './landing-site.css'
 
 /* ============================================================
@@ -10,11 +11,14 @@ import './landing-site.css'
    ============================================================ */
 
 export function LandingHeader({ cfg, agency, accent, onCta }) {
+  // the agency logo is the single brand source; never fall back to the Wandra placeholder
+  const raw = agency.logo || cfg.logo
+  const logo = raw && !String(raw).includes('wandra-logo') ? raw : ''
   return (
     <header className="ls-head">
       <div className="ls-head-inner">
         <div className="ls-head-brand">
-          {(cfg.logo || agency.logo) && <img src={cfg.logo || agency.logo} alt="" className="ls-head-logo" />}
+          {logo && <img src={logo} alt="" className="ls-head-logo" />}
           <span className="ls-head-name">{cfg.name || agency.name}</span>
         </div>
         <button className="ls-head-cta" style={{ background: accent }} onClick={onCta}>{cfg.ctaText || 'Enquire now'}</button>
@@ -233,37 +237,35 @@ export function LandingRender({ landing, agency, onSubmit, state, formRef }) {
 
 export default function BizLanding() {
   const { slug } = useParams()
-  const { landing, agency, addClient } = useApp()
+  const { data, loading, error } = usePublic(`/site/${slug}`)
+  const landing = data?.landing
+  const agency = data?.agency || {}
   const [state, setState] = useState('idle')
   const formRef = useRef(null)
 
-  if (!landing.published || slug !== landing.slug) {
+  if (loading) return <div className="ls-missing">Loading…</div>
+  if (error || !landing || !landing.published) {
     return <div className="ls-missing">This page isn’t live. <a href="/">Home</a></div>
   }
 
-  const onSubmit = (f) => {
+  const onSubmit = async (f) => {
     setState('sending')
     const days = Number(f.days) || 0
-    addClient({
-      name: f.name.trim(),
-      email: f.email || '',
-      phone: f.phone,
-      city: f.fromCity?.trim() || '',
-      interest: f.destination?.trim() || 'General Inquiry',
-      source: 'Landing Page',
-      note: f.comments || 'Landing page enquiry',
-      budget: 0,
-      query: {
-        refId: Math.random().toString(36).replace(/[^a-z0-9]/g, '').slice(0, 6).toUpperCase().padEnd(6, '7'),
-        // assignee intentionally omitted — the assignment rules engine routes the lead
+    try {
+      await publicApi.post(`/site/${slug}/lead`, {
+        name: f.name.trim(),
+        email: f.email || '',
+        phone: f.phone,
+        fromCity: f.fromCity?.trim() || '',
+        destination: f.destination?.trim() || 'General Inquiry',
+        comments: f.comments || 'Landing page enquiry',
         startDate: f.startDate || '',
-        nights: days > 0 ? Math.max(1, days - 1) : 0,
+        days,
         adults: Number(f.adults) || 0,
         children: Number(f.children) || 0,
-        childAges: (f.childAges || []).filter(Boolean),
-      },
-    })
-    setTimeout(() => setState('done'), 500)
+      })
+      setState('done')
+    } catch { setState('idle') }
   }
 
   return (

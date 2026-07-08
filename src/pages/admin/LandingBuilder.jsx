@@ -28,7 +28,13 @@ export default function LandingBuilder() {
   const dirty = JSON.stringify(draft) !== JSON.stringify(landing)
   const setTop = (p) => setDraft((d) => ({ ...d, ...p }))
   const patch = (key, p) => setDraft((d) => ({ ...d, [key]: { ...d[key], ...p } }))
-  const save = () => { updateLanding(draft); toast('Landing page saved — changes are live') }
+  const save = async () => {
+    try {
+      const saved = await updateLanding(draft)
+      setDraft(saved)   // re-sync the draft so the "unsaved changes" state clears
+      toast('Landing page saved — changes are live')
+    } catch { toast('Could not save changes') }
+  }
   const discard = () => { setDraft(landing); toast('Changes discarded') }
 
   // the LIVE site always uses the last saved slug
@@ -108,8 +114,15 @@ export default function LandingBuilder() {
             </div>
             {openSec === 'header' && (
               <div className="lb-sec-body">
-                <ImageInput label="Logo" value={draft.header?.logo} maxW={400}
-                  onChange={(v) => patch('header', { logo: v })} hint="PNG with transparency looks best" />
+                <div className="lb-field">
+                  <span className="lb-k">Logo</span>
+                  <div className="lb-img-row">
+                    <span className="lb-img-thumb" style={agency.logo ? { backgroundImage: `url("${agency.logo}")` } : undefined}>
+                      {!agency.logo && <Icon name="gallery" size={16} />}
+                    </span>
+                    <span className="lb-soft" style={{ fontSize: 12 }}>Your agency logo — set it in <a href="/app/settings" className="c-link">Settings</a>. It shows here and on every itinerary, voucher & invoice.</span>
+                  </div>
+                </div>
                 <div className="lb-two">
                   <Lbi label="Business name" v={draft.header?.name} on={(v) => patch('header', { name: v })} />
                   <Lbi label="Button text" v={draft.header?.ctaText} on={(v) => patch('header', { ctaText: v })} />

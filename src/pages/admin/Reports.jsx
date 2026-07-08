@@ -23,7 +23,7 @@ const inMonth = (iso, p) => {
 }
 
 export default function Reports() {
-  const { clients, packages, bookings, quotations } = useApp()
+  const { clients, packages, bookings, quotations, canSeePricing } = useApp()
   const [mode, setMode] = useState('all')            // 'all' | 'month'
   const [period, setPeriod] = useState({ y: 2026, m: 5 }) // June 2026 — where the demo data lives
   const [dim, setDim] = useState('assignee')
@@ -100,7 +100,7 @@ export default function Reports() {
 
   const exportLeads = () => downloadCsv(`leads-${periodTag}`,
     ['Name', 'Phone', 'Email', 'Status', 'Source', 'Sales person', 'Destination', 'Start date', 'Nights', 'Adults', 'Children', 'Created'],
-    R.leads.map((c) => [c.name, c.phone, c.email, c.tripStatus, c.source || 'Direct', c.query?.assignee || '', c.interest || '', c.query?.startDate || '', c.query?.nights ?? '', c.query?.adults ?? '', c.query?.children ?? '', c.createdAt]))
+    R.leads.map((c) => [c.name, c.phone, c.email, c.tripStatus, c.source || 'Direct', c.query?.assignee || '', c.interest || '', c.query?.startDate || '', c.query?.nights ?? '', c.query?.adults ?? '', c.query?.children ?? '', (c.createdAt || '').slice(0, 10)]))
 
   return (
     <div className="rp">
@@ -140,7 +140,8 @@ export default function Reports() {
         <Kpi k="Lost" v={R.lost} dim />
       </div>
 
-      {/* ---------- financial band ---------- */}
+      {/* ---------- financial band — hidden without pricing access ---------- */}
+      {canSeePricing && (
       <div className="rp-band fin">
         <Kpi k={`Quotes (${R.quoted})`} v={inr(R.quotedValue)} />
         <Kpi k={`Bookings (${R.bookings})`} v={inr(R.bookedValue)} />
@@ -148,6 +149,7 @@ export default function Reports() {
         <Kpi k="Outstanding" v={inr(Math.max(0, R.bookedValue - R.collected))} bad />
         <Kpi k="Est. Profit" v={inr(R.profit)} good />
       </div>
+      )}
 
       {/* ---------- charts ---------- */}
       <div className="rp-charts">
@@ -176,10 +178,12 @@ export default function Reports() {
             <div className="rp-legend row">{R.mix.map((s) => <div className="rp-leg" key={s.label}><i style={{ background: s.color }} />{s.label} · {s.value}</div>)}</div></>
             : <div className="rp-empty">No leads in this period.</div>}
         </div>
-        <div className="rp-chart">
-          <div className="rp-chart-t">Revenue waterfall</div>
-          <HBars data={R.revenue} color="#111113" formatV={inr} />
-        </div>
+        {canSeePricing && (
+          <div className="rp-chart">
+            <div className="rp-chart-t">Revenue waterfall</div>
+            <HBars data={R.revenue} color="#111113" formatV={inr} />
+          </div>
+        )}
       </div>
 
       {/* ---------- breakdown ---------- */}

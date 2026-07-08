@@ -36,7 +36,6 @@ export default function ActivityList() {
   return (
     <div>
       <PageHeader title="Activities" subtitle="Experiences with cost & selling price — picked straight into quotes."
-        counter={`Activities ${activities.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/activities/new"><Button>+ Add Activity</Button></Link></>} />
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search by name, category, city…" count={rows.length} />

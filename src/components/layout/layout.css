@@ -185,7 +185,7 @@
 .acct-scrim { position: fixed; inset: 0; z-index: 90; }
 .acct-menu {
   position: absolute; right: 0; top: calc(100% + 10px); z-index: 100;
-  min-width: 240px; padding: 8px;
+  min-width: 260px; padding: 8px; max-height: calc(100vh - 110px); overflow-y: auto;
   background: var(--color-canvas); border: 1px solid var(--color-hairline-soft);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-4);
   animation: menu-in .15s ease;
@@ -219,7 +219,6 @@
 }
 .acct-menu-head { display: flex; align-items: center; gap: 11px; padding: 10px 12px; }
 .acct-menu-email { font-size: 12px; color: var(--color-stone); margin-top: 2px; }
-
 /* ---- Content ---- */
 .content { flex: 1; padding: 32px 32px 48px; background: var(--color-canvas); }
 .content-inner { max-width: var(--container-max); margin: 0 auto; width: 100%; }

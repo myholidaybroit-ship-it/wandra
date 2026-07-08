@@ -22,8 +22,8 @@ export default function DestinationDetail() {
           <span className="t-title-md">Destination Details</span>
           <hr className="divider" />
           {d.image
-            ? <img src={d.image} alt={d.name} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 'var(--radius-md)' }} />
-            : <div className="ip-hero" style={{ height: 180, borderRadius: 'var(--radius-md)' }} />}
+            ? <img src={d.image} alt={d.name} style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--radius-md)', display: 'block' }} />
+            : <div className="ip-hero" style={{ aspectRatio: '16 / 9', borderRadius: 'var(--radius-md)' }} />}
           <div className="t-caption c-muted mt-base">Features & Specialties</div>
           <p className="t-body-md mt-xs">{d.features}</p>
           {d.description && <><div className="t-caption c-muted mt-base">Description</div><p className="t-body-sm c-body mt-xs">{d.description}</p></>}

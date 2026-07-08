@@ -1,32 +1,34 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
+import { pathFeature } from '../../featureGate'
 import { useApp } from '../../store/AppContext'
 import { Button } from '../ui/UI'
 import { Icon } from '../ui/icons'
+import RenewalBanner from './RenewalBanner'
 import './layout.css'
 
 const NAV_TOP = [
-  { to: '/app', label: 'Dashboard', icon: 'dashboard', end: true },
-  { to: '/app/clients', label: 'Trips & Clients', icon: 'clients' },
+  { to: '/app', label: 'Dashboard', icon: 'dashboard', end: true, feature: 'dashboard.view' },
+  { to: '/app/clients', label: 'Trips & Clients', icon: 'clients', feature: 'crm.view' },
 ]
 const MASTER_DATA = [
-  { to: '/app/destinations', label: 'Destinations', icon: 'destinations' },
-  { to: '/app/hotels', label: 'Hotels', icon: 'hotels' },
-  { to: '/app/cabs', label: 'Cabs', icon: 'cabs' },
-  { to: '/app/services', label: 'Service Locations', icon: 'destinations' },
-  { to: '/app/activities', label: 'Activities', icon: 'gallery' },
-  { to: '/app/packages/inclusions', label: 'Incl. & Excl.', icon: 'check' },
+  { to: '/app/destinations', label: 'Destinations', icon: 'destinations', feature: 'master.destinations' },
+  { to: '/app/hotels', label: 'Hotels', icon: 'hotels', feature: 'master.hotels' },
+  { to: '/app/cabs', label: 'Cabs', icon: 'cabs', feature: 'master.cabs' },
+  { to: '/app/services', label: 'Service Locations', icon: 'destinations', feature: 'master.service_locations' },
+  { to: '/app/activities', label: 'Activities', icon: 'gallery', feature: 'master.activities' },
+  { to: '/app/packages/inclusions', label: 'Incl. & Excl.', icon: 'check', feature: 'master.inclusions' },
 ]
 const NAV_END = [
-  { to: '/app/landing', label: 'Landing Page', icon: 'wand' },
-  { to: '/app/reports', label: 'Reports', icon: 'reports' },
-  { to: '/app/gallery', label: 'Reviews', icon: 'star' },
+  { to: '/app/landing', label: 'Landing Page', icon: 'wand', feature: 'landing.builder' },
+  { to: '/app/reports', label: 'Reports', icon: 'reports', feature: 'reports.view' },
+  { to: '/app/gallery', label: 'Reviews', icon: 'star', feature: 'reviews.view' },
 ]
 const NAV_BOTTOM = [
-  { to: '/app/settings', label: 'Settings', icon: 'settings' },
-  { to: '/app/users', label: 'User Management', icon: 'users' },
-  { to: '/app/roles', label: 'Roles & Permissions', icon: 'check' },
-  { to: '/app/assignment', label: 'Lead Assignment', icon: 'refresh' },
+  { to: '/app/settings', label: 'Settings', icon: 'settings', feature: 'branding.agency_profile' },
+  { to: '/app/users', label: 'User Management', icon: 'users', feature: 'team.users' },
+  { to: '/app/roles', label: 'Roles & Permissions', icon: 'check', feature: 'team.roles' },
+  { to: '/app/assignment', label: 'Lead Assignment', icon: 'refresh', feature: 'team.lead_assignment' },
   { to: '/app/billing', label: 'Billing & Subscription', icon: 'billing' },
   { to: '/app/support', label: 'Help & Support', icon: 'help' },
 ]
@@ -115,14 +117,21 @@ function SearchModal({ open, onClose }) {
 }
 
 export default function AdminLayout() {
-  const { agency, clients } = useApp()
+  const { agency, clients, currentUser, ready, authed, logout, hasFeature } = useApp()
+  const nav = useNavigate()
   const [open, setOpen] = useState(false)
   const [promo, setPromo] = useState(() => sessionStorage.getItem('wandra-admin-promo') !== 'off')
   const [searchOpen, setSearchOpen] = useState(false)
   const [acctOpen, setAcctOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('wandra-sidebar') === 'collapsed')
   const { pathname } = useLocation()
-  const masterActive = MASTER_DATA.some((n) => pathname.startsWith(n.to))
+  // filter every nav group by the agency's enabled features (admin-controlled)
+  const navFilter = (arr) => arr.filter((n) => !n.feature || hasFeature(n.feature))
+  const navTop = navFilter(NAV_TOP)
+  const masterData = navFilter(MASTER_DATA)
+  const navEnd = navFilter(NAV_END)
+  const navBottom = navFilter(NAV_BOTTOM)
+  const masterActive = masterData.some((n) => pathname.startsWith(n.to))
   const [masterOpen, setMasterOpen] = useState(masterActive)
   const [flyout, setFlyout] = useState(null)
   useEffect(() => { if (masterActive) setMasterOpen(true) }, [masterActive])
@@ -145,20 +154,30 @@ export default function AdminLayout() {
     return () => window.removeEventListener('keydown', h)
   }, [])
 
+  // auth guard — bounce to login once bootstrap resolves without a session
+  useEffect(() => { if (ready && !authed) nav('/login', { replace: true }) }, [ready, authed, nav])
+  if (!ready || !authed) {
+    return <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', color: '#6b7280' }}>Loading…</div>
+  }
+  const doLogout = () => { logout(); nav('/login', { replace: true }) }
+  const isPro = (agency.plan?.name || '').toLowerCase() === 'pro'
+  const planLimit = agency.plan.limit === -1 ? '∞' : agency.plan.limit
+  const usedPct = agency.plan.limit === -1 ? 0 : Math.min(100, (clients.length / agency.plan.limit) * 100)
+
   return (
     <div className="admin-shell">
       {/* Sidebar */}
       <aside className={`sidebar ${open ? 'sidebar-open' : ''} ${collapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="sidebar-top"><Logo collapsed={collapsed} /></div>
         <nav className="sidebar-nav">
-          {NAV_TOP.map((n) => (
+          {navTop.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} className="side-link" title={collapsed ? n.label : undefined} onClick={() => setOpen(false)}>
               <span className="side-ic"><Icon name={n.icon} /></span>
               <span className="side-txt">{n.label}</span>
             </NavLink>
           ))}
 
-          {collapsed ? (
+          {masterData.length > 0 && (collapsed ? (
             <button
               className={`side-link side-group ${masterActive ? 'active' : ''}`}
               title="Master Data"
@@ -176,7 +195,7 @@ export default function AdminLayout() {
               </button>
               {masterOpen && (
                 <div className="side-children">
-                  {MASTER_DATA.map((n) => (
+                  {masterData.map((n) => (
                     <NavLink key={n.to} to={n.to} className="side-link side-child" onClick={() => setOpen(false)}>
                       <span className="side-ic"><Icon name={n.icon} size={16} /></span>
                       <span className="side-txt">{n.label}</span>
@@ -185,9 +204,9 @@ export default function AdminLayout() {
                 </div>
               )}
             </>
-          )}
+          ))}
 
-          {NAV_END.map((n) => (
+          {navEnd.map((n) => (
             <NavLink key={n.to} to={n.to} className="side-link" title={collapsed ? n.label : undefined} onClick={() => setOpen(false)}>
               <span className="side-ic"><Icon name={n.icon} /></span>
               <span className="side-txt">{n.label}</span>
@@ -198,10 +217,10 @@ export default function AdminLayout() {
           <div className="side-plan-card">
             <div className="row-between">
               <span className="side-plan-name">{agency.plan.name}</span>
-              <span className="side-plan-usage">{clients.length}/{agency.plan.limit}</span>
+              <span className="side-plan-usage">{clients.length}/{planLimit}</span>
             </div>
-            <div className="side-plan-bar"><span style={{ width: `${Math.min(100, (clients.length / agency.plan.limit) * 100)}%` }} /></div>
-            <Button as="a" href="/app/billing" size="sm" className="w-full mt-sm">Upgrade plan</Button>
+            <div className="side-plan-bar"><span style={{ width: `${usedPct}%` }} /></div>
+            <Button as="a" href="/app/billing" size="sm" className="w-full mt-sm">{isPro ? 'Manage plan' : 'Upgrade plan'}</Button>
           </div>
         </div>
       </aside>
@@ -210,7 +229,7 @@ export default function AdminLayout() {
           <div className="flyout-scrim" onClick={() => setFlyout(null)} />
           <div className="side-flyout" style={{ top: flyout.top }}>
             <div className="side-flyout-head">Master Data</div>
-            {MASTER_DATA.map((n) => (
+            {masterData.map((n) => (
               <NavLink key={n.to} to={n.to} className="side-link" onClick={() => setFlyout(null)}>
                 <span className="side-ic"><Icon name={n.icon} size={16} /></span>
                 <span>{n.label}</span>
@@ -223,7 +242,7 @@ export default function AdminLayout() {
 
       {/* Main column */}
       <div className="main-col">
-        {promo && (
+        {promo && !isPro && (
           <div className="promo-banner">
             <span className="promo-copy">
               Launch offer — all plans <strong>70% off</strong> during early access.{' '}
@@ -247,16 +266,16 @@ export default function AdminLayout() {
             <div className="plan-pill">
               <div className="plan-pill-meta">
                 <span className="plan-pill-name">{agency.plan.name}</span>
-                <span className="plan-pill-usage">{clients.length}/{agency.plan.limit} clients used</span>
+                <span className="plan-pill-usage">{clients.length}/{planLimit} clients used</span>
               </div>
-              <Button as="a" href="/app/billing" size="sm" className="plan-pill-cta">Upgrade</Button>
+              <Button as="a" href="/app/billing" size="sm" className="plan-pill-cta">{isPro ? 'Manage' : 'Upgrade'}</Button>
             </div>
             <div className="acct-wrap">
               <button className="acct" onClick={() => setAcctOpen((o) => !o)}>
                 <span className="acct-avatar"><img src="/brand/wandra-mark.png" alt="" /></span>
                 <div className="acct-meta">
-                  <span className="acct-name">{agency.name}</span>
-                  <span className="acct-role">Admin</span>
+                  <span className="acct-name">{currentUser?.name || agency.name}</span>
+                  <span className="acct-role">{currentUser?.role || 'Admin'}</span>
                 </div>
                 <span className={`acct-chev ${acctOpen ? 'up' : ''}`}><Icon name="chevron" size={14} strokeWidth={2} /></span>
               </button>
@@ -267,20 +286,20 @@ export default function AdminLayout() {
                     <div className="acct-menu-head">
                       <span className="acct-avatar"><img src="/brand/wandra-mark.png" alt="" /></span>
                       <div>
-                        <div className="acct-name">{agency.name}</div>
-                        <div className="acct-menu-email">{agency.email}</div>
+                        <div className="acct-name">{currentUser?.name || agency.name}</div>
+                        <div className="acct-menu-email">{currentUser?.email || agency.email} · {currentUser?.role || 'Admin'}</div>
                       </div>
                     </div>
                     <div className="acct-menu-sep" />
-                    {NAV_BOTTOM.map((n) => (
+                    {navBottom.map((n) => (
                       <NavLink key={n.to} to={n.to} className="acct-menu-item" onClick={() => setAcctOpen(false)}>
                         <span className="side-ic"><Icon name={n.icon} size={16} /></span>{n.label}
                       </NavLink>
                     ))}
                     <div className="acct-menu-sep" />
-                    <Link to="/" className="acct-menu-item acct-menu-logout" onClick={() => setAcctOpen(false)}>
+                    <button type="button" className="acct-menu-item acct-menu-logout" onClick={() => { setAcctOpen(false); doLogout() }}>
                       <span className="side-ic"><Icon name="logout" size={16} /></span>Logout
-                    </Link>
+                    </button>
                   </div>
                 </>
               )}
@@ -290,12 +309,30 @@ export default function AdminLayout() {
 
         <main className="content">
           <div className="content-inner">
-            <Outlet />
+            {(() => {
+              const gate = pathFeature(pathname)
+              if (gate && !hasFeature(gate)) {
+                return (
+                  <div style={{ maxWidth: 520, margin: '10vh auto', textAlign: 'center' }}>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}></div>
+                    <h2 className="t-display-sm">Feature not available</h2>
+                    <p className="t-body-md c-body" style={{ marginTop: 8 }}>
+                      This module isn’t enabled on your current plan. Contact Wandra to enable it, or view your plan.
+                    </p>
+                    <div style={{ marginTop: 18 }}>
+                      <Button as="a" href="/app/billing">View plan &amp; billing</Button>
+                    </div>
+                  </div>
+                )
+              }
+              return <Outlet />
+            })()}
           </div>
         </main>
       </div>
 
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <RenewalBanner />
     </div>
   )
 }

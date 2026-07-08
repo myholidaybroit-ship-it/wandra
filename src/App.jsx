@@ -43,6 +43,7 @@ import QuoteBuilder from './pages/admin/packages/QuoteBuilder'
 import PackageDetail from './pages/admin/packages/PackageDetail'
 import PackageShare from './pages/admin/packages/PackageShare'
 import InclusionsExclusions from './pages/admin/packages/InclusionsExclusions'
+import InclusionsExclusionsEdit from './pages/admin/packages/InclusionsExclusionsEdit'
 import ItineraryTemplates from './pages/admin/packages/ItineraryTemplates'
 import Vouchers from './pages/admin/packages/Vouchers'
 import BookingList from './pages/admin/bookings/BookingList'
@@ -117,6 +118,7 @@ export default function App() {
           <Route path="packages/:id/share" element={<PackageShare />} />
           <Route path="packages/:id/vouchers" element={<Vouchers />} />
           <Route path="packages/inclusions" element={<InclusionsExclusions />} />
+          <Route path="packages/inclusions/:dest" element={<InclusionsExclusionsEdit />} />
           <Route path="packages/templates" element={<ItineraryTemplates />} />
           <Route path="bookings" element={<BookingList />} />
           <Route path="bookings/:id" element={<BookingDetail />} />

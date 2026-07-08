@@ -69,7 +69,7 @@ export default function ClientList() {
     { key: 'team', head: 'Team', render: (r) => (
       <div>
         <div>{r.query?.assignee || '—'}</div>
-        <div className="cell-sub">{r.createdAt}</div>
+        <div className="cell-sub">{(r.createdAt || '').slice(0, 10)}</div>
       </div>
     ) },
     { key: 'chev', head: '', align: 'right', render: () => <span className="row-chev"><Icon name="chevron" size={15} /></span> },

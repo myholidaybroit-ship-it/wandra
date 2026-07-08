@@ -285,10 +285,10 @@ export function SectionBanner({ n, icon, title, sub, tag, tagTone = 'neutral', a
 }
 
 /* ---------- Empty state ---------- */
-export function EmptyState({ icon = '☁', title, sub }) {
+export function EmptyState({ icon = '', title, sub }) {
   return (
     <div className="empty-state">
-      <div className="empty-icon">{icon}</div>
+      {icon && <div className="empty-icon">{icon}</div>}
       <div className="t-title-sm c-ink">{title}</div>
       {sub && <div className="t-body-sm c-muted mt-xs">{sub}</div>}
     </div>
@@ -633,19 +633,21 @@ export function HBars({ data = [], color = 'var(--color-ink)', formatV = (v) => 
 
 /* ---------- Funnel ---------- */
 export function Funnel({ stages = [], color = 'var(--color-brand-blue)' }) {
-  const max = Math.max(...stages.map((s) => s.value), 1)
+  const max = Math.max(...stages.map((s) => s.value || 0), 1)
   return (
     <div className="funnel">
       {stages.map((s, i) => {
-        const conv = i === 0 ? null : Math.round((s.value / stages[i - 1].value) * 100)
+        const label = s.stage ?? s.label ?? ''       // supports both {stage} and {label}
+        const prev = stages[i - 1]?.value
+        const conv = i === 0 || !prev ? null : Math.round(((s.value || 0) / prev) * 100)
         return (
-          <div className="funnel-row" key={s.stage}>
+          <div className="funnel-row" key={label || i}>
             <div className="row-between">
-              <span className="funnel-stage">{s.stage}</span>
-              <span className="funnel-nums">{s.value}{conv !== null && <em className="funnel-conv">{conv}%</em>}</span>
+              <span className="funnel-stage">{label}</span>
+              <span className="funnel-nums">{s.value || 0}{conv !== null && <em className="funnel-conv">{conv}%</em>}</span>
             </div>
             <div className="funnel-track">
-              <span className="funnel-fill" style={{ width: `${(s.value / max) * 100}%`, background: color, opacity: 1 - i * 0.14 }} />
+              <span className="funnel-fill" style={{ width: `${((s.value || 0) / max) * 100}%`, background: color, opacity: 1 - i * 0.14 }} />
             </div>
           </div>
         )

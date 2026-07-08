@@ -1,27 +1,30 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import * as seed from '../data/mockData'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { api, publicApi, isAuthed, setToken } from '../api'
 
 const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
 
-let idc = 1000
-const nid = (p) => `${p}${++idc}`
-
-/* ---- persistence: keep entity data across tabs/reloads so public
-   pages (/i, /pdf, /inv) opened in a NEW document can find records ---- */
-const LS_KEY = 'wandra-data-v5' // v5: Kerala destination + lead-assignment rules; v4: cab ratePerDay+image, service-location cost/sell
-const stored = (() => {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null') } catch { return null }
-})()
-if (stored) {
-  // keep freshly generated ids clear of every persisted id
-  const nums = (JSON.stringify(stored).match(/"id"\s*:\s*"[a-z]+(\d+)"/g) || []).map((s) => Number(s.replace(/\D/g, '')) || 0)
-  idc = Math.max(idc, ...nums, 0)
+// safe empty shape for the dashboard until the API responds (all live-computed)
+const EMPTY_DASH = {
+  series: { revenue: [], bookings: [], packages: [], clients: [] },
+  recentActivity: [],
+  analytics: {
+    months: [], grossByMonth: [], collectedByMonth: [], bookingsByMonth: [], profitByMonth: [],
+    marginPctByMonth: [], monthlyTarget: 1, weeklyInquiries: [], weekDays: [], leadFunnel: [],
+    leadSources: [], packageStatusMix: [], topDestinations: [], clientCities: [], invoiceAging: [],
+    ratingAvg: 0, ratingCount: 0, ratingDist: [], heatDays: [], heatWeeks: [], inquiryHeatmap: [],
+  },
+  kpis: {},
 }
 
-// ---- Pricing engine (mirrors the demo's auto-calc) ----
+// sentinel: "let the assignment rules decide" (used by the New Query form)
+export const AUTO_ASSIGNEE = '__auto__'
+
+export const inr = (n) =>
+  '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+
+/* ---- Pricing engine (identical to the backend's services/pricing.js) ---- */
 export function computePricing(pkg) {
-  // Builder mode: totals are computed and stored by the QuoteBuilder (cost vs selling per line)
   if (pkg.pricing?.mode === 'Builder' && pkg.pricing.grandTotal != null) {
     const p = pkg.pricing
     return {
@@ -47,282 +50,263 @@ export function computePricing(pkg) {
   const gstPercent = Number(pkg.pricing?.gstPercent || 0)
   const gstAmount = Math.round((afterDiscount * gstPercent) / 100)
   const grandTotal = afterDiscount + gstAmount
-  // profit = selling - buying (hotel net + cab cost approximated by rate)
   const hotelNet = (pkg.hotelsAlloc || []).reduce((s, h) => s + (Number(h.net) || 0), 0)
   const componentsCost = hotelNet + cabTotal
   const profit = grandTotal - componentsCost - otherTotal
   return { cabTotal, hotelTotal, otherTotal, subtotal, discount, gstPercent, gstAmount, grandTotal, componentsCost, profit }
 }
 
-export const inr = (n) =>
-  '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
-
-// sentinel: "let the assignment rules decide" (used by the New Query form)
-export const AUTO_ASSIGNEE = '__auto__'
+/**
+ * Shape the API agency into what the CRM components expect:
+ * the frontend reads `agency.plan.name` / `agency.plan.limit`, but the backend
+ * stores `plan` as a string ('Free'/'Pro') plus a numeric `limits` map.
+ */
+function normalizeAgency(ag) {
+  if (!ag) return ag
+  const clientLimit = ag.limits?.clients
+  return {
+    ...ag,
+    bank: ag.bank || {},
+    plan: { name: ag.plan, limit: clientLimit > 0 ? clientLimit : -1 }, // -1 = unlimited
+  }
+}
 
 export function AppProvider({ children }) {
-  // merged over seed so older saves gain new fields (e.g. logo);
-  // plan always comes from seed — it's product config, not a user edit
-  const [agency, setAgency] = useState(stored?.agency ? { ...seed.agency, ...stored.agency, plan: seed.agency.plan, bank: { ...seed.agency.bank, ...(stored.agency.bank || {}) } } : seed.agency)
-  const [destinations, setDestinations] = useState(stored?.destinations || seed.destinations)
-  const [hotels, setHotels] = useState(stored?.hotels || seed.hotels)
-  const [cabs, setCabs] = useState(stored?.cabs || seed.cabs)
-  const [serviceLocations, setServiceLocations] = useState(stored?.serviceLocations || seed.serviceLocations)
-  const [activities, setActivities] = useState(stored?.activities || seed.activities)
-  const [inclusionPresets, setInclusionPresets] = useState(stored?.inclusionPresets || seed.inclusionPresets)
-  const [vouchers, setVouchers] = useState(stored?.vouchers || [])
-  // merge over defaults so configs saved before new sections (e.g. header) pick them up
-  const [landing, setLanding] = useState(stored?.landing ? { ...seed.landingDefault, ...stored.landing } : seed.landingDefault)
-  const [roles, setRoles] = useState(stored?.roles || seed.rolesDefault)
-  const [assignment, setAssignment] = useState(stored?.assignment ? { ...seed.assignmentDefault, ...stored.assignment } : seed.assignmentDefault)
-  const [clients, setClients] = useState(stored?.clients || seed.clients)
-  const [packages, setPackages] = useState(stored?.packages || seed.packages)
-  const [bookings, setBookings] = useState(stored?.bookings || seed.bookings)
-  const [invoices, setInvoices] = useState(stored?.invoices || seed.invoices)
-  const [quotations, setQuotations] = useState(stored?.quotations || seed.quotations)
-  const [gallery, setGallery] = useState(seed.galleryStories)
-  const [users, setUsers] = useState(stored?.users || seed.users)
-  const [templates] = useState(seed.itineraryTemplates)
-  const [packageTemplates, setPackageTemplates] = useState(seed.packageTemplates)
-  const [themes, setThemes] = useState(seed.previewThemes)
+  // ── session ──
+  const [session, setSession] = useState(null)   // { user, agency, role, isAdmin, canSeePricing }
+  const [ready, setReady] = useState(false)
+  const [authed, setAuthed] = useState(isAuthed())
+
+  // ── plan feature flags (admin-controlled, per-agency) ──
+  const [features, setFeatures] = useState({})   // { 'dashboard.view': true, ... }
+  const [limitsMap, setLimitsMap] = useState({})
+
+  // ── tenant data (everything loaded from the API — no local seed) ──
+  const [agency, setAgencyState] = useState(null)
+  const [destinations, setDestinations] = useState([])
+  const [hotels, setHotels] = useState([])
+  const [cabs, setCabs] = useState([])
+  const [serviceLocations, setServiceLocations] = useState([])
+  const [activities, setActivities] = useState([])
+  const [packageTemplates, setPackageTemplates] = useState([])
+  const [inclusionPresets, setInclusionPresets] = useState({ byDest: {} })
+  const [clients, setClients] = useState([])
+  const [packages, setPackages] = useState([])
+  const [bookings, setBookings] = useState([])
+  const [invoices, setInvoices] = useState([])
+  const [quotations, setQuotations] = useState([])
+  const [vouchers, setVouchers] = useState([])
+  const [gallery, setGallery] = useState([])
+  const [users, setUsers] = useState([])
+  const [roles, setRoles] = useState([])
+  const [assignment, setAssignment] = useState({ enabled: true, rules: [], fallback: { mode: 'all', members: [], next: 0 } })
+  const [landing, setLanding] = useState(null)
+  const [dashboard, setDashboard] = useState(EMPTY_DASH)
+
+  // platform config (served from the backend via /config)
+  const [categoryGroups, setCategoryGroups] = useState([])
+  const [themes, setThemes] = useState([])
+  const [templates, setTemplates] = useState([])
+  const [plans, setPlans] = useState([])
+
+  // "view as" — local switch over the loaded users for permission preview
+  const [currentUserId, setCurrentUserId] = useState(null)
   const [toasts, setToasts] = useState([])
 
-  // persist entity data so fresh documents (new tab / print preview iframe) see it
-  useEffect(() => {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ agency, users, destinations, hotels, cabs, serviceLocations, activities, inclusionPresets, vouchers, landing, roles, assignment, clients, packages, bookings, invoices, quotations }))
-    } catch { /* storage full/unavailable — app still works in-memory */ }
-  }, [agency, users, destinations, hotels, cabs, serviceLocations, activities, inclusionPresets, vouchers, landing, roles, assignment, clients, packages, bookings, invoices, quotations])
-
-  // cross-tab sync: when another document writes (e.g. a lead submitted on the
-  // public landing page in its own tab), pull the fresh data into this tab's state
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key !== LS_KEY || !e.newValue) return
-      try {
-        const d = JSON.parse(e.newValue)
-        if (d.clients) setClients(d.clients)
-        if (d.packages) setPackages(d.packages)
-        if (d.bookings) setBookings(d.bookings)
-        if (d.invoices) setInvoices(d.invoices)
-        if (d.quotations) setQuotations(d.quotations)
-        if (d.vouchers) setVouchers(d.vouchers)
-        if (d.landing) setLanding((prev) => ({ ...prev, ...d.landing }))
-        if (d.assignment) setAssignment((prev) => ({ ...prev, ...d.assignment }))
-        if (d.agency) setAgency((prev) => ({ ...prev, ...d.agency }))
-        if (d.users) setUsers(d.users)
-      } catch { /* ignore malformed writes */ }
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
-
+  const tRef = useRef(0)
   const toast = useCallback((msg) => {
-    const id = nid('t')
+    const id = 't' + (++tRef.current)
     setToasts((t) => [...t, { id, msg }])
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2600)
   }, [])
 
-  // ---- lead assignment: conditional rules + round robin ----
-  // First enabled rule whose condition matches wins; its members take turns.
-  // Rotation pointers (rule.next / fallback.next) persist so the robin survives reloads.
-  const runAssignment = (draft) => {
-    if (!assignment.enabled) return { assignee: '', via: '' }
-    const activeNames = users.filter((u) => u.status === 'Active').map((u) => u.name)
-    const hay = {
-      destination: (draft.interest || '').toLowerCase(),
-      source: (draft.source || '').toLowerCase(),
-      city: (draft.city || '').toLowerCase(),
-    }
-    for (const r of assignment.rules) {
-      if (!r.enabled || !r.values?.length || !r.members?.length) continue
-      if (!r.values.some((v) => (hay[r.field] || '').includes(v.toLowerCase()))) continue
-      const pool = r.members.filter((m) => activeNames.includes(m))
-      if (!pool.length) continue
-      const name = pool[(r.next || 0) % pool.length]
-      setAssignment((s) => ({ ...s, rules: s.rules.map((x) => (x.id === r.id ? { ...x, next: ((x.next || 0) + 1) % pool.length } : x)) }))
-      return { assignee: name, via: r.name }
-    }
-    const fb = assignment.fallback || { mode: 'all' }
-    if (fb.mode === 'unassigned') return { assignee: '', via: '' }
-    const pool = (fb.mode === 'members' && fb.members?.length ? fb.members : activeNames).filter((m) => activeNames.includes(m))
-    if (!pool.length) return { assignee: '', via: '' }
-    const name = pool[(fb.next || 0) % pool.length]
-    setAssignment((s) => ({ ...s, fallback: { ...s.fallback, next: ((s.fallback?.next || 0) + 1) % pool.length } }))
-    return { assignee: name, via: 'Round robin' }
+  /* ---------- reload helpers (server owns cascades; client refetches) ---------- */
+  const LOADERS = {
+    destinations: () => api.get('/destinations').then((r) => setDestinations(r.items)),
+    hotels: () => api.get('/hotels').then((r) => setHotels(r.items)),
+    cabs: () => api.get('/cabs').then((r) => setCabs(r.items)),
+    serviceLocations: () => api.get('/services').then((r) => setServiceLocations(r.items)),
+    activities: () => api.get('/activities').then((r) => setActivities(r.items)),
+    packageTemplates: () => api.get('/templates').then((r) => setPackageTemplates(r.items)),
+    templates: () => api.get('/itinerary-templates').then((r) => setTemplates(r.items)),
+    inclusions: () => api.get('/inclusions').then((r) => setInclusionPresets({ byDest: r.byDest || {} })),
+    clients: () => api.get('/clients').then((r) => setClients(r.items)),
+    packages: () => api.get('/packages').then((r) => setPackages(r.items)),
+    bookings: () => api.get('/bookings').then((r) => setBookings(r.items)),
+    invoices: () => api.get('/invoices').then((r) => setInvoices(r.items)),
+    quotations: () => api.get('/quotations').then((r) => setQuotations(r.items)),
+    vouchers: () => api.get('/vouchers').then((r) => setVouchers(r.items)),
+    gallery: () => api.get('/stories').then((r) => setGallery(r.items)),
+    users: () => api.get('/users').then((r) => setUsers(r.items)),
+    roles: () => api.get('/roles').then((r) => setRoles(r.items)),
+    assignment: () => api.get('/assignment').then((r) => setAssignment(r)),
+    landing: () => api.get('/landing').then((r) => setLanding(r)),
+    dashboard: () => api.get('/dashboard').then((r) => setDashboard({ series: r.series, recentActivity: r.recentActivity, analytics: r.analytics, kpis: r.kpis })),
   }
-  const updateAssignment = (patch) => setAssignment((a) => ({ ...a, ...patch }))
-  const addAssignRule = () => {
-    const rec = { id: nid('ar'), name: 'New rule', enabled: true, field: 'destination', values: [], members: [], next: 0 }
-    setAssignment((a) => ({ ...a, rules: [...a.rules, rec] }))
-    return rec
-  }
-  const updateAssignRule = (id, patch) => setAssignment((a) => ({ ...a, rules: a.rules.map((r) => (r.id === id ? { ...r, ...patch } : r)) }))
-  const removeAssignRule = (id) => setAssignment((a) => ({ ...a, rules: a.rules.filter((r) => r.id !== id) }))
+  const reload = (...names) => Promise.all(names.map((n) => LOADERS[n]?.()))
 
-  // ---- generic add/update/remove factories ----
-  const addClient = (c) => {
-    const code = `CLI-202602-${String(clients.length + 1).padStart(3, '0')}`
-    const rec = { id: nid('cl'), code, tripStatus: 'New Query', createdAt: '2026-06-26', ...c }
-    const q = rec.query || {}
-    if (!q.assignee || q.assignee === AUTO_ASSIGNEE) {
-      const { assignee, via } = runAssignment(rec)
-      rec.query = { ...q, assignee, assignedVia: via }
-    }
-    setClients((l) => [rec, ...l])
-    return rec
-  }
-  const addClientDoc = (clientId, doc) => setClients((l) => l.map((c) => (c.id === clientId ? { ...c, docs: [{ id: nid('doc'), uploadedAt: new Date().toISOString().slice(0, 10), ...doc }, ...(c.docs || [])] } : c)))
-  const removeClientDoc = (clientId, docId) => setClients((l) => l.map((c) => (c.id === clientId ? { ...c, docs: (c.docs || []).filter((d) => d.id !== docId) } : c)))
-  const addDestination = (d) => setDestinations((l) => [{ id: nid('d'), ...d }, ...l])
-  const addHotel = (h) => setHotels((l) => [{ id: nid('h'), ...h }, ...l])
-  const addCab = (c) => setCabs((l) => [{ id: nid('c'), status: 'Active', ...c }, ...l])
-  const updateClient = (id, patch) => setClients((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x)))
-  const updateDestination = (id, patch) => setDestinations((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x)))
-  const updateHotel = (id, patch) => setHotels((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x)))
-  const updateCab = (id, patch) => setCabs((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x)))
-  const addServiceLocation = (s) => setServiceLocations((l) => [{ id: nid('sl'), ...s }, ...l])
-  const updateServiceLocation = (id, patch) => setServiceLocations((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x)))
-  const addActivity = (a) => setActivities((l) => [{ id: nid('ac'), ...a }, ...l])
-  const updateActivity = (id, patch) => setActivities((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x)))
-  // type: 'inclusions' | 'exclusions'
-  const addInclusionPreset = (type, text) => setInclusionPresets((p) => (p[type].includes(text) ? p : { ...p, [type]: [...p[type], text] }))
-  const removeInclusionPreset = (type, text) => setInclusionPresets((p) => ({ ...p, [type]: p[type].filter((x) => x !== text) }))
-  // vouchers: { type: 'Hotel'|'Transport'|'Activity', clientId, clientName, packageId, title, fields: [{k,v}], notes }
-  const updateLanding = (patch) => setLanding((l) => ({ ...l, ...patch }))
-  const addRole = (name) => { const rec = { id: nid('r'), name, perms: { dashboard: true, clients: true } }; setRoles((l) => [...l, rec]); return rec }
-  const removeRole = (id) => setRoles((l) => l.filter((r) => r.id !== id || r.system))
-  const setRolePerm = (id, key, val) => setRoles((l) => l.map((r) => (r.id === id && !r.system ? { ...r, perms: { ...r.perms, [key]: val } } : r)))
-  const addVoucher = (v) => {
-    const rec = { id: nid('v'), code: `VCH-${String(vouchers.length + 1).padStart(4, '0')}`, createdAt: '2026-06-26', ...v }
-    setVouchers((l) => [rec, ...l]); return rec
-  }
-  const removeVoucher = (id) => setVouchers((l) => l.filter((v) => v.id !== id))
+  /* ---------- bootstrap ---------- */
+  const bootstrap = useCallback(async () => {
+    const [me, ag, cfg, ent] = await Promise.all([api.get('/auth/me'), api.get('/agency'), api.get('/config'), api.get('/agency/features')])
+    setSession(me)
+    setAgencyState(normalizeAgency(ag.agency))
+    setCurrentUserId(me.user.id)
+    // admin-controlled plan feature flags (gate the whole UI)
+    setFeatures(ent.features || {})
+    setLimitsMap(ent.limits || {})
+    // platform config from the backend
+    setCategoryGroups(cfg.categoryGroups || [])
+    setThemes(cfg.previewThemes || [])
+    setPlans(cfg.plans || [])
+    await Promise.all(Object.values(LOADERS).map((fn) => fn().catch(() => {})))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addPackage = (p) => {
-    const seq = String(packages.length + 4).padStart(4, '0')
-    const rec = { id: nid('pk'), code: `PKG-202606-${seq}`, createdAt: '2026-06-26', createdBy: agency.name, paid: 0, status: p.status || 'Draft', ...p }
-    setPackages((l) => [rec, ...l])
-    // auto-create a quotation entry
-    const pr = computePricing(rec)
-    setQuotations((q) => [{ id: nid('q'), packageId: rec.id, packageCode: rec.code, client: rec.clientName, travelDate: rec.startDate, phone: '', email: '', status: 'Draft', amount: pr.grandTotal }, ...q])
-    return rec
-  }
-  const updatePackage = (id, patch) => setPackages((l) => l.map((p) => (p.id === id ? { ...p, ...patch } : p)))
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      if (!isAuthed()) { setReady(true); return }
+      try { await bootstrap(); if (alive) setAuthed(true) }
+      catch { setToken(''); if (alive) setAuthed(false) }
+      finally { if (alive) setReady(true) }
+    })()
+    return () => { alive = false }
+  }, [bootstrap])
 
-  const createPackageFromTemplate = (tpl, client) => {
-    const dest = seed.destinations.find((d) => d.name === tpl.destination)
-    const rec = addPackage({
-      clientId: client?.id || '', clientName: client?.name || '', clientPhone: client?.phone || '',
-      clientEmail: client?.email || '', clientAddress: client?.address || '',
-      fromLocation: '', route: '',
-      destination: dest ? `${dest.name} - ${dest.location}` : tpl.destination,
-      days: tpl.days, nights: tpl.nights, autoNights: false,
-      startDate: client?.query?.startDate || '',
-      pax: { total: (client?.query?.adults || 2) + (client?.query?.children || 0), adults: client?.query?.adults || 2, children: client?.query?.children || 0, childrenNoBed: 0, extraBeds: 0, rooms: Math.max(1, Math.ceil((client?.query?.adults || 2) / 2)), roomType: 'Double / Twin' },
-      flightIncluded: false, flight: { airline: '', flightNo: '', depart: '', arrive: '' },
-      status: 'Draft',
-      cabs: (tpl.cabs || []).map((c) => ({ ...c })),
-      hotelsAlloc: (tpl.hotelsAlloc || []).map((h) => ({ ...h })),
-      itinerary: (tpl.itinerary || []).map((d) => ({ ...d, stops: (d.stops || []).map((s) => ({ ...s })) })),
-      inclusions: [...seed.inclusionPresets.inclusions],
-      exclusions: [...seed.inclusionPresets.exclusions],
-      categories: (tpl.categories || []).map((c) => ({ ...c })),
-      pricing: { ...tpl.pricing },
-      fromTemplate: tpl.name,
-    })
-    setPackageTemplates((l) => l.map((t) => (t.id === tpl.id ? { ...t, usedCount: (t.usedCount || 0) + 1 } : t)))
-    if (client) addPackageLog(rec.id, `Created from template “${tpl.name}”`)
-    return rec
+  async function login(email, password) {
+    const data = await api.login(email, password)
+    await bootstrap()
+    setAuthed(true)
+    return data
+  }
+  function logout() {
+    api.logout(); setAuthed(false); setSession(null)
+    setClients([]); setPackages([]); setBookings([]); setInvoices([]); setQuotations([])
   }
 
-  const addPackageLog = (id, text) => setPackages((l) => l.map((p) => (p.id === id ? { ...p, logs: [{ id: nid('lg'), text, at: '2026-06-26' }, ...(p.logs || [])] } : p)))
-  const setPackageStatus = (id, status) => { updatePackage(id, { status }); addPackageLog(id, `Status changed to ${status}`); setQuotations((q) => q.map((x) => (x.packageId === id ? { ...x, status: status === 'Confirmed' ? 'Confirmed' : status === 'Cancelled' ? 'Cancelled' : 'Sent' } : x))) }
+  /* ---------- helpers ---------- */
+  const replace = (setter) => (rec) => setter((l) => l.map((x) => (x.id === rec.id ? rec : x)))
+  const prepend = (setter) => (rec) => setter((l) => [rec, ...l])
 
-  const createBookingFromPackage = (pkg) => {
-    const existing = bookings.find((b) => b.packageId === pkg.id && b.status !== 'Cancelled')
-    if (existing) return existing
-    const pr = computePricing(pkg)
-    const seq = String(bookings.length + 3).padStart(4, '0')
-    // auto-generate the invoice alongside the booking
-    const destShort = (pkg.destination || '').split(' - ')[0]
-    const inv = addInvoice({
-      clientId: pkg.clientId || '', clientName: pkg.clientName, type: 'Booking',
-      packageId: pkg.id, issueDate: '2026-06-26', dueDate: pkg.startDate || '', status: 'Unpaid', gst: false,
-      items: [{ description: `Travel Package ${pkg.code} — ${destShort} (${pkg.nights}N/${pkg.days}D)`, qty: 1, rate: pr.grandTotal, tax: 0 }],
-    })
-    const rec = { id: nid('bk'), code: `BKG-202606-${seq}`, packageId: pkg.id, invoiceId: inv.id, clientName: pkg.clientName, travelDate: pkg.startDate, status: 'Active', value: pr.grandTotal, paid: pkg.paid || 0, payments: [] }
-    setBookings((l) => [rec, ...l])
-    setInvoices((l) => l.map((i) => (i.id === inv.id ? { ...i, bookingId: rec.id } : i)))
-    setPackageStatus(pkg.id, 'Booked')
-    setQuotations((l) => l.map((q) => (q.packageId === pkg.id ? { ...q, status: 'Confirmed' } : q)))
-    addPackageLog(pkg.id, `Booking ${rec.code} created · Invoice ${inv.code} generated`)
-    // booking confirmed → the client's trip pipeline moves to Converted automatically
-    setClients((l) => l.map((c) => ((c.id === pkg.clientId || c.name === pkg.clientName) ? { ...c, tripStatus: 'Converted' } : c)))
-    return rec
+  /* ---------- agency profile ---------- */
+  const setAgency = async (patch) => {
+    const body = typeof patch === 'function' ? patch(agency) : patch
+    const updated = await api.patch('/agency', body)
+    setAgencyState(normalizeAgency(updated))
   }
-  const cancelBooking = (id) => {
-    const bk = bookings.find((b) => b.id === id)
-    if (!bk) return
-    setBookings((l) => l.map((b) => (b.id === id ? { ...b, status: 'Cancelled' } : b)))
-    if (bk.invoiceId) setInvoices((l) => l.map((i) => (i.id === bk.invoiceId ? { ...i, status: 'Cancelled' } : i)))
-    if (bk.packageId) {
-      setPackageStatus(bk.packageId, 'Quoted')
-      setQuotations((l) => l.map((q) => (q.packageId === bk.packageId ? { ...q, status: 'Sent' } : q)))
-      addPackageLog(bk.packageId, `Booking ${bk.code} cancelled`)
-    }
-  }
-  const addBookingPayment = (id, pay) => setBookings((l) => l.map((b) => (b.id === id ? { ...b, payments: [...(b.payments || []), pay], paid: (b.paid || 0) + Number(pay.amount || 0) } : b)))
-  const setBookingStatus = (id, status) => setBookings((l) => l.map((b) => (b.id === id ? { ...b, status } : b)))
-  const setQuotationStatus = (id, status) => setQuotations((l) => l.map((q) => (q.id === id ? { ...q, status } : q)))
+  const respondRenewal = async (answer) => { setAgencyState(normalizeAgency(await api.post('/agency/renewal/respond', { answer }))) }
 
-  const addInvoice = (inv) => {
-    const seq = String(invoices.length + 4).padStart(4, '0')
-    const rec = { id: nid('in'), code: `INV-202606-${seq}`, status: 'Draft', payments: [], items: [], ...inv }
-    setInvoices((l) => [rec, ...l]); return rec
-  }
-  const addPayment = (invId, pay) => setInvoices((l) => l.map((i) => {
-    if (i.id !== invId) return i
-    const payments = [...(i.payments || []), pay]
-    const total = i.items.reduce((s, it) => s + it.qty * it.rate * (1 + it.tax / 100), 0)
-    const paid = payments.reduce((s, p) => s + Number(p.amount || 0), 0)
-    const status = paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Draft'
-    return { ...i, payments, status }
-  }))
+  /* ---------- master data ---------- */
+  const addDestination = async (d) => { const rec = await api.post('/destinations', d); prepend(setDestinations)(rec); return rec }
+  const updateDestination = async (id, patch) => replace(setDestinations)(await api.patch(`/destinations/${id}`, patch))
+  const addHotel = async (h) => { const rec = await api.post('/hotels', h); prepend(setHotels)(rec); return rec }
+  const updateHotel = async (id, patch) => replace(setHotels)(await api.patch(`/hotels/${id}`, patch))
+  const addCab = async (c) => { const rec = await api.post('/cabs', c); prepend(setCabs)(rec); return rec }
+  const updateCab = async (id, patch) => replace(setCabs)(await api.patch(`/cabs/${id}`, patch))
+  const addServiceLocation = async (s) => { const rec = await api.post('/services', s); prepend(setServiceLocations)(rec); return rec }
+  const updateServiceLocation = async (id, patch) => replace(setServiceLocations)(await api.patch(`/services/${id}`, patch))
+  const addActivity = async (a) => { const rec = await api.post('/activities', a); prepend(setActivities)(rec); return rec }
+  const updateActivity = async (id, patch) => replace(setActivities)(await api.patch(`/activities/${id}`, patch))
 
-  const approveStory = (id) => setGallery((l) => l.map((g) => (g.id === id ? { ...g, status: 'Published' } : g)))
-  const addStory = (s) => setGallery((l) => [{ id: nid('g'), status: 'Pending', date: 'June 2026', ...s }, ...l])
-  const addUser = (u) => { const rec = { id: nid('u'), status: 'Active', ...u }; setUsers((l) => [rec, ...l]); return rec }
-  // Renaming a member cascades everywhere the name is referenced:
-  // assignment rotations (rules + fallback) and each lead's assignee.
-  const updateUser = (id, patch) => {
+  /* ---------- inclusion / exclusion presets ---------- */
+  const presetsForDest = (dest) => (dest && inclusionPresets.byDest?.[dest]) || { inclusions: [], exclusions: [] }
+  const addInclusionPreset = async (dest, type, text) => { const r = await api.post('/inclusions', { dest, type, text }); setInclusionPresets({ byDest: r.byDest }) }
+  const removeInclusionPreset = async (dest, type, text) => { const r = await api.del('/inclusions', { dest, type, text }); setInclusionPresets({ byDest: r.byDest }) }
+  const updateInclusionPreset = async (dest, type, oldText, newText) => { const r = await api.patch('/inclusions', { dest, type, oldText, newText }); setInclusionPresets({ byDest: r.byDest }) }
+  const clearDestinationPresets = async (dest) => { const r = await api.del('/inclusions', { dest }); setInclusionPresets({ byDest: r.byDest }) }
+
+  /* ---------- clients / leads ---------- */
+  const addClient = async (c) => { const rec = await api.post('/clients', c); prepend(setClients)(rec); return rec }
+  const updateClient = async (id, patch) => replace(setClients)(await api.patch(`/clients/${id}`, patch))
+  const addClientDoc = async (clientId, doc) => replace(setClients)(await api.post(`/clients/${clientId}/docs`, doc))
+  const removeClientDoc = async (clientId, docId) => replace(setClients)(await api.del(`/clients/${clientId}/docs/${docId}`))
+
+  /* ---------- packages ---------- */
+  const addPackage = async (p) => { const rec = await api.post('/packages', p); prepend(setPackages)(rec); reload('quotations'); return rec }
+  const updatePackage = async (id, patch) => { const rec = await api.patch(`/packages/${id}`, patch); replace(setPackages)(rec); return rec }
+  const setPackageStatus = async (id, status) => { const rec = await api.patch(`/packages/${id}/status`, { status }); replace(setPackages)(rec); reload('quotations') }
+  const addPackageLog = async (id, text) => replace(setPackages)(await api.post(`/packages/${id}/logs`, { text }))
+  const createPackageFromTemplate = async (tpl, client) => {
+    const rec = await api.post('/packages/from-template', { templateId: tpl.id, clientId: client?.id })
+    prepend(setPackages)(rec); reload('quotations', 'packageTemplates'); return rec
+  }
+
+  /* ---------- bookings ---------- */
+  const createBookingFromPackage = async (pkg) => {
+    const booking = await api.post('/bookings/from-package', { packageId: pkg.id })
+    await reload('bookings', 'invoices', 'quotations', 'packages', 'clients')
+    return booking
+  }
+  const cancelBooking = async (id) => { await api.post(`/bookings/${id}/cancel`); await reload('bookings', 'invoices', 'quotations', 'packages') }
+  const addBookingPayment = async (id, pay) => replace(setBookings)(await api.post(`/bookings/${id}/payments`, pay))
+  const setBookingStatus = async (id, status) => replace(setBookings)(await api.patch(`/bookings/${id}/status`, { status }))
+
+  /* ---------- invoices ---------- */
+  const addInvoice = async (inv) => { const rec = await api.post('/invoices', inv); prepend(setInvoices)(rec); return rec }
+  const addPayment = async (invId, pay) => replace(setInvoices)(await api.post(`/invoices/${invId}/payments`, pay))
+
+  /* ---------- quotations ---------- */
+  const setQuotationStatus = async (id, status) => replace(setQuotations)(await api.patch(`/quotations/${id}/status`, { status }))
+
+  /* ---------- vouchers ---------- */
+  const addVoucher = async (v) => { const rec = await api.post('/vouchers', v); prepend(setVouchers)(rec); return rec }
+  const removeVoucher = async (id) => { await api.del(`/vouchers/${id}`); setVouchers((l) => l.filter((v) => v.id !== id)) }
+
+  /* ---------- gallery / stories ---------- */
+  const approveStory = async (id) => replace(setGallery)(await api.patch(`/stories/${id}/approve`))
+  const addStory = async (s) => { const rec = await api.post('/stories', s); prepend(setGallery)(rec); return rec }
+
+  /* ---------- landing ---------- */
+  const updateLanding = async (patch) => {
+    setLanding((l) => ({ ...l, ...patch }))
+    const saved = await api.patch('/landing', patch)
+    setLanding(saved)
+    return saved
+  }
+
+  /* ---------- roles ---------- */
+  const addRole = async (name) => { const rec = await api.post('/roles', { name }); setRoles((l) => [...l, rec]); return rec }
+  const removeRole = async (id) => { await api.del(`/roles/${id}`); setRoles((l) => l.filter((r) => r.id !== id)) }
+  const setRolePerm = async (id, key, val) => replace(setRoles)(await api.patch(`/roles/${id}/perm`, { key, value: val }))
+
+  /* ---------- assignment ---------- */
+  const updateAssignment = async (patch) => { setAssignment((a) => ({ ...a, ...patch })); setAssignment(await api.patch('/assignment', patch)) }
+  const addAssignRule = async () => { const cfg = await api.post('/assignment/rules', {}); setAssignment(cfg); return cfg.rules[cfg.rules.length - 1] }
+  const updateAssignRule = async (id, patch) => setAssignment(await api.patch(`/assignment/rules/${id}`, patch))
+  const removeAssignRule = async (id) => setAssignment(await api.del(`/assignment/rules/${id}`))
+
+  /* ---------- users ---------- */
+  const addUser = async (u) => { const rec = await api.post('/users', u); prepend(setUsers)(rec); return rec }
+  const updateUser = async (id, patch) => {
     const prev = users.find((u) => u.id === id)
-    setUsers((l) => l.map((u) => (u.id === id ? { ...u, ...patch } : u)))
-    if (prev && patch.name && patch.name !== prev.name) {
-      const from = prev.name, to = patch.name
-      setAssignment((a) => ({
-        ...a,
-        rules: a.rules.map((r) => (r.members.includes(from) ? { ...r, members: r.members.map((m) => (m === from ? to : m)) } : r)),
-        fallback: { ...a.fallback, members: (a.fallback?.members || []).map((m) => (m === from ? to : m)) },
-      }))
-      setClients((l) => l.map((c) => (c.query?.assignee === from ? { ...c, query: { ...c.query, assignee: to } } : c)))
-    }
+    const rec = await api.patch(`/users/${id}`, patch)
+    replace(setUsers)(rec)
+    if (patch.name && prev && patch.name !== prev.name) reload('clients', 'assignment')
   }
-  // Deleting removes them from every assignment rotation; lead history keeps the name.
-  const removeUser = (id) => {
-    const u = users.find((x) => x.id === id)
-    if (!u || u.designation === 'Owner') return
-    setUsers((l) => l.filter((x) => x.id !== id))
-    setAssignment((a) => ({
-      ...a,
-      rules: a.rules.map((r) => (r.members.includes(u.name) ? { ...r, members: r.members.filter((m) => m !== u.name), next: 0 } : r)),
-      fallback: { ...a.fallback, members: (a.fallback?.members || []).filter((m) => m !== u.name), next: 0 },
-    }))
-  }
+  const removeUser = async (id) => { await api.del(`/users/${id}`); setUsers((l) => l.filter((x) => x.id !== id)); reload('assignment') }
+
+  /* ---------- themes (static demo) ---------- */
   const toggleTheme = (id, key) => setThemes((l) => l.map((t) => (t.id === id ? { ...t, [key]: !t[key] } : t)))
 
+  /* ---------- current user + permission flags ---------- */
+  const currentUser = users.find((u) => u.id === currentUserId) || session?.user || null
+  const currentRole = roles.find((r) => r.name === currentUser?.role) || session?.role
+  const isAdmin = currentUserId === session?.user?.id ? session?.isAdmin : !!currentRole?.system
+  const canSeePricing = currentRole
+    ? (currentRole.system || currentRole.perms?.viewPricing !== false)
+    : (session?.canSeePricing ?? true)
+  const setCurrentUser = (id) => setCurrentUserId(id)
+
+  /* ---------- plan feature flags (admin-controlled) ----------
+     hasFeature(key) → is this feature enabled for the agency? Unknown keys
+     default to enabled so we never hide something the catalog doesn't cover. */
+  const hasFeature = useCallback((key) => features[key] !== false, [features])
+  const limitFor = useCallback((key) => (limitsMap[key] == null ? -1 : limitsMap[key]), [limitsMap])
+
   const value = {
-    agency, setAgency,
+    ready, authed, session, login, logout,
+    features, limitsMap, hasFeature, limitFor,
+    agency, setAgency, respondRenewal,
+    agency, setAgency, respondRenewal,
     destinations, addDestination, updateDestination,
     hotels, addHotel, updateHotel,
     cabs, addCab, updateCab,
@@ -336,14 +320,16 @@ export function AppProvider({ children }) {
     quotations, setQuotationStatus,
     gallery, approveStory, addStory,
     users, addUser, updateUser, removeUser,
+    currentUser, currentUserId, setCurrentUser, canSeePricing, isAdmin,
     templates, themes, toggleTheme,
-    inclusionPresets, addInclusionPreset, removeInclusionPreset, categoryGroups: seed.categoryGroups,
+    inclusionPresets, addInclusionPreset, removeInclusionPreset, updateInclusionPreset, clearDestinationPresets, presetsForDest, categoryGroups,
     vouchers, addVoucher, removeVoucher,
     landing, updateLanding,
     roles, addRole, removeRole, setRolePerm,
     assignment, updateAssignment, addAssignRule, updateAssignRule, removeAssignRule,
-    dashboardSeries: seed.dashboardSeries, recentActivity: seed.recentActivity, plans: seed.plans,
-    dashboardAnalytics: seed.dashboardAnalytics,
+    dashboardSeries: dashboard.series, recentActivity: dashboard.recentActivity, plans,
+    dashboardAnalytics: dashboard.analytics, dashboardKpis: dashboard.kpis,
+    reload, publicApi,
     toast, toasts,
   }
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

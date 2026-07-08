@@ -87,7 +87,7 @@ export default function PublicLayout() {
           </div>
         </div>
       </footer>
-      {!onLanding && <a className="wa-float" href="#" title="Chat on WhatsApp">✆</a>}
+      {!onLanding && <a className="wa-float" href="#" title="Chat on WhatsApp"></a>}
     </div>
   )
 }

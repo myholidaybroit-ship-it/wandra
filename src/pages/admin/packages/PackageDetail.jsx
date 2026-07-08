@@ -19,7 +19,7 @@ function addDays(iso, n) {
 export default function PackageDetail() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { packages, clients, hotels, destinations, bookings, createBookingFromPackage, cancelBooking, addPackageLog, toast } = useApp()
+  const { packages, clients, hotels, destinations, bookings, createBookingFromPackage, cancelBooking, addPackageLog, toast, canSeePricing } = useApp()
   const pkg = packages.find((p) => p.id === id)
   const [note, setNote] = useState('')
 
@@ -68,9 +68,9 @@ export default function PackageDetail() {
   const pax = pkg.pax || {}
 
   const activeBooking = bookings.find((b) => b.packageId === pkg.id && b.status !== 'Cancelled')
-  const makeBooking = () => { const b = createBookingFromPackage(pkg); toast('Booked — invoice generated automatically'); nav(`/app/bookings/${b.id}`) }
-  const onCancelBooking = () => { cancelBooking(activeBooking.id); toast('Booking cancelled — package back to Quoted') }
-  const addNote = () => { if (!note.trim()) return; addPackageLog(pkg.id, note.trim()); setNote(''); toast('Note added') }
+  const makeBooking = async () => { try { const b = await createBookingFromPackage(pkg); toast('Booked — invoice generated automatically'); nav(`/app/bookings/${b.id}`) } catch (ex) { toast(ex.message || 'Could not create booking') } }
+  const onCancelBooking = async () => { await cancelBooking(activeBooking.id); toast('Booking cancelled — package back to Quoted') }
+  const addNote = async () => { if (!note.trim()) return; await addPackageLog(pkg.id, note.trim()); setNote(''); toast('Note added') }
 
   return (
     <div className="pd">
@@ -94,10 +94,12 @@ export default function PackageDetail() {
               <span className="pd-meta-item">{Number(pax.adults) || 0} Adults{Number(pax.children) ? ` · ${pax.children} Children` : ''}</span>
             </div>
           </div>
-          <div className="pd-hero-price">
-            <span className="pd-price-k">Package price</span>
-            <span className="pd-price-v">{inr(pr.grandTotal)}</span>
-          </div>
+          {canSeePricing && (
+            <div className="pd-hero-price">
+              <span className="pd-price-k">Package price</span>
+              <span className="pd-price-v">{inr(pr.grandTotal)}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -156,7 +158,7 @@ export default function PackageDetail() {
                   <div className="pd-day-b">
                     <div className="pd-day-t">{d.title}{d.city && d.city !== d.title ? <span className="pd-day-city">{d.city}</span> : null}</div>
                     {d.transfers.map((t, i) => (
-                      <div className="pd-day-svc" key={`t${i}`}><Icon name="cabs" size={13} /><span>{t.location || 'Transfer'}{t.serviceType ? ` · ${t.serviceType}` : ''}{t.startTime ? ` · ${t.startTime}` : ''}</span></div>
+                      <div className="pd-day-svc" key={`t${i}`}><Icon name="cabs" size={13} /><span>{t.location || 'Transfer'}{t.serviceType ? ` · ${t.serviceType}` : ''}</span></div>
                     ))}
                     {d.acts.map((a, i) => (
                       <div className="pd-day-svc" key={`a${i}`}><Icon name="star" size={13} /><span>{a.location || 'Activity'}{a.serviceType ? ` · ${a.serviceType}` : ''}</span></div>
@@ -168,26 +170,39 @@ export default function PackageDetail() {
             </div>
           </section>
 
-          {/* Inclusions / Exclusions */}
-          {((pkg.inclusions || []).length > 0 || (pkg.exclusions || []).length > 0) && (
-            <section className="pd-card">
-              <div className="pd-card-head"><span className="pd-card-title">Inclusions &amp; exclusions</span></div>
-              <div className="pd-ie">
-                {(pkg.inclusions || []).length > 0 && (
-                  <div>
-                    <div className="pd-ie-h inc">Included</div>
-                    {pkg.inclusions.map((x, i) => <div className="pd-ie-li" key={i}><i className="inc" />{x}</div>)}
+          {/* Inclusions / Exclusions — grouped per destination */}
+          {(() => {
+            const groups = (pkg.inclusionGroups && pkg.inclusionGroups.length)
+              ? pkg.inclusionGroups.filter((g) => (g.inclusions?.length || g.exclusions?.length))
+              : (((pkg.inclusions || []).length || (pkg.exclusions || []).length)
+                  ? [{ destination: '', inclusions: pkg.inclusions || [], exclusions: pkg.exclusions || [] }] : [])
+            if (!groups.length) return null
+            const multi = groups.length > 1
+            return (
+              <section className="pd-card">
+                <div className="pd-card-head"><span className="pd-card-title">Inclusions &amp; exclusions</span>{multi && <span className="pd-card-sub">per destination</span>}</div>
+                {groups.map((g, gi) => (
+                  <div className="pd-ie-group" key={gi}>
+                    {multi && g.destination && <div className="pd-ie-dest"><Icon name="destinations" size={13} /> {g.destination}</div>}
+                    <div className="pd-ie">
+                      {g.inclusions.length > 0 && (
+                        <div>
+                          <div className="pd-ie-h inc">Included</div>
+                          {g.inclusions.map((x, i) => <div className="pd-ie-li" key={i}><i className="inc" />{x}</div>)}
+                        </div>
+                      )}
+                      {g.exclusions.length > 0 && (
+                        <div>
+                          <div className="pd-ie-h exc">Not included</div>
+                          {g.exclusions.map((x, i) => <div className="pd-ie-li" key={i}><i className="exc" />{x}</div>)}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-                {(pkg.exclusions || []).length > 0 && (
-                  <div>
-                    <div className="pd-ie-h exc">Not included</div>
-                    {pkg.exclusions.map((x, i) => <div className="pd-ie-li" key={i}><i className="exc" />{x}</div>)}
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
+                ))}
+              </section>
+            )
+          })()}
 
           {/* Notes & activity */}
           <section className="pd-card">
@@ -223,7 +238,8 @@ export default function PackageDetail() {
 
         {/* ================= RIGHT ================= */}
         <aside className="pd-rail">
-          {/* Pricing */}
+          {/* Pricing — hidden for roles without pricing access */}
+          {canSeePricing && (
           <div className="pd-price-card">
             <div className="pd-pc-head">Pricing</div>
             {p.mode === 'Builder' ? (
@@ -257,6 +273,7 @@ export default function PackageDetail() {
             </div>
             <div className="pd-pc-bar"><span style={{ width: `${pr.grandTotal ? Math.min(100, (paid / pr.grandTotal) * 100) : 0}%` }} /></div>
           </div>
+          )}
 
           {/* Share */}
           <div className="pd-card pd-share">

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgencyLogo } from '../../components/ui/AgencyBrand'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { useApp } from '../../store/AppContext'
+import { usePublic } from '../../hooks/usePublic'
 import { preloadAndDownload } from '../../utils/pdf'
 import './pdf.css'
 
@@ -14,8 +14,9 @@ const TYPE_META = {
 export default function VoucherDoc() {
   const { id } = useParams()
   const [sp] = useSearchParams()
-  const { vouchers, agency } = useApp()
-  const v = vouchers.find((x) => x.id === id)
+  const { data } = usePublic(`/voucher/${id}`)
+  const v = data?.voucher
+  const agency = data?.agency || {}
   const docRef = useRef(null)
   const [busy, setBusy] = useState(false)
 
@@ -64,7 +65,7 @@ export default function VoucherDoc() {
           </div>
           <div className="vd-stub">
             <span className="vd-pass">{meta.pass}</span>
-            <span className="vd-logo"><AgencyLogo /></span>
+            <span className="vd-logo"><AgencyLogo agency={agency} /></span>
             <span className="vd-code">{v.code}</span>
           </div>
         </div>

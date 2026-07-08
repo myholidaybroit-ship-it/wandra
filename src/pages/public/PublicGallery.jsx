@@ -1,17 +1,21 @@
-import { useApp } from '../../store/AppContext'
-import { AgencyLogo } from '../../components/ui/AgencyBrand'
+import { useParams } from 'react-router-dom'
+import { usePublic } from '../../hooks/usePublic'
 import './stories.css'
 
 /* Agency-facing share page — their brand only, Wandra just powers it. */
 export default function PublicGallery() {
-  const { gallery, agency } = useApp()
-  const published = gallery.filter((g) => g.status === 'Published')
+  const { agency: slug } = useParams()
+  const { data, loading } = usePublic(`/stories/${slug}`)
+  const agency = data?.agency || {}
+  const published = data?.stories || []
   const avg = published.length ? published.reduce((s, g) => s + (g.rating || 0), 0) / published.length : 0
+
+  if (loading) return <div className="st"><header className="st-head"><p>Loading…</p></header></div>
 
   return (
     <div className="st">
       <header className="st-head">
-        <AgencyLogo className="st-logo" fallback="name" />
+        {agency.logo && <img className="st-logo" src={agency.logo} alt={agency.name} />}
         <h1 className="st-title">Traveler Stories</h1>
         <p className="st-sub">Real trips, real reviews from travellers who booked with {agency.name}.</p>
         {published.length > 0 && (

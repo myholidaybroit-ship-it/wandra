@@ -30,16 +30,18 @@ export async function downloadElementPdf(el, filename = 'document.pdf') {
   const mod = await import('html2pdf.js')
   const html2pdf = mod.default || mod
 
-  // neutralise screen-only chrome + force clean page breaks between .pdf-page's.
-  //  - zero margin/shadow/radius so pages sit flush
-  //  - min-height:0 so a SHORT doc (voucher/invoice) never spills to a 2nd page
-  //  - break BEFORE every page except the first → one sheet each, no trailing blank
+  // A "flow" doc (premium Holiday/Coastal studio) is one continuous sheet whose
+  // sections can be reordered freely — jsPDF slices it into A4 pages, so it needs
+  // a repeated top/bottom page margin. Fixed-layout docs keep hard page breaks.
+  const flow = el.dataset.pdfFlow === '1'
   const pages = [...el.querySelectorAll('.pdf-page')]
   const savedPages = pages.map((p) => p.style.cssText)
   pages.forEach((p, i) => {
     p.style.margin = '0'; p.style.boxShadow = 'none'; p.style.borderRadius = '0'; p.style.minHeight = '0'
-    p.style.breakBefore = i > 0 ? 'page' : 'auto'
-    p.style.pageBreakBefore = i > 0 ? 'always' : 'auto'
+    if (!flow) {
+      p.style.breakBefore = i > 0 ? 'page' : 'auto'
+      p.style.pageBreakBefore = i > 0 ? 'always' : 'auto'
+    }
   })
   const hidden = [...el.querySelectorAll('.no-print, [data-no-pdf]')]
   const savedHidden = hidden.map((h) => h.style.display)
@@ -48,11 +50,12 @@ export async function downloadElementPdf(el, filename = 'document.pdf') {
   try {
     await html2pdf().set({
       filename,
-      margin: 0,
+      margin: flow ? [11, 0, 13, 0] : 0,
       image: { type: 'jpeg', quality: 0.96 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-      pagebreak: { mode: ['css', 'legacy'] },
+      // 'avoid-all' keeps cards/days/tables from being sliced across a page edge
+      pagebreak: flow ? { mode: ['css', 'legacy'], avoid: ['.pdf-avoid', 'tr', 'img'] } : { mode: ['css', 'legacy'] },
     }).from(el).save()
   } finally {
     pages.forEach((p, i) => { p.style.cssText = savedPages[i] })

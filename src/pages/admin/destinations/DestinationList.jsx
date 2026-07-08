@@ -31,7 +31,6 @@ export default function DestinationList() {
   return (
     <div>
       <PageHeader title="Destinations" subtitle="The places your agency sells — photos flow into PDFs & the landing page."
-        counter={`Destinations ${destinations.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/destinations/new"><Button>+ Add New Destination</Button></Link></>} />
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search destinations…" count={rows.length} />

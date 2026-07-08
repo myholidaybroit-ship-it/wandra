@@ -1,11 +1,25 @@
+import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useApp } from '../../store/AppContext'
 import './login.css'
 
 const VISUAL = 'https://res.cloudinary.com/dyxxkrq8r/image/upload/w_1600,q_auto,f_auto/v1783197372/beautiful-girl-standing-viewpoint-koh-nangyuan-island-near-koh-tao-island-surat-thani-thailand_1_qz5qy8.jpg'
 
 export default function Login() {
   const nav = useNavigate()
-  const go = (e) => { e.preventDefault(); nav('/app') }
+  const { login } = useApp()
+  const [email, setEmail] = useState('admin@wandra.travel')
+  const [password, setPassword] = useState('demo1234')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const go = async (e) => {
+    e.preventDefault()
+    setErr(''); setBusy(true)
+    try { await login(email, password); nav('/app') }
+    catch (ex) { setErr(ex.message || 'Login failed') }
+    finally { setBusy(false) }
+  }
 
   return (
     <div className="lg">
@@ -28,10 +42,11 @@ export default function Login() {
 
           <form className="lg-form" onSubmit={go}>
             <label className="lg-field"><span>Email</span>
-              <input type="email" defaultValue="admin@wandra.travel" placeholder="name@agency.com" /></label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@agency.com" required /></label>
             <label className="lg-field"><span>Password</span>
-              <input type="password" defaultValue="demo1234" /></label>
-            <button className="lg-submit" type="submit">Log in</button>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
+            {err && <div style={{ color: '#dc2626', fontSize: 13, marginTop: 4 }}>{err}</div>}
+            <button className="lg-submit" type="submit" disabled={busy}>{busy ? 'Logging in…' : 'Log in'}</button>
           </form>
         </div>
       </div>

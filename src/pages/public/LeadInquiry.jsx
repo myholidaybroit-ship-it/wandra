@@ -1,16 +1,21 @@
 import { useState } from 'react'
-import { useApp } from '../../store/AppContext'
+import { publicApi } from '../../api'
 import { Card, Button, Field, Input, Textarea } from '../../components/ui/UI'
 
+// Wandra's own marketing enquiry routes to the demo agency's public inbox
+const DEMO_SLUG = 'wandra-travels'
+
 export default function LeadInquiry() {
-  const { addClient, toast } = useApp()
   const [f, setF] = useState({ name: '', email: '', phone: '', interest: '', budget: '', details: '' })
   const [done, setDone] = useState(false)
+  const [err, setErr] = useState('')
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
-  const submit = () => {
-    if (!f.name || !f.phone) return toast('Name and phone are required')
-    addClient({ name: f.name, email: f.email, phone: f.phone, interest: f.interest, budget: Number(f.budget) || 0, note: 'New Inquiry', source: 'Lead Form', address: '', city: '', state: '', country: 'India' })
-    setDone(true); toast('Inquiry sent — the lead is now in the CRM')
+  const submit = async () => {
+    if (!f.name || !f.phone) return setErr('Name and phone are required')
+    try {
+      await publicApi.post(`/site/${DEMO_SLUG}/lead`, { name: f.name, email: f.email, phone: f.phone, destination: f.interest, budget: Number(f.budget) || 0, comments: f.details, source: 'Lead Form' })
+      setDone(true)
+    } catch (ex) { setErr(ex.message || 'Could not send your inquiry') }
   }
   return (
     <div className="section" style={{ display: 'grid', placeItems: 'center' }}>
@@ -36,6 +41,7 @@ export default function LeadInquiry() {
                 <Field label="Approx. Budget"><Input value={f.budget} onChange={set('budget')} placeholder="50000" /></Field>
               </div>
               <Field label="Additional Details"><Textarea value={f.details} onChange={set('details')} placeholder="Tell us more about your travel plans…" /></Field>
+              {err && <div style={{ color: '#dc2626', fontSize: 13 }}>{err}</div>}
               <Button className="w-full" onClick={submit}>Send Inquiry</Button>
             </div>
           </>

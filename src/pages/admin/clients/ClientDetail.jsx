@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../../store/AppContext'
+import { api } from '../../../api'
+import { fileToUploadable } from '../../../utils/image'
 import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, DataTable, EmptyState, PillSelect } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import '../packages/detail.css'
@@ -16,7 +18,7 @@ const fmtSize = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math
 
 export default function ClientDetail() {
   const { id } = useParams()
-  const { clients, packages, bookings, invoices, quotations, setQuotationStatus, updateClient, addClientDoc, removeClientDoc, toast } = useApp()
+  const { clients, packages, bookings, invoices, quotations, setQuotationStatus, updateClient, addClientDoc, removeClientDoc, toast, canSeePricing } = useApp()
   const c = clients.find((x) => x.id === id)
   const [tab, setTab] = useState('Overview')
   const [edit, setEdit] = useState(false)
@@ -45,16 +47,21 @@ export default function ClientDetail() {
     setDocFile(file)
     setDocName((n) => n || file.name.replace(/\.[^.]+$/, ''))
   }
-  const saveDoc = () => {
+  const [docSaving, setDocSaving] = useState(false)
+  const saveDoc = async () => {
     if (!docFile) return toast('Choose a file first')
     if (!docName.trim()) return toast('Give the document a name')
-    addClientDoc(c.id, {
-      name: docName.trim(), category: docCat,
-      fileName: docFile.name, size: docFile.size, mime: docFile.type,
-      url: URL.createObjectURL(docFile),
-    })
-    toast('Document uploaded')
-    setDocOpen(false)
+    setDocSaving(true)
+    try {
+      const dataUrl = await fileToUploadable(docFile, 1800)
+      const url = await api.upload(dataUrl, 'client-docs')
+      await addClientDoc(c.id, {
+        name: docName.trim(), category: docCat,
+        fileName: docFile.name, size: docFile.size, mime: docFile.type, url,
+      })
+      toast('Document uploaded')
+      setDocOpen(false)
+    } catch { toast('Could not upload that document') } finally { setDocSaving(false) }
   }
 
   const counts = { Packages: cPkgs.length, Bookings: cBookings.length, Invoices: cInvoices.length, Quotations: cQuotes.length, Documents: docs.length }
@@ -88,8 +95,10 @@ export default function ClientDetail() {
           <div className="ch-stat"><span className="ch-stat-v">{cBookings.length}</span><span className="ch-stat-k">Bookings</span></div>
           <div className="ch-stat"><span className="ch-stat-v">{cInvoices.length}</span><span className="ch-stat-k">Invoices</span></div>
           <div className="ch-stat"><span className="ch-stat-v">{cQuotes.length}</span><span className="ch-stat-k">Quotations</span></div>
-          <div className="ch-stat"><span className="ch-stat-v">{inr(lifetime)}</span><span className="ch-stat-k">Paid to date</span></div>
-          <div className="ch-stat"><span className="ch-stat-v">{inr(c.budget)}</span><span className="ch-stat-k">Budget</span></div>
+          {canSeePricing && <>
+            <div className="ch-stat"><span className="ch-stat-v">{inr(lifetime)}</span><span className="ch-stat-k">Paid to date</span></div>
+            <div className="ch-stat"><span className="ch-stat-v">{inr(c.budget)}</span><span className="ch-stat-k">Budget</span></div>
+          </>}
         </div>
       </Card>
 
@@ -108,14 +117,14 @@ export default function ClientDetail() {
             <div>
               <div className="kv-grid kv-grid-3">
                 <KV k="Lead Interest" v={c.interest || '—'} />
-                <KV k="Budget" v={inr(c.budget)} />
+                {canSeePricing && <KV k="Budget" v={inr(c.budget)} />}
                 <KV k="Source" v={c.source || '—'} />
                 <KV k="Phone" v={c.phone} />
                 <KV k="Email" v={c.email} />
                 <KV k="City" v={`${c.city || '—'}${c.state ? ', ' + c.state : ''}`} />
                 <KV k="Address" v={c.address || '—'} />
                 <KV k="Note" v={c.note || '—'} />
-                <KV k="Created" v={c.createdAt} />
+                <KV k="Created" v={(c.createdAt || '').slice(0, 10)} />
               </div>
               <hr className="divider" />
               <div className="tstep-wrap">
@@ -158,7 +167,7 @@ export default function ClientDetail() {
                   { key: 'destination', head: 'Destination', render: (r) => <span>{r.destination?.split(' - ')[0] || '—'}</span> },
                   { key: 'start', head: 'Start', render: (r) => <span className="cell-sub">{r.startDate || '—'}</span> },
                   { key: 'status', head: 'Status', render: (r) => <Badge tone={r.status}>{r.status}</Badge> },
-                  { key: 'total', head: 'Total', align: 'right', render: (r) => <span className="cell-strong">{inr(computePricing(r).grandTotal)}</span> },
+                  ...(canSeePricing ? [{ key: 'total', head: 'Total', align: 'right', render: (r) => <span className="cell-strong">{inr(computePricing(r).grandTotal)}</span> }] : []),
                   { key: 'open', head: '', align: 'right', render: (r) => <Link to={`/app/packages/${r.id}`}><Button variant="tertiary" size="sm">Open</Button></Link> },
                 ]} rows={cPkgs} />
               </>
@@ -173,8 +182,10 @@ export default function ClientDetail() {
                 { key: 'code', head: 'Booking', render: (r) => <Link className="cell-strong c-link" to={`/app/bookings/${r.id}`}>{r.code}</Link> },
                 { key: 'travelDate', head: 'Travel date', render: (r) => <span className="cell-sub">{r.travelDate}</span> },
                 { key: 'status', head: 'Status', render: (r) => <Badge tone={r.status}>{r.status}</Badge> },
-                { key: 'value', head: 'Value', align: 'right', render: (r) => inr(r.value) },
-                { key: 'paid', head: 'Collected', align: 'right', render: (r) => <span className="c-success">{inr(r.paid)}</span> },
+                ...(canSeePricing ? [
+                  { key: 'value', head: 'Value', align: 'right', render: (r) => inr(r.value) },
+                  { key: 'paid', head: 'Collected', align: 'right', render: (r) => <span className="c-success">{inr(r.paid)}</span> },
+                ] : []),
                 { key: 'open', head: '', align: 'right', render: (r) => <Link to={`/app/bookings/${r.id}`}><Button variant="tertiary" size="sm">Open</Button></Link> },
               ]} rows={cBookings} />
             )
@@ -190,8 +201,10 @@ export default function ClientDetail() {
                   { key: 'code', head: 'Invoice', render: (r) => <Link className="cell-strong c-link" to={`/app/invoices/${r.id}`}>{r.code}</Link> },
                   { key: 'issueDate', head: 'Issued', render: (r) => <span className="cell-sub">{r.issueDate}</span> },
                   { key: 'status', head: 'Status', render: (r) => <Badge tone={r.status}>{r.status}</Badge> },
-                  { key: 'total', head: 'Total', align: 'right', render: (r) => inr(invoiceTotal(r)) },
-                  { key: 'balance', head: 'Balance', align: 'right', render: (r) => <span className="cell-strong">{inr(invoiceTotal(r) - invoicePaid(r))}</span> },
+                  ...(canSeePricing ? [
+                    { key: 'total', head: 'Total', align: 'right', render: (r) => inr(invoiceTotal(r)) },
+                    { key: 'balance', head: 'Balance', align: 'right', render: (r) => <span className="cell-strong">{inr(invoiceTotal(r) - invoicePaid(r))}</span> },
+                  ] : []),
                   { key: 'open', head: '', align: 'right', render: (r) => <Link to={`/app/invoices/${r.id}`}><Button variant="tertiary" size="sm">Open</Button></Link> },
                 ]} rows={cInvoices} />
               </>
@@ -235,7 +248,7 @@ export default function ClientDetail() {
               <DataTable columns={[
                 { key: 'packageCode', head: 'Package', render: (r) => <span className="cell-strong mono">{r.packageCode}</span> },
                 { key: 'travelDate', head: 'Travel date', render: (r) => <span className="cell-sub">{r.travelDate}</span> },
-                { key: 'amount', head: 'Amount', align: 'right', render: (r) => inr(r.amount) },
+                ...(canSeePricing ? [{ key: 'amount', head: 'Amount', align: 'right', render: (r) => inr(r.amount) }] : []),
                 { key: 'status', head: 'Status', render: (r) => (
                   r.status === 'Confirmed'
                     ? <Badge tone="confirmed">Confirmed</Badge>

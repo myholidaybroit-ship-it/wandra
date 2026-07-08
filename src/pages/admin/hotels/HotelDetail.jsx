@@ -22,7 +22,7 @@ export default function HotelDetail() {
         <Card>
           <span className="t-title-md">Hotel Information</span>
           <hr className="divider" />
-          {h.image && <img src={h.image} alt={h.name} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 14 }} />}
+          {h.image && <img src={h.image} alt={h.name} style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 14, display: 'block' }} />}
           <div className="kv-grid">
             <KV k="City" v={h.city} /><KV k="Rating" v={`${h.rating} / 5`} />
             <KV k="Phone" v={h.phone} /><KV k="Email" v={h.email} />

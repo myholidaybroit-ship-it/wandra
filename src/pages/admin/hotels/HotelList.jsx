@@ -30,7 +30,6 @@ export default function HotelList() {
   return (
     <div>
       <PageHeader title="Hotels" subtitle="Affiliated hotels — base & bed rates feed straight into quote pricing."
-        counter={`Hotels ${hotels.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/hotels/new"><Button>+ Add New Hotel</Button></Link></>} />
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search hotels…" count={rows.length} />

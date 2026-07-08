@@ -14,7 +14,7 @@ const PRODUCTS = [
 
 const TILES = [
   { icon: '⌂', title: 'Hotels & Inventory', body: 'Your affiliated hotels with buying prices, so every quote knows its margin.' },
-  { icon: '⛟', title: 'Cabs & Transfers', body: 'Rate-per-km fleets and day-wise transfer plans, auto-costed.' },
+  { icon: '', title: 'Cabs & Transfers', body: 'Rate-per-km fleets and day-wise transfer plans, auto-costed.' },
   { icon: '◈', title: 'Vouchers', body: 'Hotel, cab and flight vouchers generated straight from the booking.' },
   { icon: '❖', title: 'Gallery & Stories', body: 'Collect traveler photos and testimonials into a shareable wall.' },
 ]

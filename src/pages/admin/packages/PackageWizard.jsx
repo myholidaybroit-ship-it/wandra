@@ -7,13 +7,13 @@ import './wizard.css'
 const SECTIONS = [
   { n: 1, key: 'client', icon: '◉', title: 'Client & Query Information', sub: 'Basic client details and passenger information', tag: 'Required', tone: 'required' },
   { n: 2, key: 'basics', icon: '⌖', title: 'Travel Basics', sub: 'Destination, dates and basic travel information', tag: 'Basic Info', tone: 'warning' },
-  { n: 3, key: 'flight', icon: '✈', title: 'Flight Section', sub: 'Flight arrangements and details', tag: 'Optional', tone: 'warning' },
-  { n: 4, key: 'meta', icon: '⚙', title: 'Itinerary Meta', sub: 'Assignment, status, and route information', tag: 'Meta', tone: 'neutral' },
-  { n: 5, key: 'cab', icon: '⛟', title: 'Cab Section', sub: 'Transportation arrangements and vehicle selection', tag: 'Transport', tone: 'success' },
+  { n: 3, key: 'flight', icon: '', title: 'Flight Section', sub: 'Flight arrangements and details', tag: 'Optional', tone: 'warning' },
+  { n: 4, key: 'meta', icon: '', title: 'Itinerary Meta', sub: 'Assignment, status, and route information', tag: 'Meta', tone: 'neutral' },
+  { n: 5, key: 'cab', icon: '', title: 'Cab Section', sub: 'Transportation arrangements and vehicle selection', tag: 'Transport', tone: 'success' },
   { n: 6, key: 'hotel', icon: '⌂', title: 'Hotel Allocation', sub: 'Hotel selection and accommodation details', tag: 'Accommodation', tone: 'warning' },
   { n: 7, key: 'days', icon: '▦', title: 'Day-wise Itinerary Builder', sub: 'Detailed day-by-day travel schedule and destinations', tag: 'Schedule', tone: 'info' },
   { n: 8, key: 'incl', icon: '✓', title: 'Inclusions / Exclusions', sub: "What's included and excluded from the package", tag: 'Details', tone: 'neutral' },
-  { n: 9, key: 'cats', icon: '🏷', title: 'Other Package Categories', sub: 'Additional charges and custom categories', tag: 'Additional', tone: 'info' },
+  { n: 9, key: 'cats', icon: '', title: 'Other Package Categories', sub: 'Additional charges and custom categories', tag: 'Additional', tone: 'info' },
   { n: 10, key: 'pricing', icon: '₹', title: 'Pricing & Quotation', sub: 'Package pricing, discounts, and final calculations', tag: 'Financial', tone: 'info' },
 ]
 
@@ -45,7 +45,7 @@ export default function PackageWizard() {
     cabIncluded: true, cabs: [{ cabId: '', name: '', type: '', km: '', rate: '', }],
     hotelIncluded: true, hotelsAlloc: [],
     itinerary: [blankDay(1)],
-    inclusions: [...inclusionPresets.inclusions], exclusions: [...inclusionPresets.exclusions],
+    inclusions: [...(inclusionPresets.inclusions || [])], exclusions: [...(inclusionPresets.exclusions || [])],
     categories: [],
     pricing: { mode: 'Total', packageCost: '', childCost: '', discount: '', gstPercent: '' },
   })
@@ -104,7 +104,7 @@ export default function PackageWizard() {
 
   const toggleIncl = (key, item) => setPkg((p) => ({ ...p, [key]: p[key].includes(item) ? p[key].filter((x) => x !== item) : [...p[key], item] }))
 
-  const create = () => {
+  const create = async () => {
     if (!pkg.clientName) { setActive(1); return toast('Client name is required') }
     const payload = {
       ...pkg,
@@ -114,10 +114,12 @@ export default function PackageWizard() {
       categories: pkg.categories.filter((c) => c.name).map((c) => ({ ...c, amount: Number(c.amount) || 0 })),
       pricing: { ...pkg.pricing, packageCost: Number(pkg.pricing.packageCost) || 0, childCost: Number(pkg.pricing.childCost) || 0, discount: Number(pkg.pricing.discount) || 0, gstPercent: Number(pkg.pricing.gstPercent) || 0, hotelTotal: live.hotelTotal, cabTotal: live.cabTotal, otherTotal: live.otherTotal },
     }
-    if (editing) { updatePackage(editing.id, payload); toast('Package updated successfully'); nav(`/app/packages/${editing.id}`); return }
-    const rec = addPackage(payload)
-    toast('Package created successfully')
-    nav(`/app/packages/${rec.id}`)
+    try {
+      if (editing) { await updatePackage(editing.id, payload); toast('Package updated successfully'); nav(`/app/packages/${editing.id}`); return }
+      const rec = await addPackage(payload)
+      toast('Package created successfully')
+      nav(`/app/packages/${rec.id}`)
+    } catch (ex) { toast(ex.message || 'Could not save the package') }
   }
   const addCatGroup = (g) => setPkg((p) => ({ ...p, categories: [...p.categories, { name: g, description: '', amount: '' }] }))
 
@@ -224,7 +226,7 @@ export default function PackageWizard() {
                           <Field label="KMs Travel"><Input value={c.km} onChange={(e) => setCab(i, { km: e.target.value })} /></Field>
                           <Field label="Rate / KM"><Input value={c.rate} onChange={(e) => setCab(i, { rate: e.target.value })} /></Field>
                           <Field label="Total"><Input value={inr((Number(c.km) || 0) * (Number(c.rate) || 0))} readOnly /></Field>
-                          <Button variant="danger" size="sm" onClick={() => rmCab(i)}>🗑 Remove</Button>
+                          <Button variant="danger" size="sm" onClick={() => rmCab(i)}>Remove</Button>
                         </div>
                       ))}
                       <Button variant="secondary" size="sm" onClick={addCabRow}>+ Add Cab</Button>
@@ -251,7 +253,7 @@ export default function PackageWizard() {
                     {pkg.itinerary.map((d, i) => (
                       <div className="day-card" key={i}>
                         <div className="row-between"><span className="t-title-sm">Day {i + 1}</span>
-                          <div className="row gap-xs"><Button variant="secondary" size="sm" onClick={() => addStop(i)}>+ Add Destination</Button>{pkg.itinerary.length > 1 && <Button variant="danger" size="sm" onClick={() => rmDay(i)}>🗑 Remove</Button>}</div>
+                          <div className="row gap-xs"><Button variant="secondary" size="sm" onClick={() => addStop(i)}>+ Add Destination</Button>{pkg.itinerary.length > 1 && <Button variant="danger" size="sm" onClick={() => rmDay(i)}>Remove</Button>}</div>
                         </div>
                         <div className="form-grid-3 mt-sm">
                           <Field label="Day Title"><Input value={d.title} onChange={(e) => setDay(i, { title: e.target.value })} placeholder="e.g. Arrival & Check-in" /></Field>
@@ -281,13 +283,13 @@ export default function PackageWizard() {
                     <div className="form-grid">
                       <div>
                         <div className="t-title-sm mb-sm">Inclusions</div>
-                        {inclusionPresets.inclusions.map((x) => (
+                        {(inclusionPresets.inclusions || []).map((x) => (
                           <label className="check-line" key={x}><input type="checkbox" checked={pkg.inclusions.includes(x)} onChange={() => toggleIncl('inclusions', x)} /> {x}</label>
                         ))}
                       </div>
                       <div>
                         <div className="t-title-sm mb-sm">Exclusions</div>
-                        {inclusionPresets.exclusions.map((x) => (
+                        {(inclusionPresets.exclusions || []).map((x) => (
                           <label className="check-line" key={x}><input type="checkbox" checked={pkg.exclusions.includes(x)} onChange={() => toggleIncl('exclusions', x)} /> {x}</label>
                         ))}
                       </div>
@@ -307,7 +309,7 @@ export default function PackageWizard() {
                         <Field label="Name"><Input value={c.name} onChange={(e) => setCat(i, { name: e.target.value })} placeholder="e.g. Gondola ride" /></Field>
                         <Field label="Description"><Input value={c.description} onChange={(e) => setCat(i, { description: e.target.value })} /></Field>
                         <Field label="Amount (₹)"><Input value={c.amount} onChange={(e) => setCat(i, { amount: e.target.value })} /></Field>
-                        <Button variant="danger" size="sm" onClick={() => rmCat(i)}>🗑</Button>
+                        <Button variant="danger" size="sm" onClick={() => rmCat(i)}></Button>
                       </div>
                     ))}
                     <NextBtn onClick={next} label="Pricing & Quotation" />

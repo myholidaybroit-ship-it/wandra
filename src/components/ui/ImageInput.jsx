@@ -3,14 +3,17 @@ import { useApp } from '../../store/AppContext'
 import { Icon } from './icons'
 
 /* ============================================================
-   Image upload controls — files are downscaled on-device and
-   stored as data-URLs (persist in localStorage, no backend).
+   Image upload controls — files are downscaled on-device, then
+   uploaded to S3 via the backend; the returned public URL is
+   stored (so it maps everywhere). Falls back to a data-URL if
+   the upload fails, so the form is never blocked.
    Used across master data forms + the landing page builder.
    ============================================================ */
 
 import { fileToDataUrl } from '../../utils/image'
+import { api } from '../../api'
 
-export function ImageInput({ label, value, onChange, maxW = 1600, hint }) {
+export function ImageInput({ label, value, onChange, maxW = 1600, hint, folder = 'uploads' }) {
   const { toast } = useApp()
   const fileRef = useRef(null)
   const [loading, setLoading] = useState(false)
@@ -21,7 +24,8 @@ export function ImageInput({ label, value, onChange, maxW = 1600, hint }) {
     if (!file.type.startsWith('image/')) return toast('Please choose an image file')
     setLoading(true)
     try {
-      onChange(await fileToDataUrl(file, maxW))
+      const dataUrl = await fileToDataUrl(file, maxW)
+      onChange(await api.upload(dataUrl, folder))
       toast('Image uploaded')
     } catch { toast('Could not read that image') } finally { setLoading(false) }
   }
@@ -43,7 +47,7 @@ export function ImageInput({ label, value, onChange, maxW = 1600, hint }) {
 }
 
 /* multiple images (destination galleries etc.) */
-export function GalleryInput({ label, value = [], onChange, maxW = 1600, hint }) {
+export function GalleryInput({ label, value = [], onChange, maxW = 1600, hint, folder = 'gallery' }) {
   const { toast } = useApp()
   const fileRef = useRef(null)
   const [loading, setLoading] = useState(false)
@@ -54,7 +58,7 @@ export function GalleryInput({ label, value = [], onChange, maxW = 1600, hint })
     setLoading(true)
     try {
       const urls = []
-      for (const f of files) urls.push(await fileToDataUrl(f, maxW))
+      for (const f of files) urls.push(await api.upload(await fileToDataUrl(f, maxW), folder))
       onChange([...value, ...urls])
       toast(`${urls.length} image${urls.length > 1 ? 's' : ''} added`)
     } catch { toast('Could not read those images') } finally { setLoading(false) }

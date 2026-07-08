@@ -3,23 +3,25 @@ import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, DataTable, Badge, Button } from '../../../components/ui/UI'
 
 export default function QuotationList() {
-  const { quotations, packages, setQuotationStatus, createBookingFromPackage, toast } = useApp()
+  const { quotations, packages, setQuotationStatus, createBookingFromPackage, toast, canSeePricing } = useApp()
   const nav = useNavigate()
 
-  const convert = (q) => {
+  const convert = async (q) => {
     const pkg = packages.find((p) => p.id === q.packageId)
     if (!pkg) return toast('Package not found')
-    const b = createBookingFromPackage(pkg)
-    setQuotationStatus(q.id, 'Confirmed')
-    toast('Quotation converted to booking')
-    nav(`/app/bookings/${b.id}`)
+    try {
+      const b = await createBookingFromPackage(pkg)
+      await setQuotationStatus(q.id, 'Confirmed')
+      toast('Quotation converted to booking')
+      nav(`/app/bookings/${b.id}`)
+    } catch (ex) { toast(ex.message || 'Could not convert the quotation') }
   }
 
   const columns = [
     { key: 'packageCode', head: 'Package ID', render: (r) => <Link className="mono cell-strong c-link" to={`/app/packages/${r.packageId}`}>{r.packageCode}</Link> },
     { key: 'client', head: 'Client' },
     { key: 'travelDate', head: 'Travel Date', render: (r) => r.travelDate || '—' },
-    { key: 'amount', head: 'Amount', align: 'right', render: (r) => <span className="cell-strong">{inr(r.amount)}</span> },
+    ...(canSeePricing ? [{ key: 'amount', head: 'Amount', align: 'right', render: (r) => <span className="cell-strong">{inr(r.amount)}</span> }] : []),
     { key: 'status', head: 'Status', render: (r) => (
       r.status === 'Confirmed'
         ? <Badge tone="confirmed">Confirmed</Badge>

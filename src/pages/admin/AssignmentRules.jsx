@@ -78,7 +78,7 @@ export default function AssignmentRules() {
     toast('Rule priority updated — first match wins')
   }
 
-  const newRule = () => { const r = addAssignRule(); setOpenId(r.id); toast('Rule added — set its condition and members') }
+  const newRule = async () => { const r = await addAssignRule(); if (r) setOpenId(r.id); toast('Rule added — set its condition and members') }
 
   const summary = (r) => {
     if (!r.values?.length || !r.members?.length) return <em className="as-incomplete">Incomplete — pick condition values and members</em>

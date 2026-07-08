@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, PillSelect, ListSearch } from '../../../components/ui/UI'
+import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, PillSelect, ListSearch, Textarea } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
+import { ImageInput } from '../../../components/ui/ImageInput'
 
 const SERVICE_TYPES = ['Arrival Transfer', 'Departure Transfer', 'Intercity Transfer', 'Sightseeing', 'Excursion', 'Half-day Transfer', 'Full-day Transfer']
 
@@ -23,7 +24,12 @@ export default function ServiceLocationList() {
   }
 
   const columns = [
-    { key: 'name', head: 'Service location / route', render: (r) => <span className="cell-strong">{r.name}</span> },
+    { key: 'name', head: 'Service location / route', render: (r) => (
+      <div className="row gap-sm">
+        <span className="master-thumb" style={r.image ? { backgroundImage: `url("${r.image}")` } : undefined} />
+        <span className="cell-strong">{r.name}</span>
+      </div>
+    ) },
     { key: 'serviceType', head: 'Service type', render: (r) => <Badge tone="info">{r.serviceType}</Badge> },
     { key: 'duration', head: 'Duration', render: (r) => `${r.durationMins} mins` },
     { key: 'city', head: 'City', render: (r) => <span className="cell-sub">{r.city || '—'}</span> },
@@ -34,7 +40,6 @@ export default function ServiceLocationList() {
   return (
     <div>
       <PageHeader title="Service Locations" subtitle="Transport routes — type, duration & rates auto-fill the quote builder."
-        counter={`Locations ${serviceLocations.length}`}
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/services/new"><Button>+ Add Service Location</Button></Link></>} />
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search by route, type, city…" count={rows.length} />
@@ -51,6 +56,10 @@ export default function ServiceLocationList() {
             <Field label="City"><Input value={edit.city || ''} onChange={(e) => setEdit({ ...edit, city: e.target.value })} /></Field>
             <Field label="Cost (₹)"><Input value={edit.cost ?? ''} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></Field>
             <Field label="Selling (₹)"><Input value={edit.sell ?? ''} onChange={(e) => setEdit({ ...edit, sell: e.target.value })} /></Field>
+            <div className="field-full"><ImageInput label="Service photo" hint="Shown on the quote PDF day pages" value={edit.image || ''} onChange={(v) => setEdit({ ...edit, image: v })} /></div>
+            <Field label="Description" full hint="Free notes about this route — auto-fills the transfer in the quote builder">
+              <Textarea rows={3} value={edit.description || ''} onChange={(e) => setEdit({ ...edit, description: e.target.value })} placeholder="e.g. Private cab with meet & greet, bottled water on board." />
+            </Field>
           </div>
         )}
       </Modal>
