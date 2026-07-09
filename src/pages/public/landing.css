@@ -116,6 +116,9 @@
 }
 .promo-cta-card .btn { background: var(--color-canvas); color: var(--color-ink); border: none; }
 .promo-cta-sub { color: rgba(255, 255, 255, 0.85); margin-top: 12px; }
+.trial-done { display: grid; gap: 14px; justify-items: center; text-align: center; padding: 12px 0; }
+.trial-check { background: var(--color-success-bg); color: var(--color-success); }
+.trial-error { color: var(--color-error); font-size: 13px; font-weight: 600; }
 
 /* ===================== Responsive ===================== */
 @media (max-width: 1024px) {

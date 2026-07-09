@@ -5,15 +5,16 @@ import { PageHeader, Card, Button, Field, Input, PillSelect, Textarea } from '..
 import { ImageInput } from '../../../components/ui/ImageInput'
 
 const SERVICE_TYPES = ['Arrival Transfer', 'Departure Transfer', 'Intercity Transfer', 'Sightseeing', 'Excursion', 'Half-day Transfer', 'Full-day Transfer']
+const optionalNumber = (v) => String(v ?? '').trim() === '' ? null : Number(v) || 0
 
 export default function ServiceLocationCreate() {
-  const { addServiceLocation, toast } = useApp()
+  const { addServiceLocation, destinations, toast } = useApp()
   const nav = useNavigate()
-  const [f, setF] = useState({ name: '', serviceType: 'Arrival Transfer', durationMins: 60, city: '', cost: '', sell: '', description: '', image: '' })
+  const [f, setF] = useState({ name: '', destination: '', serviceType: 'Arrival Transfer', durationMins: '', city: '', cost: '', sell: '', description: '', image: '' })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
     if (!f.name) return toast('Service location name is required')
-    addServiceLocation({ ...f, durationMins: Number(f.durationMins) || 0, cost: Number(f.cost) || 0, sell: Number(f.sell) || 0 })
+    addServiceLocation({ ...f, durationMins: optionalNumber(f.durationMins), cost: Number(f.cost) || 0, sell: Number(f.sell) || 0 })
     toast('Service location added'); nav('/app/services')
   }
   return (
@@ -22,8 +23,12 @@ export default function ServiceLocationCreate() {
       <Card>
         <div className="form-grid">
           <Field label="Service location / route" required><Input value={f.name} onChange={set('name')} placeholder="e.g. Airport to Hotel" /></Field>
+          <Field label="Destination" hint="Scopes this route to a destination so it only shows up when building quotes for that place">
+            <PillSelect value={f.destination || 'Select destination'} options={['Select destination', ...destinations.map((d) => d.name)]}
+              onChange={(v) => setF({ ...f, destination: v === 'Select destination' ? '' : v })} />
+          </Field>
           <Field label="Service type"><PillSelect value={f.serviceType} options={SERVICE_TYPES} onChange={(v) => setF({ ...f, serviceType: v })} /></Field>
-          <Field label="Duration (mins)"><Input value={f.durationMins} onChange={set('durationMins')} placeholder="60" /></Field>
+          <Field label="Duration (mins)"><Input value={f.durationMins} onChange={set('durationMins')} placeholder="Optional" /></Field>
           <Field label="City"><Input value={f.city} onChange={set('city')} placeholder="e.g. Srinagar" /></Field>
           <Field label="Cost (₹)" hint="Your buying price per day / trip"><Input value={f.cost} onChange={set('cost')} placeholder="1200" /></Field>
           <Field label="Selling (₹)" hint="Given / customer price"><Input value={f.sell} onChange={set('sell')} placeholder="1600" /></Field>

@@ -8,11 +8,11 @@ import { downloadCsv } from '../../../utils/csv'
 export default function HotelList() {
   const { hotels } = useApp()
   const [q, setQ] = useState('')
-  const rows = hotels.filter((h) => (h.name + h.city).toLowerCase().includes(q.toLowerCase()))
+  const rows = hotels.filter((h) => (h.name + h.city + (h.destination || '')).toLowerCase().includes(q.toLowerCase()))
 
   const exportCsv = () => downloadCsv('hotels',
-    ['Name', 'City', 'Rating', 'Buying price / night', 'Extra bed adult', 'Extra bed child', 'Child no bed', 'Room types', 'Phone'],
-    rows.map((h) => [h.name, h.city, h.rating, h.buyingPrice, h.extraBedAdult || 0, h.extraBedChild || 0, h.childNoBed || 0, h.roomTypes, h.phone]))
+    ['Name', 'Destination', 'City', 'Rating', 'Buying price / night', 'Extra bed adult', 'Extra bed child', 'Child no bed', 'Room types', 'Phone'],
+    rows.map((h) => [h.name, h.destination || '', h.city, h.rating, h.buyingPrice, h.extraBedAdult || 0, h.extraBedChild || 0, h.childNoBed || 0, h.roomTypes, h.phone]))
 
   const columns = [
     { key: 'name', head: 'Hotel', render: (r) => (
@@ -21,6 +21,7 @@ export default function HotelList() {
         <div><span className="cell-strong">{r.name}</span><div className="cell-sub">{r.roomTypes}</div></div>
       </div>
     ) },
+    { key: 'destination', head: 'Destination', render: (r) => <span className="cell-sub">{r.destination || '—'}</span> },
     { key: 'city', head: 'City' },
     { key: 'rating', head: 'Rating', render: (r) => <span>{'★'.repeat(r.rating)}<span className="c-muted">{'★'.repeat(5 - r.rating)}</span></span> },
     { key: 'buyingPrice', head: 'Buying / Night', align: 'right', render: (r) => <span className="cell-strong">{inr(r.buyingPrice)}</span> },

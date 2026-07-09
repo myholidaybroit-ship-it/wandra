@@ -5,9 +5,9 @@ import { PageHeader, Card, Button, Field, Input, Textarea, PillSelect } from '..
 import { ImageInput } from '../../../components/ui/ImageInput'
 
 export default function HotelCreate() {
-  const { addHotel, toast } = useApp()
+  const { addHotel, destinations, toast } = useApp()
   const nav = useNavigate()
-  const [f, setF] = useState({ name: '', address: '', city: '', phone: '', email: '', rating: 5, buyingPrice: '', extraBedAdult: '', extraBedChild: '', childNoBed: '', roomTypes: '', description: '', image: '' })
+  const [f, setF] = useState({ name: '', destination: '', address: '', city: '', phone: '', email: '', rating: 5, buyingPrice: '', extraBedAdult: '', extraBedChild: '', childNoBed: '', roomTypes: '', description: '', image: '' })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
     if (!f.name) return toast('Hotel name is required')
@@ -19,6 +19,10 @@ export default function HotelCreate() {
       <Card>
         <div className="form-grid">
           <Field label="Hotel Name" required><Input value={f.name} onChange={set('name')} placeholder="e.g. The Lalit Grand Palace" /></Field>
+          <Field label="Destination" hint="Scopes this hotel to a destination so it only shows up when building quotes for that place">
+            <PillSelect value={f.destination || 'Select destination'} options={['Select destination', ...destinations.map((d) => d.name)]}
+              onChange={(v) => setF({ ...f, destination: v === 'Select destination' ? '' : v })} />
+          </Field>
           <Field label="City"><Input value={f.city} onChange={set('city')} /></Field>
           <Field label="Address" full><Input value={f.address} onChange={set('address')} /></Field>
           <Field label="Phone"><Input value={f.phone} onChange={set('phone')} /></Field>

@@ -39,6 +39,7 @@
 .pdf-stars-off { color: #d8d8de; }
 .pdf-svc { display: flex; gap: 8px; font-size: 10.5px; margin: 4px 0; }
 .pdf-svc-k { flex-shrink: 0; font-weight: 700; }
+.pdf-svc-img { width: 22mm; height: 15mm; border-radius: 5px; flex-shrink: 0; }
 .pdf-svc-desc { color: #5a5a66; margin-top: 1px; }
 .pdf-sign { margin-top: 22px; font-size: 11px; line-height: 1.5; }
 .pdf-sign-t { font-weight: 700; }

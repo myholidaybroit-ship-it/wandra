@@ -4,6 +4,7 @@ import { pathFeature } from '../../featureGate'
 import { useApp } from '../../store/AppContext'
 import { Button } from '../ui/UI'
 import { Icon } from '../ui/icons'
+import { AgencyLogo } from '../ui/AgencyBrand'
 import RenewalBanner from './RenewalBanner'
 import './layout.css'
 
@@ -17,6 +18,7 @@ const MASTER_DATA = [
   { to: '/app/cabs', label: 'Cabs', icon: 'cabs', feature: 'master.cabs' },
   { to: '/app/services', label: 'Service Locations', icon: 'destinations', feature: 'master.service_locations' },
   { to: '/app/activities', label: 'Activities', icon: 'gallery', feature: 'master.activities' },
+  { to: '/app/packages/templates', label: 'Day-wise Plans', icon: 'file', feature: 'builder.templates' },
   { to: '/app/packages/inclusions', label: 'Incl. & Excl.', icon: 'check', feature: 'master.inclusions' },
 ]
 const NAV_END = [
@@ -33,7 +35,15 @@ const NAV_BOTTOM = [
   { to: '/app/support', label: 'Help & Support', icon: 'help' },
 ]
 
-function Logo({ collapsed }) {
+function Logo({ collapsed, agency, isPro }) {
+  const agencyLogo = agency?.logo && !String(agency.logo).includes('wandra-logo')
+  if (isPro && agencyLogo) {
+    return (
+      <Link to="/app" className="brand brand-agency" title={agency.name || 'Agency'}>
+        <AgencyLogo agency={agency} className={collapsed ? 'agency-side-logo collapsed' : 'agency-side-logo'} fallback="name" />
+      </Link>
+    )
+  }
   return (
     <Link to="/app" className="brand" title="Wandra — Travel Software">
       {collapsed
@@ -160,15 +170,17 @@ export default function AdminLayout() {
     return <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', color: '#6b7280' }}>Loading…</div>
   }
   const doLogout = () => { logout(); nav('/login', { replace: true }) }
-  const isPro = (agency.plan?.name || '').toLowerCase() === 'pro'
-  const planLimit = agency.plan.limit === -1 ? '∞' : agency.plan.limit
-  const usedPct = agency.plan.limit === -1 ? 0 : Math.min(100, (clients.length / agency.plan.limit) * 100)
+  const planName = agency.plan?.name || agency.plan || ''
+  const planLimitValue = agency.plan?.limit ?? agency.limits?.clients ?? -1
+  const isPro = String(planName).toLowerCase() === 'pro'
+  const planLimit = planLimitValue === -1 ? '∞' : planLimitValue
+  const usedPct = planLimitValue === -1 ? 0 : Math.min(100, (clients.length / planLimitValue) * 100)
 
   return (
     <div className="admin-shell">
       {/* Sidebar */}
       <aside className={`sidebar ${open ? 'sidebar-open' : ''} ${collapsed ? 'sidebar-collapsed' : ''}`}>
-        <div className="sidebar-top"><Logo collapsed={collapsed} /></div>
+        <div className="sidebar-top"><Logo collapsed={collapsed} agency={agency} isPro={isPro} /></div>
         <nav className="sidebar-nav">
           {navTop.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} className="side-link" title={collapsed ? n.label : undefined} onClick={() => setOpen(false)}>
@@ -216,7 +228,7 @@ export default function AdminLayout() {
         <div className="sidebar-bottom">
           <div className="side-plan-card">
             <div className="row-between">
-              <span className="side-plan-name">{agency.plan.name}</span>
+              <span className="side-plan-name">{planName}</span>
               <span className="side-plan-usage">{clients.length}/{planLimit}</span>
             </div>
             <div className="side-plan-bar"><span style={{ width: `${usedPct}%` }} /></div>

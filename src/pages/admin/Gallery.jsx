@@ -1,23 +1,29 @@
 import { useState } from 'react'
 import { useApp } from '../../store/AppContext'
-import { PageHeader, Card, Button, Badge, Modal, Field, PillSelect } from '../../components/ui/UI'
+import { PageHeader, Card, Button, Badge, Modal, Field, Input, PillSelect } from '../../components/ui/UI'
 import '../public/stories.css'
 
+const slugify = (v) => String(v || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+
 export default function Gallery() {
-  const { gallery, approveStory, clients, bookings, toast } = useApp()
+  const { gallery, approveStory, clients, bookings, agency, landing, toast } = useApp()
   const [tab, setTab] = useState('queue')
   const [open, setOpen] = useState(false)
   const [selClient, setSelClient] = useState(clients[0]?.name || '')
   const [selBooking, setSelBooking] = useState(bookings[0]?.code || '')
+  const defaultSuffix = slugify(agency?.name) || landing?.slug || agency?.code || ''
+  const [suffix, setSuffix] = useState(defaultSuffix)
   const pending = gallery.filter((g) => g.status === 'Pending')
   const published = gallery.filter((g) => g.status === 'Published')
   const avg = published.length ? published.reduce((s, g) => s + (g.rating || 0), 0) / published.length : 0
-  const link = `${window.location.origin}/share-story/abc123`
+  const cleanSuffix = slugify(suffix) || defaultSuffix
+  const link = `${window.location.origin}/share-story/${encodeURIComponent(cleanSuffix)}`
+  const galleryLink = `/stories/${encodeURIComponent(cleanSuffix)}`
 
   return (
     <div>
       <PageHeader title="Traveler Gallery & Testimonials" subtitle="Collect trip stories and build your public portfolio."
-        actions={<><Button variant="secondary" onClick={() => setOpen(true)}>Create Link</Button><Button as="a" href={`/stories/wandra`} target="_blank">View Gallery ↗</Button></>} />
+        actions={<><Button variant="secondary" onClick={() => setOpen(true)}>Create Link</Button><Button as="a" href={galleryLink} target="_blank">View Gallery ↗</Button></>} />
 
       <div className="grid grid-3">
         <Card pad={20}><div className="t-caption-upper c-muted">Pending Reviews</div><div className="t-display-sm mt-xs">{pending.length}</div></Card>
@@ -50,6 +56,9 @@ export default function Gallery() {
         <div className="col gap-base">
           <Field label="Client"><PillSelect value={selClient} options={clients.map((c) => c.name)} onChange={setSelClient} /></Field>
           <Field label="Related Booking"><PillSelect value={selBooking} options={bookings.map((b) => b.code)} onChange={setSelBooking} /></Field>
+          <Field label="Review link suffix" hint="Use landing page slug or company code">
+            <Input value={suffix} onChange={(e) => setSuffix(e.target.value)} placeholder={defaultSuffix || 'your-company'} />
+          </Field>
           <div className="mono t-caption c-muted" style={{ wordBreak: 'break-all', background: 'var(--color-surface-strong)', padding: 12, borderRadius: 8 }}>{link}</div>
         </div>
       </Modal>

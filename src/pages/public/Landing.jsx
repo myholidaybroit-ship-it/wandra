@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Card, Badge } from '../../components/ui/UI'
+import { publicApi } from '../../api'
+import { Button, Card, Badge, Modal, Field, Input, Textarea } from '../../components/ui/UI'
 import './landing.css'
 
 const ROTATE = ['Modern Travel Agencies', 'Going Paperless', 'Itineraries in Seconds', 'Zero-Leaked Leads', 'GST-Ready Invoicing']
@@ -39,7 +40,20 @@ const STEPS = ['Capture lead', 'Build package', 'Send itinerary', 'Confirm booki
 
 export default function Landing() {
   const [idx, setIdx] = useState(0)
+  const [trialOpen, setTrialOpen] = useState(false)
+  const [trialDone, setTrialDone] = useState(false)
+  const [trialErr, setTrialErr] = useState('')
+  const [trial, setTrial] = useState({ name: '', agencyName: '', phone: '', email: '', city: '', website: '', teamSize: '', note: '' })
   useEffect(() => { const t = setInterval(() => setIdx((i) => (i + 1) % ROTATE.length), 2200); return () => clearInterval(t) }, [])
+  const setTrialField = (k) => (e) => setTrial({ ...trial, [k]: e.target.value })
+  const openTrial = () => { setTrialOpen(true); setTrialDone(false); setTrialErr('') }
+  const submitTrial = async () => {
+    if (!trial.name.trim() || !trial.agencyName.trim() || !trial.phone.trim()) return setTrialErr('Name, agency name and phone are required')
+    try {
+      await publicApi.post('/trial', trial)
+      setTrialDone(true)
+    } catch (ex) { setTrialErr(ex.message || 'Could not send trial request') }
+  }
 
   return (
     <div className="landing">
@@ -55,7 +69,7 @@ export default function Landing() {
             WhatsApp threads and scattered tools with one connected system.
           </p>
           <div className="row gap-sm hero-cta wrap">
-            <Button as="a" href="/app" size="lg">Start Free Trial</Button>
+            <Button size="lg" onClick={openTrial}>Start Free Trial</Button>
             <Link to="/i/PKG-202602-0003"><Button variant="secondary" size="lg">See a sample itinerary</Button></Link>
           </div>
         </div>
@@ -186,10 +200,37 @@ export default function Landing() {
           <div className="promo-cta-card">
             <h2 className="t-display-lg">Go paperless this week</h2>
             <p className="t-subtitle promo-cta-sub">Start free. Upgrade only when you scale — launch pricing locked for a year.</p>
-            <div className="mt-lg"><Button as="a" href="/app" size="lg">Start Free Trial</Button></div>
+            <div className="mt-lg"><Button size="lg" onClick={openTrial}>Start Free Trial</Button></div>
           </div>
         </div>
       </section>
+      <Modal open={trialOpen} onClose={() => setTrialOpen(false)} title={trialDone ? 'Free trial request received' : 'Start Free Trial'} width={620}
+        footer={trialDone
+          ? <Button onClick={() => setTrialOpen(false)}>Close</Button>
+          : <><Button variant="tertiary" onClick={() => setTrialOpen(false)}>Cancel</Button><Button onClick={submitTrial}>Send Request</Button></>}>
+        {trialDone ? (
+          <div className="trial-done">
+            <div className="feat-icon trial-check">✓</div>
+            <p className="t-body-md c-body">Thanks. We have your agency details and will contact you to activate free trial access.</p>
+          </div>
+        ) : (
+          <div className="col gap-base">
+            <Field label="Owner name" required><Input value={trial.name} onChange={setTrialField('name')} placeholder="Your name" /></Field>
+            <Field label="Agency name" required><Input value={trial.agencyName} onChange={setTrialField('agencyName')} placeholder="e.g. Valley Voyages" /></Field>
+            <div className="form-grid">
+              <Field label="Phone" required><Input value={trial.phone} onChange={setTrialField('phone')} placeholder="WhatsApp number" /></Field>
+              <Field label="Email"><Input value={trial.email} onChange={setTrialField('email')} placeholder="you@agency.com" /></Field>
+            </div>
+            <div className="form-grid">
+              <Field label="City"><Input value={trial.city} onChange={setTrialField('city')} placeholder="e.g. Srinagar" /></Field>
+              <Field label="Team size"><Input value={trial.teamSize} onChange={setTrialField('teamSize')} placeholder="e.g. 5" /></Field>
+            </div>
+            <Field label="Website / Instagram"><Input value={trial.website} onChange={setTrialField('website')} placeholder="Optional" /></Field>
+            <Field label="Anything else"><Textarea rows={3} value={trial.note} onChange={setTrialField('note')} placeholder="Tell us what access or setup you need." /></Field>
+            {trialErr && <div className="trial-error">{trialErr}</div>}
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

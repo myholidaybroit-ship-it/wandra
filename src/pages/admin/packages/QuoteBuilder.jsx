@@ -297,10 +297,11 @@ export default function QuoteBuilder() {
                 <div className="qb-grid-3">
                   <Field label="Hotel">
                     <HotelPicker value={{ id: st.hotelId, name: st.hotelName, city: st.hotelCity, star: st.hotelStar }} hotels={hotels}
-                      onPick={(h) => setStay(i, { hotelId: h.id, hotelName: h.name, hotelCity: h.city, hotelStar: h.rating, roomType: h.roomTypes?.split(',')[0]?.trim() || st.roomType, rate: h.buyingPrice ? String(h.buyingPrice) : st.rate, given: st.given || (h.buyingPrice ? String(h.buyingPrice) : st.given), awebRate: h.extraBedAdult || 0, cwebRate: h.extraBedChild || 0, cnbRate: h.childNoBed || 0 })} />
+                      destFilter={st.nights.length ? [...new Set(st.nights.map(nightCity).filter(Boolean))] : ieDests}
+                      onPick={(h) => setStay(i, { hotelId: h.id, hotelName: h.name, hotelCity: h.city || h.destination || '', hotelStar: h.rating, hotelImage: h.image || '', hotelDescription: h.description || '', roomType: h.roomTypes?.split(',')[0]?.trim() || st.roomType, rate: h.buyingPrice ? String(h.buyingPrice) : st.rate, given: st.given || (h.buyingPrice ? String(h.buyingPrice) : st.given), awebRate: h.extraBedAdult || 0, cwebRate: h.extraBedChild || 0, cnbRate: h.childNoBed || 0 })} />
                   </Field>
-                  <Field label="Meal plan"><PillSelect value={st.mealPlan} options={MEAL_PLANS} onChange={(v) => setStay(i, { mealPlan: v })} format={(v) => MEAL_LABEL[v] || v} /></Field>
                   <Field label="Room type"><PillSelect value={st.roomType} options={hotelRooms(hotels, st.hotelId)} onChange={(v) => setStay(i, { roomType: v })} /></Field>
+                  <Field label="Meal plan"><PillSelect value={st.mealPlan} options={MEAL_PLANS} onChange={(v) => setStay(i, { mealPlan: v })} format={(v) => MEAL_LABEL[v] || v} /></Field>
                 </div>
                 <div className="qb-grid-4">
                   <Field label="Pax / room" hint="WoEB"><Input type="number" min="1" value={st.paxPerRoom} onChange={(e) => setStay(i, { paxPerRoom: e.target.value })} /></Field>
@@ -358,12 +359,14 @@ export default function QuoteBuilder() {
                   {s.kind === 'transport' ? (
                     <Field label="Service location">
                       <MasterPicker value={s.location} items={serviceLocations} placeholder="Select or search a route…"
+                        destFilter={s.days.length ? [...new Set(s.days.map(dayCity).filter(Boolean))] : ieDests}
                         sub={(it) => `${it.serviceType}${it.durationMins ? ` · ${it.durationMins} mins` : ''}${it.sell != null ? ` · ${inr(it.sell)}` : ''}`}
                         onPick={(it) => setService(i, { location: it.name, ...(it.custom ? {} : { serviceType: it.serviceType || s.serviceType, description: it.description || s.description, image: it.image || '', durationMins: it.durationMins ? String(it.durationMins) : s.durationMins, rate: it.cost != null ? String(it.cost) : s.rate, given: it.sell != null ? String(it.sell) : s.given }) })} />
                     </Field>
                   ) : (
                     <Field label="Activity / ticket name">
                       <MasterPicker value={s.location} items={activities} placeholder="Select or search an activity…"
+                        destFilter={s.days.length ? [...new Set(s.days.map(dayCity).filter(Boolean))] : ieDests}
                         sub={(it) => `${it.category}${it.sell != null ? ` · ${inr(it.sell)}` : ''}`}
                         onPick={(it) => setService(i, { location: it.name, ...(it.custom ? {} : { serviceType: it.category || s.serviceType, description: it.description || s.description, image: it.image || '', durationMins: it.durationMins ? String(it.durationMins) : s.durationMins, rate: it.cost != null ? String(it.cost) : s.rate, given: it.sell != null ? String(it.sell) : s.given }) })} />
                     </Field>
@@ -373,7 +376,7 @@ export default function QuoteBuilder() {
                     : <Field label="Category"><PillSelect value={s.serviceType || 'Select'} options={['Select', ...activityCats]} onChange={(v) => setService(i, { serviceType: v === 'Select' ? '' : v })} /></Field>}
                 </div>
                 <div className="qb-grid-3">
-                  <Field label="Duration (mins)"><Input type="number" value={s.durationMins} onChange={(e) => setService(i, { durationMins: e.target.value })} placeholder="60" /></Field>
+                  <Field label="Duration (mins)"><Input type="number" value={s.durationMins} onChange={(e) => setService(i, { durationMins: e.target.value })} placeholder="Optional" /></Field>
                   <Field label={s.kind === 'activity' ? 'Qty (pax)' : 'Vehicles'}><Input type="number" min="1" value={s.qty} onChange={(e) => setService(i, { qty: e.target.value })} /></Field>
                   {s.kind === 'transport' && !opt.sameCab
                     ? <Field label="Cab type"><PillSelect value={s.cabName || 'Select'} options={['Select', ...cabs.map((c) => c.name)]} onChange={(v) => {
@@ -618,6 +621,7 @@ export default function QuoteBuilder() {
                         <div className="copy-hotel-sub">{[st.hotelCity, st.hotelStar ? `${st.hotelStar} Star` : '', st.nights.length ? `${st.nights.join(', ')} N` : ''].filter(Boolean).join(' · ')}</div>
                       </div>
                       <HotelPicker value={rep ? { id: rep.id, name: rep.name, city: rep.city, star: rep.rating } : {}} hotels={hotels}
+                        destFilter={st.nights.length ? [...new Set(st.nights.map(nightCity).filter(Boolean))] : ieDests}
                         placeholder="Type to search…" onPick={(h) => setCopyState((c) => ({ ...c, replacements: { ...c.replacements, [st.id]: h } }))} />
                     </div>
                   )
@@ -780,10 +784,14 @@ function IEList({ title, tone, master, selected, onToggle, onAddCustom }) {
 }
 
 /* ---------- Searchable hotel picker (name + City · Star) ---------- */
-function HotelPicker({ value, hotels, onPick, placeholder = 'Select hotel' }) {
+function HotelPicker({ value, hotels, destFilter = [], onPick, placeholder = 'Select hotel' }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const shown = query.trim() ? hotels.filter((h) => `${h.name} ${h.city}`.toLowerCase().includes(query.trim().toLowerCase())) : hotels
+  const [showAll, setShowAll] = useState(false)
+  const hasFilter = destFilter.length > 0
+  const scoped = hasFilter ? hotels.filter((h) => !h.destination || destFilter.includes(h.destination)) : hotels
+  const base = hasFilter && !showAll ? scoped : hotels
+  const shown = query.trim() ? base.filter((h) => `${h.name} ${h.city}`.toLowerCase().includes(query.trim().toLowerCase())) : base
   const sub = value?.city ? `${value.city}${value.star ? ` · ${value.star} Star` : ''}` : ''
   return (
     <div className="pill-select-wrap">
@@ -798,12 +806,18 @@ function HotelPicker({ value, hotels, onPick, placeholder = 'Select hotel' }) {
           <div className="pill-menu-scrim" onClick={() => setOpen(false)} />
           <div className="pill-menu hp-menu">
             <div className="pms-search"><Icon name="search" size={13} /><input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search hotels…" /></div>
+            {hasFilter && (
+              <label className="hp-dest-filter">
+                <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+                <span>Show all destinations <span className="hp-dest-hint">(scoped to {destFilter.join(', ')} by default)</span></span>
+              </label>
+            )}
             <div className="hp-list">
-              {shown.length === 0 && <div className="pms-none">No hotels match “{query}”</div>}
+              {shown.length === 0 && <div className="pms-none">No hotels match{query ? ` “${query}”` : ` this destination`}{hasFilter && !showAll ? ' — try Show all destinations' : ''}</div>}
               {shown.map((h) => (
                 <button key={h.id} className={`pill-menu-item hp-item ${h.id === value?.id ? 'selected' : ''}`} onClick={() => { onPick(h); setOpen(false); setQuery('') }}>
                   <span className="hp-name">{h.name}</span>
-                  <span className="hp-sub">{h.city}{h.rating ? ` · ${h.rating} Star` : ''}</span>
+                  <span className="hp-sub">{h.city}{h.rating ? ` · ${h.rating} Star` : ''}{h.destination ? ` · ${h.destination}` : ''}</span>
                 </button>
               ))}
             </div>
@@ -815,11 +829,15 @@ function HotelPicker({ value, hotels, onPick, placeholder = 'Select hotel' }) {
 }
 
 /* ---------- Master picker (search a master list + allow a custom entry) ---------- */
-function MasterPicker({ value, items = [], onPick, placeholder = 'Select…', sub }) {
+function MasterPicker({ value, items = [], destFilter = [], onPick, placeholder = 'Select…', sub }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [showAll, setShowAll] = useState(false)
+  const hasFilter = destFilter.length > 0
+  const scoped = hasFilter ? items.filter((it) => !it.destination || destFilter.includes(it.destination)) : items
+  const base = hasFilter && !showAll ? scoped : items
   const q = query.trim().toLowerCase()
-  const shown = q ? items.filter((it) => it.name.toLowerCase().includes(q)) : items
+  const shown = q ? base.filter((it) => it.name.toLowerCase().includes(q)) : base
   const exact = items.some((it) => it.name.toLowerCase() === q)
   return (
     <div className="pill-select-wrap">
@@ -832,6 +850,12 @@ function MasterPicker({ value, items = [], onPick, placeholder = 'Select…', su
           <div className="pill-menu-scrim" onClick={() => setOpen(false)} />
           <div className="pill-menu hp-menu">
             <div className="pms-search"><Icon name="search" size={13} /><input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search master…" /></div>
+            {hasFilter && (
+              <label className="hp-dest-filter">
+                <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+                <span>Show all destinations <span className="hp-dest-hint">(scoped to {destFilter.join(', ')} by default)</span></span>
+              </label>
+            )}
             <div className="hp-list">
               {shown.map((it) => (
                 <button key={it.id} className={`pill-menu-item hp-item ${it.name === value ? 'selected' : ''}`} onClick={() => { onPick(it); setOpen(false); setQuery('') }}>
@@ -845,7 +869,7 @@ function MasterPicker({ value, items = [], onPick, placeholder = 'Select…', su
                   <span className="hp-sub">custom entry</span>
                 </button>
               )}
-              {shown.length === 0 && !query.trim() && <div className="pms-none">No master entries yet</div>}
+              {shown.length === 0 && !query.trim() && <div className="pms-none">No master entries{hasFilter && !showAll ? ' for this destination — try Show all destinations' : ' yet'}</div>}
             </div>
           </div>
         </>
@@ -1057,11 +1081,10 @@ function blankOption(name) {
   return { id: uid(), name, sameCab: false, sameCabId: '', sameCabName: '', stays: [], services: [], flights: [], extras: [], sellingOverride: '' }
 }
 function blankStay(q, opt) {
-  return { id: uid(), nights: [], hotelId: '', hotelName: '', hotelCity: '', hotelStar: '', mealPlan: 'MAP', roomType: 'Deluxe', paxPerRoom: 2, rooms: q.rooms || 1, aweb: 0, cweb: 0, cnb: 0, awebRate: 0, cwebRate: 0, cnbRate: 0, compChild: COMP_CHILD[1], rate: '', given: '' }
+  return { id: uid(), nights: [], hotelId: '', hotelName: '', hotelCity: '', hotelStar: '', hotelImage: '', hotelDescription: '', mealPlan: 'MAP', roomType: 'Deluxe', paxPerRoom: 2, rooms: q.rooms || 1, aweb: 0, cweb: 0, cnb: 0, awebRate: 0, cwebRate: 0, cnbRate: 0, compChild: COMP_CHILD[1], rate: '', given: '' }
 }
 function blankService(kind, opt, q) {
-  // new services land on Day 1 by default — the user adds more days from the day chips
-  return { id: uid(), kind, days: [1], location: '', serviceType: kind === 'transport' ? 'Arrival Transfer' : '', description: '', durationMins: '', qty: kind === 'activity' ? (num(q.adults) || 1) : 1, cabId: opt.sameCabId || '', cabName: opt.sameCabName || '', rate: '', given: '' }
+  return { id: uid(), kind, days: [], location: '', serviceType: kind === 'transport' ? 'Arrival Transfer' : '', description: '', durationMins: '', qty: kind === 'activity' ? (num(q.adults) || 1) : 1, cabId: opt.sameCabId || '', cabName: opt.sameCabName || '', rate: '', given: '' }
 }
 
 // hotel line = (base × rooms + extra-bed charges) × nights; bed rates come from the hotel master
@@ -1149,7 +1172,7 @@ function fromLegacy(pkg, presets) {
   ;(pkg.hotelsAlloc || []).forEach((h) => {
     const last = stays[stays.length - 1]
     if (last && last.hotelName === h.name && last.roomType === h.roomType) last.nights.push(h.night)
-    else stays.push({ id: uid(), nights: [h.night], hotelId: h.hotelId || '', hotelName: h.name, hotelCity: '', hotelStar: '', mealPlan: h.mealPlan || 'MAP', roomType: h.roomType || 'Deluxe', paxPerRoom: 2, rooms: 1, aweb: 0, cweb: 0, cnb: 0, compChild: COMP_CHILD[1], rate: String(h.net || 0), given: String(h.price || 0) })
+    else stays.push({ id: uid(), nights: [h.night], hotelId: h.hotelId || '', hotelName: h.name, hotelCity: h.city || '', hotelStar: h.star || '', hotelImage: h.image || '', hotelDescription: h.description || '', mealPlan: h.mealPlan || 'MAP', roomType: h.roomType || 'Deluxe', paxPerRoom: 2, rooms: 1, aweb: 0, cweb: 0, cnb: 0, compChild: COMP_CHILD[1], rate: String(h.net || 0), given: String(h.price || 0) })
   })
   const services = (pkg.cabs || []).map((c) => ({ id: uid(), kind: 'transport', days: c.days || [1], location: c.name || 'Transfer', serviceType: c.serviceType || 'Sightseeing', durationMins: '', qty: 1, cabId: c.cabId || '', cabName: c.type || '', rate: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))), given: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))) }))
   const extras = (pkg.categories || []).map((cat) => ({ id: uid(), name: cat.name, note: cat.description || '', cost: '', sell: String(cat.amount || 0) }))
@@ -1206,13 +1229,13 @@ function serialize(q, oi, t, destinations, presets) {
   const destLabel = sectors.length === 1
     ? (() => { const d = destinations.find((x) => x.name === sectors[0].destination); return d ? `${d.name} - ${d.location}` : (sectors[0].destination || q.destShort) })()
     : (sectors.map((s) => s.destination).join(', ') || q.destination || q.destShort)
-  const hotelsAlloc = opt.stays.flatMap((s) => { const bed = bedPerNight(s); return s.nights.map((n) => ({ night: n, hotelId: s.hotelId, name: s.hotelName, roomType: s.roomType, mealPlan: s.mealPlan, rooms: num(s.rooms), aweb: num(s.aweb), cweb: num(s.cweb), cnb: num(s.cnb), price: num(s.given) * num(s.rooms) + bed, net: num(s.rate) * num(s.rooms) + bed })) })
+  const hotelsAlloc = opt.stays.flatMap((s) => { const bed = bedPerNight(s); return s.nights.map((n) => ({ night: n, hotelId: s.hotelId, name: s.hotelName, city: s.hotelCity || cityForNight(q.sectors, n), star: s.hotelStar, image: s.hotelImage || '', description: s.hotelDescription || '', roomType: s.roomType, mealPlan: s.mealPlan, rooms: num(s.rooms), aweb: num(s.aweb), cweb: num(s.cweb), cnb: num(s.cnb), price: num(s.given) * num(s.rooms) + bed, net: num(s.rate) * num(s.rooms) + bed })) })
     .sort((a, b) => a.night - b.night)
   const transports = opt.services.filter((s) => s.kind === 'transport')
   const activities = opt.services.filter((s) => s.kind === 'activity')
-  const cabsOut = transports.map((tr) => ({ cabId: tr.cabId, name: tr.location, type: opt.sameCab ? opt.sameCabName : tr.cabName, km: 0, rate: 0, total: num(tr.given) * (num(tr.qty) || 1) * Math.max(1, tr.days.length), days: tr.days, serviceType: tr.serviceType, description: tr.description || '' }))
+  const cabsOut = transports.map((tr) => ({ cabId: tr.cabId, name: tr.location, type: opt.sameCab ? opt.sameCabName : tr.cabName, km: 0, rate: num(tr.rate), given: num(tr.given), total: num(tr.given) * (num(tr.qty) || 1) * Math.max(1, tr.days.length), days: tr.days, serviceType: tr.serviceType, description: tr.description || '', durationMins: num(tr.durationMins), qty: num(tr.qty) || 1, image: tr.image || '' }))
   const categories = [
-    ...activities.map((a) => ({ name: a.location || 'Activity', description: a.description || a.serviceType || '', amount: num(a.given) * (num(a.qty) || 1) * Math.max(1, a.days.length) })),
+    ...activities.map((a) => ({ kind: 'activity', name: a.location || 'Activity', description: a.description || a.serviceType || '', serviceType: a.serviceType || '', durationMins: num(a.durationMins), qty: num(a.qty) || 1, days: a.days, image: a.image || '', amount: num(a.given) * (num(a.qty) || 1) * Math.max(1, a.days.length) })),
     ...opt.extras.map((e) => ({ name: e.name, description: e.note || '', amount: num(e.sell) })),
     ...opt.flights.map((f) => ({ name: `Flight · ${f.kind}`, description: `${f.fromCode || f.fromCity || ''} → ${f.toCode || f.toCity || ''}`, amount: num(f.sell) })),
   ]
@@ -1220,12 +1243,15 @@ function serialize(q, oi, t, destinations, presets) {
     const dnum = i + 1
     const svcs = opt.services.filter((s) => s.days.includes(dnum))
     const stay = opt.stays.find((s) => s.nights.includes(dnum))
+    const dayDest = dayCity(dnum) || q.destShort
     const title = svcs[0]?.location || (dnum === q.days ? 'Departure' : `Day ${dnum}`)
+    const serviceText = svcs.map((s) => [s.location, s.description].filter(Boolean).join(' — ')).filter(Boolean).join('; ')
     return {
       day: dnum, title, template: '', mealPlan: stay?.mealPlan || '',
-      description: svcs.map((s) => s.location).filter(Boolean).join('; ') || (stay ? `Stay at ${stay.hotelName}` : ''),
+      description: serviceText || (stay ? `Stay at ${stay.hotelName}` : ''),
       activities: svcs.map((s) => s.serviceType).filter(Boolean).join(', '),
-      stops: svcs.length ? svcs.map((s) => ({ destination: s.location, date: '', activity: s.serviceType })) : [{ destination: q.destShort, date: '', activity: '' }],
+      stops: [{ destination: dayDest, date: '', activity: svcs.map((s) => s.location || s.serviceType).filter(Boolean).join(', ') }],
+      services: svcs.map((s) => ({ kind: s.kind, name: s.location, serviceType: s.serviceType, description: s.description, durationMins: s.durationMins, image: s.image, qty: s.qty, cabId: s.cabId, cabName: s.cabName })),
       travel: '', notes: '',
     }
   })

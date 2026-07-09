@@ -35,9 +35,10 @@ function countdown(bk, days) {
 
 export default function BookingDetail() {
   const { id } = useParams()
-  const { bookings, packages, clients, addBookingPayment, setBookingStatus, cancelBooking, toast, canSeePricing } = useApp()
+  const { bookings, packages, clients, hotels, cabs, agency, addBookingPayment, setBookingStatus, cancelBooking, toast, canSeePricing } = useApp()
   const bk = bookings.find((b) => b.id === id)
   const [open, setOpen] = useState(false)
+  const [supplierOpen, setSupplierOpen] = useState(false)
   const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
 
   const pkg = packages.find((p) => p.id === bk?.packageId)
@@ -57,9 +58,11 @@ export default function BookingDetail() {
     return { destShort, days }
   }, [bk, pkg])
 
+  const client = clients.find((c) => c.name === bk?.clientName || c.id === pkg?.clientId)
+  const suppliers = useMemo(() => buildSupplierMessages({ bk, pkg, client, hotels, cabs, agency }), [bk, pkg, client, hotels, cabs, agency])
+
   if (!bk) return <div className="t-body-md">Booking not found. <Link className="c-link" to="/app/bookings">Back to Bookings</Link></div>
 
-  const client = clients.find((c) => c.name === bk.clientName || c.id === pkg?.clientId)
   const balance = Math.max(0, bk.value - bk.paid)
   const pct = Math.round((bk.paid / (bk.value || 1)) * 100)
   const cd = countdown(bk, model.days.length || pkg?.days || 0)
@@ -90,6 +93,7 @@ export default function BookingDetail() {
               <Link to={`/app/invoices/new?booking=${bk.id}`}><Button variant="secondary" size="sm">Create Invoice</Button></Link>
               <Button size="sm" onClick={() => setOpen(true)}>+ Add Payment</Button>
             </>}
+            <Button variant="secondary" size="sm" onClick={() => setSupplierOpen(true)}>Supplier Messages</Button>
           </div>
         </div>
         <h1 className="bk-title">{model.destShort} <span>— {client ? <Link to={`/app/clients/${client.id}`} className="c-link">{bk.clientName}</Link> : bk.clientName}</span></h1>
@@ -177,6 +181,7 @@ export default function BookingDetail() {
           {pkg && (
             <div className="bk-card bk-links">
               <Link to={`/app/packages/${pkg.id}`}><Button variant="secondary" className="w-full">Open package {pkg.code}</Button></Link>
+              <Button variant="secondary" className="w-full" onClick={() => setSupplierOpen(true)}>Send hotel / cab details</Button>
             </div>
           )}
         </aside>
@@ -192,6 +197,96 @@ export default function BookingDetail() {
           <Field label="Date"><DatePicker value={pay.date} onChange={(v) => setPay({ ...pay, date: v })} /></Field>
         </div>
       </Modal>
+
+      <Modal open={supplierOpen} onClose={() => setSupplierOpen(false)} title="Hotel & Cab Supplier Messages" width={760}
+        footer={<Button variant="tertiary" onClick={() => setSupplierOpen(false)}>Close</Button>}>
+        <div className="bk-supplier-list">
+          {suppliers.length === 0 && <div className="bk-empty">No hotel or cab suppliers found on this booking.</div>}
+          {suppliers.map((s, i) => (
+            <div className="bk-supplier" key={`${s.kind}-${i}`}>
+              <div>
+                <div className="bk-supplier-title">{s.kind} · {s.name}</div>
+                <div className="bk-supplier-sub">{[s.phone, s.email].filter(Boolean).join(' · ') || 'No contact saved in master data'}</div>
+              </div>
+              <div className="bk-supplier-actions">
+                <Button size="sm" variant="secondary" onClick={() => { navigator.clipboard?.writeText(s.message); toast('Message copied') }}>Copy</Button>
+                {s.phone && <Button size="sm" variant="secondary" onClick={() => window.open(`https://wa.me/${s.phone.replace(/\D/g, '')}?text=${encodeURIComponent(s.message)}`, '_blank')}>WhatsApp</Button>}
+                {s.email && <Button size="sm" onClick={() => { window.location.href = `mailto:${s.email}?subject=${encodeURIComponent(s.subject)}&body=${encodeURIComponent(s.message)}` }}>Email</Button>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
+}
+
+function fmtSupplierDate(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso + 'T00:00:00')
+  return isNaN(d) ? iso : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+function buildSupplierMessages({ bk, pkg, client, hotels, cabs, agency }) {
+  if (!bk || !pkg) return []
+  const contactLine = [client?.phone || pkg.clientPhone, client?.email || pkg.clientEmail].filter(Boolean).join(' · ')
+  const tripLine = `${pkg.destination || 'Trip'} · ${fmtSupplierDate(bk.travelDate)} to ${fmtSupplierDate(addDays(bk.travelDate, (pkg.nights || 0)))} · ${pkg.nights}N/${pkg.days}D`
+  const pax = pkg.pax || {}
+  const guest = `${bk.clientName}${contactLine ? ` (${contactLine})` : ''}`
+  const dayPlan = (pkg.itinerary || []).map((d) => `Day ${d.day}: ${d.title || ''}${d.description ? ` - ${d.description}` : ''}`).join('\n')
+  const base = [
+    `Hello, this is ${agency?.name || 'Travel Team'}. Booking is confirmed.`,
+    `Guest: ${guest}`,
+    `Trip: ${tripLine}`,
+    `Pax: ${Number(pax.adults) || 0} adults${Number(pax.children) ? `, ${pax.children} children` : ''}${Number(pax.infants) ? `, ${pax.infants} infants` : ''}`,
+  ]
+
+  const hotelRows = []
+  ;(pkg.hotelsAlloc || []).forEach((h) => {
+    const key = `${h.hotelId || h.name}-${h.roomType || ''}`
+    const row = hotelRows.find((x) => x.key === key)
+    if (row) { row.nights.push(h.night); return }
+    const master = hotels.find((x) => x.id === h.hotelId) || hotels.find((x) => x.name === h.name) || {}
+    hotelRows.push({ key, h, master, nights: [h.night] })
+  })
+
+  const hotelMessages = hotelRows.map(({ h, master, nights }) => {
+    const checkIn = addDays(bk.travelDate, Math.min(...nights) - 1)
+    const checkOut = addDays(bk.travelDate, Math.max(...nights))
+    const message = [
+      ...base,
+      `Hotel: ${h.name}`,
+      `Check-in: ${fmtSupplierDate(checkIn)}`,
+      `Check-out: ${fmtSupplierDate(checkOut)}`,
+      `Rooms: ${h.rooms || 1}`,
+      `Room type: ${h.roomType || '—'}`,
+      `Meal plan: ${h.mealPlan || '—'}`,
+      '',
+      'Day-wise plan:',
+      dayPlan || 'Plan not added.',
+      '',
+      'Please confirm availability and booking acknowledgement.',
+    ].join('\n')
+    return { kind: 'Hotel', name: h.name || master.name || 'Hotel', phone: master.phone || '', email: master.email || '', subject: `Booking confirmation · ${bk.code} · ${bk.clientName}`, message }
+  })
+
+  const active = pkg.builderV2?.options?.[pkg.activeOption ?? 0] || {}
+  const cabMessages = (active.services || []).filter((s) => s.kind === 'transport').map((s) => {
+    const master = cabs.find((c) => c.id === s.cabId) || cabs.find((c) => c.name === s.cabName) || {}
+    const serviceDays = (s.days || []).map((d) => `Day ${d} (${fmtSupplierDate(addDays(bk.travelDate, d - 1))})`).join(', ')
+    const message = [
+      ...base,
+      `Vehicle: ${s.cabName || master.name || 'Cab'}`,
+      `Service: ${s.location || 'Transfer'}${s.serviceType ? ` · ${s.serviceType}` : ''}`,
+      `Days: ${serviceDays || 'As per plan'}`,
+      s.description ? `Notes: ${s.description}` : '',
+      '',
+      'Day-wise plan:',
+      dayPlan || 'Plan not added.',
+      '',
+      'Please confirm driver/vehicle details.',
+    ].filter(Boolean).join('\n')
+    return { kind: 'Cab', name: s.cabName || master.name || s.location || 'Cab', phone: master.contact || '', email: '', subject: `Cab confirmation · ${bk.code} · ${bk.clientName}`, message }
+  })
+
+  return [...hotelMessages, ...cabMessages]
 }

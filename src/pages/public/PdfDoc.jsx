@@ -42,7 +42,7 @@ function ieGroupsOf(pkg) {
 }
 
 /* ---------- build one flat model from the package ---------- */
-function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster, serviceLocationsMaster = []) {
+function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster, serviceLocationsMaster = [], cabsMaster = []) {
   const opts = pkg.builderV2?.options || []
   const activeIdx = pkg.activeOption ?? 0
   const active = opts[activeIdx] || opts[0]
@@ -52,24 +52,31 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
   const destTitle = sectors.map((s) => s.destination).join(' · ') || (pkg.destination || '').split(' - ')[0]
 
   // image lookups — everything resolves from master data
+  const norm = (v) => String(v || '').trim().toLowerCase()
+  const loose = (needle, hay) => {
+    const a = norm(needle), b = norm(hay)
+    return a && b && (a === b || a.includes(b) || b.includes(a))
+  }
   const findDest = (name) => {
     if (!name) return null
-    const q = name.toLowerCase()
-    return destinations.find((x) => x.name.toLowerCase() === q) || destinations.find((x) => q.includes(x.name.toLowerCase()) || x.name.toLowerCase().includes(q)) || null
+    return destinations.find((x) => norm(x.name) === norm(name)) || destinations.find((x) => loose(name, x.name) || loose(name, x.location)) || null
   }
   const destImg = (name) => findDest(name)?.image || ''
   const destGal = (name) => { const d = findDest(name); return d ? [d.image, ...(d.gallery || [])].filter(Boolean) : [] }
   const actImg = (name) => {
     if (!name) return ''
-    const q = name.toLowerCase()
-    const a = activitiesMaster.find((x) => x.name.toLowerCase() === q) || activitiesMaster.find((x) => q.includes(x.name.toLowerCase()) || x.name.toLowerCase().includes(q))
+    const a = activitiesMaster.find((x) => norm(x.name) === norm(name)) || activitiesMaster.find((x) => loose(name, x.name) || loose(name, x.category))
     return a?.image || ''
+  }
+  const cabImg = (name, id, type) => {
+    if (!name && !id) return ''
+    const c = cabsMaster.find((x) => x.id === id) || cabsMaster.find((x) => norm(x.name) === norm(name)) || cabsMaster.find((x) => loose(name, x.name) || loose(name, x.type) || loose(type, x.name) || loose(type, x.type))
+    return c?.image || ''
   }
   // transport routes resolve their photo + notes from the Service Locations master (by route name)
   const svcMaster = (name) => {
     if (!name) return null
-    const q = name.toLowerCase()
-    return serviceLocationsMaster.find((x) => x.name.toLowerCase() === q) || serviceLocationsMaster.find((x) => q.includes(x.name.toLowerCase()) || x.name.toLowerCase().includes(q)) || null
+    return serviceLocationsMaster.find((x) => norm(x.name) === norm(name)) || serviceLocationsMaster.find((x) => loose(name, x.name) || loose(name, x.serviceType)) || null
   }
 
   const stayRows = (o) => (o?.stays || []).map((st) => {
@@ -79,7 +86,7 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
       city: st.hotelCity || h?.city || '', name: st.hotelName || '—', star: N(st.hotelStar || h?.rating),
       room: st.roomType || '', meal: st.mealPlan || '', rooms: N(st.rooms) || 1,
       nightsCount: ns.length, checkIn: addDays(start, Math.min(...ns) - 1), checkOut: addDays(start, Math.max(...ns)),
-      desc: h?.description || '', image: h?.image || destImg(st.hotelCity),
+      desc: st.hotelDescription || h?.description || '', image: st.hotelImage || h?.image || destImg(st.hotelCity),
     }
   })
 
@@ -93,7 +100,7 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
   const days = (pkg.itinerary || []).map((d) => {
     // transfers carry their own resolved photo + description (own value, else the route master's)
     const transfers = services.filter((s) => s.kind === 'transport' && (s.days || []).includes(d.day))
-      .map((t) => { const sm = svcMaster(t.location); return { ...t, image: t.image || sm?.image || '', description: t.description || sm?.description || '' } })
+      .map((t) => { const sm = svcMaster(t.location); return { ...t, image: t.image || sm?.image || cabImg(t.cabName || t.location, t.cabId, t.serviceType) || '', description: t.description || sm?.description || '' } })
     const dayActs = services.filter((s) => s.kind === 'activity' && (s.days || []).includes(d.day))
     const city = d.stops?.[0]?.destination || ''
     // collage pool: this day's activity + service photos, then the city's gallery rotated by day number so consecutive days differ
@@ -103,7 +110,7 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     const rotated = pool.length ? Array.from({ length: pool.length }, (_, i) => pool[(d.day - 1 + i) % pool.length]) : []
     const images = [...new Set([...actImgs, ...svcImgs, ...rotated])].slice(0, 3)
     // each activity carries its own resolved photo (fallbacks handled at render)
-    const acts = dayActs.map((a, ai) => ({ ...a, image: a.image || actImg(a.location) || images[ai % Math.max(1, images.length)] || '' }))
+    const acts = dayActs.map((a, ai) => ({ ...a, image: a.image || actImg(a.location || a.serviceType) || images[ai % Math.max(1, images.length)] || '' }))
     return { n: d.day, title: d.title || `Day ${d.day}`, city, desc: d.description || '', meal: d.mealPlan || '', transfers, activities: acts, image: images[0] || '', images }
   })
 
@@ -131,7 +138,7 @@ function groupLegacy(pkg, start, hotels) {
     if (last && last.name === h.name && last.room === h.roomType) { last.nightsCount++; last.checkOut = addDays(start, h.night) }
     else {
       const m = hotels.find((x) => x.id === h.hotelId || x.name === h.name)
-      groups.push({ city: m?.city || '', name: h.name, star: N(m?.rating), room: h.roomType || '', meal: h.mealPlan || '', rooms: N(h.rooms) || 1, nightsCount: 1, checkIn: addDays(start, h.night - 1), checkOut: addDays(start, h.night), desc: m?.description || '' })
+      groups.push({ city: h.city || m?.city || '', name: h.name, star: N(h.star || m?.rating), room: h.roomType || '', meal: h.mealPlan || '', rooms: N(h.rooms) || 1, nightsCount: 1, checkIn: addDays(start, h.night - 1), checkOut: addDays(start, h.night), desc: h.description || m?.description || '', image: h.image || m?.image || '' })
     }
   })
   return groups
@@ -147,10 +154,15 @@ export default function PdfDoc() {
   // master data isn't loaded on the public doc — the package payload is
   // denormalised (hotelsAlloc/itinerary carry names & prices), so enrichment
   // (hotel/destination photos) degrades gracefully to the stored values.
-  const hotels = [], destinations = [], activities = [], serviceLocations = []
+  const masters = data?.masters || {}
+  const hotels = masters.hotels || []
+  const destinations = masters.destinations || []
+  const activities = masters.activities || []
+  const serviceLocations = masters.serviceLocations || []
+  const cabs = masters.cabs || []
   const v = sp.get('v') || 'classic'
   const premium = isPremiumVariant(v)
-  const m = useMemo(() => (pkg ? buildModel(pkg, client, agency, hotels, destinations, activities, serviceLocations) : null), [pkg, agency]) // eslint-disable-line react-hooks/exhaustive-deps
+  const m = useMemo(() => (pkg ? buildModel(pkg, client, agency, hotels, destinations, activities, serviceLocations, cabs) : null), [pkg, agency, data]) // eslint-disable-line react-hooks/exhaustive-deps
   const docRef = useRef(null)
   const [busy, setBusy] = useState(false)
 
@@ -298,6 +310,7 @@ function DaySvc({ d }) {
     {d.transfers.map((t, i) => (
       <div className="pdf-svc" key={`t${i}`}>
         <span className="pdf-svc-k">Transfer</span>
+        {t.image && <Img src={t.image} className="pdf-svc-img" />}
         <div><strong>{t.location || '—'}</strong>{t.serviceType ? ` · ${t.serviceType}` : ''}{t.cabName ? ` · ${t.cabName}` : ''}
           {t.description && <div className="pdf-svc-desc">{t.description}</div>}</div>
       </div>
@@ -305,6 +318,7 @@ function DaySvc({ d }) {
     {d.activities.map((a, i) => (
       <div className="pdf-svc" key={`a${i}`}>
         <span className="pdf-svc-k">Activity</span>
+        {a.image && <Img src={a.image} className="pdf-svc-img" />}
         <div><strong>{a.location || '—'}</strong>{a.serviceType ? ` · ${a.serviceType}` : ''}
           {a.description && <div className="pdf-svc-desc">{a.description}</div>}</div>
       </div>

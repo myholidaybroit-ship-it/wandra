@@ -7,19 +7,21 @@ import { downloadCsv } from '../../../utils/csv'
 import { ImageInput } from '../../../components/ui/ImageInput'
 
 const SERVICE_TYPES = ['Arrival Transfer', 'Departure Transfer', 'Intercity Transfer', 'Sightseeing', 'Excursion', 'Half-day Transfer', 'Full-day Transfer']
+const optionalMins = (v) => Number(v) > 0 ? `${Number(v)} mins` : '—'
+const optionalNumber = (v) => String(v ?? '').trim() === '' ? null : Number(v) || 0
 
 export default function ServiceLocationList() {
-  const { serviceLocations, updateServiceLocation, toast } = useApp()
+  const { serviceLocations, destinations, updateServiceLocation, toast } = useApp()
   const [q, setQ] = useState('')
   const [edit, setEdit] = useState(null)
-  const rows = serviceLocations.filter((s) => (s.name + (s.city || '') + s.serviceType).toLowerCase().includes(q.toLowerCase()))
+  const rows = serviceLocations.filter((s) => (s.name + (s.city || '') + s.serviceType + (s.destination || '')).toLowerCase().includes(q.toLowerCase()))
 
   const exportCsv = () => downloadCsv('service-locations',
-    ['Route', 'Service type', 'Duration (mins)', 'City', 'Cost', 'Selling'],
-    rows.map((s) => [s.name, s.serviceType, s.durationMins, s.city || '', s.cost || 0, s.sell || 0]))
+    ['Route', 'Destination', 'Service type', 'Duration (mins)', 'City', 'Cost', 'Selling'],
+    rows.map((s) => [s.name, s.destination || '', s.serviceType, Number(s.durationMins) > 0 ? s.durationMins : '', s.city || '', s.cost || 0, s.sell || 0]))
 
   const save = () => {
-    updateServiceLocation(edit.id, { ...edit, durationMins: Number(edit.durationMins) || 0, cost: Number(edit.cost) || 0, sell: Number(edit.sell) || 0 })
+    updateServiceLocation(edit.id, { ...edit, durationMins: optionalNumber(edit.durationMins), cost: Number(edit.cost) || 0, sell: Number(edit.sell) || 0 })
     toast('Service location updated'); setEdit(null)
   }
 
@@ -30,8 +32,9 @@ export default function ServiceLocationList() {
         <span className="cell-strong">{r.name}</span>
       </div>
     ) },
+    { key: 'destination', head: 'Destination', render: (r) => <span className="cell-sub">{r.destination || '—'}</span> },
     { key: 'serviceType', head: 'Service type', render: (r) => <Badge tone="info">{r.serviceType}</Badge> },
-    { key: 'duration', head: 'Duration', render: (r) => `${r.durationMins} mins` },
+    { key: 'duration', head: 'Duration', render: (r) => optionalMins(r.durationMins) },
     { key: 'city', head: 'City', render: (r) => <span className="cell-sub">{r.city || '—'}</span> },
     { key: 'cost', head: 'Cost', align: 'right', render: (r) => <span className="cell-sub">{inr(r.cost || 0)}</span> },
     { key: 'sell', head: 'Selling', align: 'right', render: (r) => <span className="cell-strong">{inr(r.sell || 0)}</span> },
@@ -51,8 +54,12 @@ export default function ServiceLocationList() {
         {edit && (
           <div className="form-grid">
             <Field label="Route" full><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
+            <Field label="Destination">
+              <PillSelect value={edit.destination || 'Select destination'} options={['Select destination', ...destinations.map((d) => d.name)]}
+                onChange={(v) => setEdit({ ...edit, destination: v === 'Select destination' ? '' : v })} />
+            </Field>
             <Field label="Service type"><PillSelect value={edit.serviceType} options={SERVICE_TYPES} onChange={(v) => setEdit({ ...edit, serviceType: v })} /></Field>
-            <Field label="Duration (mins)"><Input value={edit.durationMins} onChange={(e) => setEdit({ ...edit, durationMins: e.target.value })} /></Field>
+            <Field label="Duration (mins)"><Input value={edit.durationMins ?? ''} onChange={(e) => setEdit({ ...edit, durationMins: e.target.value })} placeholder="Optional" /></Field>
             <Field label="City"><Input value={edit.city || ''} onChange={(e) => setEdit({ ...edit, city: e.target.value })} /></Field>
             <Field label="Cost (₹)"><Input value={edit.cost ?? ''} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></Field>
             <Field label="Selling (₹)"><Input value={edit.sell ?? ''} onChange={(e) => setEdit({ ...edit, sell: e.target.value })} /></Field>

@@ -6,7 +6,7 @@ import { ImageInput } from '../../../components/ui/ImageInput'
 
 export default function HotelDetail() {
   const { id } = useParams()
-  const { hotels, packages, updateHotel, toast } = useApp()
+  const { hotels, packages, destinations, updateHotel, toast } = useApp()
   const h = hotels.find((x) => x.id === id)
   const [edit, setEdit] = useState(false)
   const [f, setF] = useState(h || {})
@@ -24,7 +24,7 @@ export default function HotelDetail() {
           <hr className="divider" />
           {h.image && <img src={h.image} alt={h.name} style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 14, display: 'block' }} />}
           <div className="kv-grid">
-            <KV k="City" v={h.city} /><KV k="Rating" v={`${h.rating} / 5`} />
+            <KV k="Destination" v={h.destination || '—'} /><KV k="City" v={h.city} /><KV k="Rating" v={`${h.rating} / 5`} />
             <KV k="Phone" v={h.phone} /><KV k="Email" v={h.email} />
             <KV k="Address" v={h.address || '—'} /><KV k="Room Types" v={h.roomTypes} />
           </div>
@@ -47,6 +47,10 @@ export default function HotelDetail() {
         footer={<><Button variant="secondary" onClick={() => setEdit(false)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         <div className="form-grid">
           <Field label="Name"><Input value={f.name || ''} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
+          <Field label="Destination">
+            <PillSelect value={f.destination || 'Select destination'} options={['Select destination', ...destinations.map((d) => d.name)]}
+              onChange={(v) => setF({ ...f, destination: v === 'Select destination' ? '' : v })} />
+          </Field>
           <Field label="City"><Input value={f.city || ''} onChange={(e) => setF({ ...f, city: e.target.value })} /></Field>
           <Field label="Phone"><Input value={f.phone || ''} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
           <Field label="Email"><Input value={f.email || ''} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>

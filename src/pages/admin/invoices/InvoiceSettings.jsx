@@ -1,11 +1,23 @@
 import { useState } from 'react'
-import { useApp } from '../../../store/AppContext'
+import { DEFAULT_INVOICE_SETTINGS, useApp } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Field, Input, Select, Textarea } from '../../../components/ui/UI'
 
 export default function InvoiceSettings() {
-  const { toast } = useApp()
-  const [f, setF] = useState({ prefix: 'INV-', nextNo: '0004', defaultGst: '18', defaultDue: '15', terms: 'Payable within 15 days. 50% advance to confirm booking.', footer: 'Thank you for travelling with Wandra.' })
+  const { agency, setAgency, toast } = useApp()
+  const saved = { ...DEFAULT_INVOICE_SETTINGS, ...(agency.invoiceSettings || {}) }
+  const [f, setF] = useState({
+    prefix: saved.prefix || 'INV-',
+    defaultGst: String(saved.defaultGst ?? 18),
+    defaultDue: String(saved.defaultDue ?? 15),
+    type: saved.type || 'Non-GST',
+    terms: saved.terms || 'Payable within 15 days. 50% advance to confirm booking.',
+    footer: saved.footer || 'Thank you for travelling with us.',
+  })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+  const save = async () => {
+    await setAgency({ invoiceSettings: { ...saved, ...f, defaultGst: Number(f.defaultGst) || 0, defaultDue: Number(f.defaultDue) || 0 } })
+    toast('Invoice settings saved')
+  }
   return (
     <div>
       <PageHeader title="Invoice Settings" subtitle="Defaults applied to every new invoice." />
@@ -15,10 +27,9 @@ export default function InvoiceSettings() {
           <hr className="divider" />
           <div className="form-grid">
             <Field label="Invoice Prefix"><Input value={f.prefix} onChange={set('prefix')} /></Field>
-            <Field label="Next Number"><Input value={f.nextNo} onChange={set('nextNo')} /></Field>
             <Field label="Default GST %"><Input value={f.defaultGst} onChange={set('defaultGst')} /></Field>
             <Field label="Default Due (days)"><Input value={f.defaultDue} onChange={set('defaultDue')} /></Field>
-            <Field label="Default Invoice Type" full><Select><option>Non-GST</option><option>GST</option></Select></Field>
+            <Field label="Default Invoice Type" full><Select value={f.type} onChange={set('type')}><option>Non-GST</option><option>GST</option></Select></Field>
           </div>
         </Card>
         <Card>
@@ -26,7 +37,7 @@ export default function InvoiceSettings() {
           <hr className="divider" />
           <Field label="Payment Terms" full><Textarea value={f.terms} onChange={set('terms')} /></Field>
           <div className="mt-base"><Field label="Invoice Footer" full><Textarea value={f.footer} onChange={set('footer')} /></Field></div>
-          <Button className="mt-lg" onClick={() => toast('Invoice settings saved')}>Save Settings</Button>
+          <Button className="mt-lg" onClick={save}>Save Settings</Button>
         </Card>
       </div>
     </div>

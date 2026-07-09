@@ -15,6 +15,7 @@ export default function ItineraryPreview() {
   const { data, loading } = usePublic(`/itinerary/${code}`)
   const pkg = data?.package
   const agency = data?.agency || {}
+  const masters = data?.masters || {}
   const docRef = useRef(null)
   const [busy, setBusy] = useState(false)
   const download = async () => { if (!docRef.current) return; setBusy(true); try { await preloadAndDownload(docRef.current, `${pkg.code}-itinerary.pdf`) } finally { setBusy(false) } }
@@ -22,11 +23,19 @@ export default function ItineraryPreview() {
   if (!pkg) return <div className="itin-wrap"><p>Itinerary not found.</p></div>
   const pr = pkg.computed || computePricing(pkg)
   const accent = THEME_ACCENT[theme] || '#0d74ce'
+  const findDest = (name) => {
+    if (!name) return null
+    const q = name.toLowerCase()
+    return (masters.destinations || []).find((x) => x.name.toLowerCase() === q) || (masters.destinations || []).find((x) => q.includes(x.name.toLowerCase()) || x.name.toLowerCase().includes(q))
+  }
+  const destName = (pkg.sectors || []).find((s) => s.destination)?.destination || pkg.destination?.split(' - ')[0]
+  const heroImage = findDest(destName)?.image || ''
+  const imageForStop = (name) => findDest(name)?.image || (masters.activities || []).find((a) => a.name === name)?.image || (masters.serviceLocations || []).find((s) => s.name === name)?.image || ''
 
   return (
     <div className={`itin itin-${theme}`} style={{ '--accent': accent }} ref={docRef}>
       {/* hero */}
-      <div className="itin-hero">
+      <div className="itin-hero" style={heroImage ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.58)), url("${heroImage}")` } : undefined}>
         <div className="itin-hero-overlay" />
         <div className="itin-hero-text">
           {agency.logo
@@ -64,7 +73,7 @@ export default function ItineraryPreview() {
                 {d.activities && <div className="itin-activities"><strong>Activities:</strong> {d.activities}</div>}
                 <div className="itin-stops">
                   {d.stops?.filter((s) => s.destination).map((s, i) => (
-                    <div className="itin-stop" key={i}><div className="itin-stop-img" /><div><div className="cell-strong t-body-sm">{s.destination}</div><div className="cell-sub">{s.activity}</div></div></div>
+                    <div className="itin-stop" key={i}><div className="itin-stop-img" style={imageForStop(s.destination) ? { backgroundImage: `url("${imageForStop(s.destination)}")` } : undefined} /><div><div className="cell-strong t-body-sm">{s.destination}</div><div className="cell-sub">{s.activity}</div></div></div>
                   ))}
                 </div>
               </div>

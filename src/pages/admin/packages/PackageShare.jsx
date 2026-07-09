@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useApp, inr } from '../../../store/AppContext'
+import { useApp, inr, computePricing } from '../../../store/AppContext'
 import { Button, Modal } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import './share.css'
@@ -25,7 +25,7 @@ export default function PackageShare() {
 
   const client = clients.find((c) => c.id === pkg.clientId)
   const link = `${window.location.origin}/i/${pkg.code}`
-  const total = pkg.pricing?.grandTotal || 0
+  const total = packageTotal(pkg)
   const firstName = (client?.name || pkg.clientName || '').split(' ').slice(-1)[0]
   const msg = `Hi${firstName ? ` ${firstName}` : ''}! Here's your travel quote ${pkg.code} — ${pkg.destination} (${pkg.nights}N / ${pkg.days}D). View it here: ${link}`
   const phone = (pkg.clientPhone || client?.phone || '').replace(/\D/g, '')
@@ -158,6 +158,18 @@ function PdfIcon() {
 /* ---------- Dynamic WhatsApp itinerary message ---------- */
 const B = (s) => `*${s}*`
 const N = (v) => Number(v) || 0
+const firstMoney = (...vals) => vals.map(N).find((v) => v > 0) || 0
+function packageTotal(pkg) {
+  const computed = pkg.computed || computePricing(pkg)
+  return firstMoney(
+    pkg.pricing?.grandTotal,
+    pkg.pricing?.sellingPrice,
+    pkg.pricing?.sellSum,
+    pkg.pricing?.packageCost,
+    computed?.grandTotal,
+    computed?.subtotal,
+  )
+}
 function fmtD(iso) {
   if (!iso) return ''
   const d = new Date(iso + 'T00:00:00')
@@ -178,6 +190,7 @@ export function buildWaMessage(pkg, client, agency) {
   const end = addDays(start, pkg.nights || 0)
   const pax = pkg.pax || {}
   const total = N(pax.adults) + N(pax.children) + N(pax.infants)
+  const quoteTotal = packageTotal(pkg)
   const sectors = (pkg.sectors || []).filter((s) => s.destination)
   const destTitle = sectors.map((s) => s.destination).join(' ') || (pkg.destination || '').split(' - ')[0]
 
@@ -189,6 +202,10 @@ export function buildWaMessage(pkg, client, agency) {
   L.push(`${B('Traveler')}: ${total}`)
   L.push(`${B('Adults')}: ${N(pax.adults)} ${B('Children')}: ${N(pax.children)} ${B('Infants')}: ${N(pax.infants)}`)
   L.push(`${B('Destinations')}: ${sectors.map((s) => B(s.destination)).join(' ') || B(destTitle)}`)
+  if (quoteTotal) {
+    L.push('')
+    L.push(`${B('Package Price')}: ₹${quoteTotal.toLocaleString('en-IN')}${activeOpt.name ? ` (${activeOpt.name})` : ''}`)
+  }
 
   // Hotels — per option
   if (opts.some((o) => o.stays && o.stays.length)) {
@@ -204,6 +221,7 @@ export function buildWaMessage(pkg, client, agency) {
         L.push(`${B('Location')}: ${st.hotelCity || '—'}`)
         L.push(`${B('Check-in')}: ${fmtD(addDays(start, Math.min(...ns) - 1))}`)
         L.push(`${B('Check-out')}: ${fmtD(addDays(start, Math.max(...ns)))}`)
+        if (st.roomType) L.push(`${B('Room type')}: ${st.roomType}`)
         L.push(`${B('Meal')}: ${st.mealPlan || '—'}`)
         if (st.hotelStar) L.push(`${B('Hotel type')}: ${st.hotelStar} Star`)
       })
@@ -242,6 +260,7 @@ export function buildWaMessage(pkg, client, agency) {
       L.push(`${B('Service')}: ${tr.location || '—'}${tr.serviceType ? ` (${tr.serviceType})` : ''}`)
       if (tr.cabName) L.push(`${B('Vehicle')}: ${tr.cabName}`)
       L.push(`${B('Quantity')}: ${N(tr.qty) || 1}`)
+      if (tr.given) L.push(`${B('Price')}: ₹${N(tr.given).toLocaleString('en-IN')}`)
       if (tr.description) L.push(`${B('Remarks')}: ${tr.description}`)
     })
     services.filter((s) => s.kind === 'activity' && (s.days || []).includes(d.day)).forEach((a) => {
@@ -249,7 +268,7 @@ export function buildWaMessage(pkg, client, agency) {
       L.push(`${B('Activity')}: ${a.location || '—'}`)
       if (a.serviceType) L.push(`${B('Type')}: ${a.serviceType}`)
       L.push(`${B('Quantity')}: ${N(a.qty) || 1}`)
-      L.push(`${B('Price')}: ₹${N(a.given)}`)
+      if (a.given) L.push(`${B('Price')}: ₹${N(a.given).toLocaleString('en-IN')}`)
       if (a.description) L.push(`${B('Description')}: ${a.description}`)
     })
   })
@@ -288,6 +307,7 @@ export function buildEmail(pkg, client, agency) {
   const destTitle = sectors.map((s) => s.destination).join(', ') || (pkg.destination || '').split(' - ')[0]
   const name = client?.name || pkg.clientName || 'Traveller'
   const money = (v) => `₹${(Number(v) || 0).toLocaleString('en-IN')}`
+  const quoteTotal = packageTotal(pkg)
 
   const subject = `Your ${destTitle} Travel Quote — ${pkg.code}`
   const L = []
@@ -353,7 +373,7 @@ export function buildEmail(pkg, client, agency) {
       if (g.exclusions.length) { L.push('', multi && g.destination ? `EXCLUSIONS — ${g.destination.toUpperCase()}` : 'EXCLUSIONS'); g.exclusions.forEach((x) => L.push(`  - ${x}`)) }
     })
   }
-  if (pkg.pricing?.grandTotal) { L.push('', 'PACKAGE PRICE'); L.push(`  ${money(pkg.pricing.grandTotal)}${activeOpt.name ? ` (${activeOpt.name})` : ''}`) }
+  if (quoteTotal) { L.push('', 'PACKAGE PRICE'); L.push(`  ${money(quoteTotal)}${activeOpt.name ? ` (${activeOpt.name})` : ''}`) }
   if (pkg.customerRemarks) { L.push('', 'NOTES'); L.push(`  ${pkg.customerRemarks}`) }
 
   L.push('')

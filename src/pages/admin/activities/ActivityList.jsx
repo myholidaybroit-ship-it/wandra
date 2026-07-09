@@ -1,23 +1,26 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, Textarea, ListSearch } from '../../../components/ui/UI'
+import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, Textarea, ListSearch, PillSelect } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 import { ImageInput } from '../../../components/ui/ImageInput'
 
+const optionalMins = (v) => Number(v) > 0 ? `${Number(v)} mins` : '—'
+const optionalNumber = (v) => String(v ?? '').trim() === '' ? null : Number(v) || 0
+
 export default function ActivityList() {
-  const { activities, updateActivity, toast } = useApp()
+  const { activities, destinations, updateActivity, toast } = useApp()
   const [q, setQ] = useState('')
   const [edit, setEdit] = useState(null)
-  const rows = activities.filter((a) => (a.name + a.category + (a.city || '')).toLowerCase().includes(q.toLowerCase()))
+  const rows = activities.filter((a) => (a.name + a.category + (a.city || '') + (a.destination || '')).toLowerCase().includes(q.toLowerCase()))
 
   const exportCsv = () => downloadCsv('activities',
-    ['Activity', 'Category', 'City', 'Duration (mins)', 'Cost', 'Selling', 'Description'],
-    rows.map((a) => [a.name, a.category, a.city || '', a.durationMins, a.cost, a.sell, a.description || '']))
+    ['Activity', 'Destination', 'Category', 'City', 'Duration (mins)', 'Cost', 'Selling', 'Description'],
+    rows.map((a) => [a.name, a.destination || '', a.category, a.city || '', Number(a.durationMins) > 0 ? a.durationMins : '', a.cost, a.sell, a.description || '']))
 
   const save = () => {
-    updateActivity(edit.id, { ...edit, durationMins: Number(edit.durationMins) || 0, cost: Number(edit.cost) || 0, sell: Number(edit.sell) || 0 })
+    updateActivity(edit.id, { ...edit, durationMins: optionalNumber(edit.durationMins), cost: Number(edit.cost) || 0, sell: Number(edit.sell) || 0 })
     toast('Activity updated'); setEdit(null)
   }
 
@@ -25,9 +28,10 @@ export default function ActivityList() {
     { key: 'name', head: 'Activity / ticket', render: (r) => (
       <div className="row gap-sm">
         <span className="master-thumb" style={r.image ? { backgroundImage: `url("${r.image}")` } : undefined} />
-        <div><span className="cell-strong">{r.name}</span><div className="cell-sub">{r.city || '—'} · {r.durationMins} mins</div></div>
+        <div><span className="cell-strong">{r.name}</span><div className="cell-sub">{r.city || '—'} · {optionalMins(r.durationMins)}</div></div>
       </div>
     ) },
+    { key: 'destination', head: 'Destination', render: (r) => <span className="cell-sub">{r.destination || '—'}</span> },
     { key: 'category', head: 'Category', render: (r) => <Badge tone="neutral">{r.category}</Badge> },
     { key: 'cost', head: 'Cost', align: 'right', render: (r) => <span className="cell-sub">{inr(r.cost)}</span> },
     { key: 'sell', head: 'Selling', align: 'right', render: (r) => <span className="cell-strong">{inr(r.sell)}</span> },
@@ -47,9 +51,13 @@ export default function ActivityList() {
         {edit && (
           <div className="form-grid">
             <Field label="Name" full><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
+            <Field label="Destination">
+              <PillSelect value={edit.destination || 'Select destination'} options={['Select destination', ...destinations.map((d) => d.name)]}
+                onChange={(v) => setEdit({ ...edit, destination: v === 'Select destination' ? '' : v })} />
+            </Field>
             <Field label="Category"><Input value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /></Field>
             <Field label="City"><Input value={edit.city || ''} onChange={(e) => setEdit({ ...edit, city: e.target.value })} /></Field>
-            <Field label="Duration (mins)"><Input value={edit.durationMins} onChange={(e) => setEdit({ ...edit, durationMins: e.target.value })} /></Field>
+            <Field label="Duration (mins)"><Input value={edit.durationMins ?? ''} onChange={(e) => setEdit({ ...edit, durationMins: e.target.value })} placeholder="Optional" /></Field>
             <div className="field-full"><ImageInput label="Activity photo" value={edit.image || ''} onChange={(v) => setEdit({ ...edit, image: v })} /></div>
             <Field label="Cost (₹)"><Input value={edit.cost ?? ''} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></Field>
             <Field label="Selling (₹)"><Input value={edit.sell ?? ''} onChange={(e) => setEdit({ ...edit, sell: e.target.value })} /></Field>

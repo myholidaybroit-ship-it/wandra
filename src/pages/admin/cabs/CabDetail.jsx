@@ -6,17 +6,23 @@ import { ImageInput } from '../../../components/ui/ImageInput'
 
 export default function CabDetail() {
   const { id } = useParams()
-  const { cabs, packages, updateCab, toast } = useApp()
+  const { cabs, packages, updateCab, removeCab, toast } = useApp()
   const c = cabs.find((x) => x.id === id)
   const [edit, setEdit] = useState(false)
   const [f, setF] = useState(c || {})
   if (!c) return <div>Cab not found. <Link className="c-link" to="/app/cabs">Back</Link></div>
-  const usedIn = packages.filter((p) => p.cabs?.some((a) => a.cabId === c.id || a.name === c.name))
+  const usedIn = packages.filter((p) => p.cabs?.some((a) => a.cabId === c.id || a.name === c.name) || p.builderV2?.options?.some((o) => o.sameCabId === c.id || o.services?.some((s) => s.cabId === c.id || s.cabName === c.name)))
   const save = () => { updateCab(c.id, { ...f, capacity: Number(f.capacity), ratePerKm: Number(f.ratePerKm) || 0, ratePerDay: Number(f.ratePerDay) || 0 }); toast('Cab updated'); setEdit(false) }
+  const remove = async () => {
+    if (usedIn.length && !window.confirm(`This cab is used in ${usedIn.length} package(s). Delete it from master data anyway? Existing packages will keep their saved cab text.`)) return
+    await removeCab(c.id)
+    toast('Cab deleted')
+    window.location.href = '/app/cabs'
+  }
   return (
     <div>
       <PageHeader title={c.name} subtitle={`${c.type} · ${c.capacity} pax`}
-        actions={<><Link to="/app/cabs"><Button variant="secondary" size="sm">← Back</Button></Link><Button size="sm" onClick={() => { setF(c); setEdit(true) }}>✎ Edit</Button></>} />
+        actions={<><Link to="/app/cabs"><Button variant="secondary" size="sm">← Back</Button></Link><Button variant="secondary" size="sm" onClick={remove}>Delete</Button><Button size="sm" onClick={() => { setF(c); setEdit(true) }}>✎ Edit</Button></>} />
       <div className="detail-grid">
         <Card>
           <span className="t-title-md">Vehicle Information</span>

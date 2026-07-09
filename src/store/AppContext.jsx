@@ -23,6 +23,14 @@ export const AUTO_ASSIGNEE = '__auto__'
 export const inr = (n) =>
   '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
 
+export const DEFAULT_INVOICE_SETTINGS = {
+  defaultGst: 18,
+  defaultDue: 15,
+  type: 'Non-GST',
+  terms: 'Payable within 15 days. 50% advance to confirm booking.',
+  footer: 'Thank you for travelling with us.',
+}
+
 /* ---- Pricing engine (identical to the backend's services/pricing.js) ---- */
 export function computePricing(pkg) {
   if (pkg.pricing?.mode === 'Builder' && pkg.pricing.grandTotal != null) {
@@ -67,6 +75,7 @@ function normalizeAgency(ag) {
   return {
     ...ag,
     bank: ag.bank || {},
+    invoiceSettings: { ...DEFAULT_INVOICE_SETTINGS, ...(ag.invoiceSettings || {}) },
     plan: { name: ag.plan, limit: clientLimit > 0 ? clientLimit : -1 }, // -1 = unlimited
   }
 }
@@ -202,6 +211,7 @@ export function AppProvider({ children }) {
   const updateHotel = async (id, patch) => replace(setHotels)(await api.patch(`/hotels/${id}`, patch))
   const addCab = async (c) => { const rec = await api.post('/cabs', c); prepend(setCabs)(rec); return rec }
   const updateCab = async (id, patch) => replace(setCabs)(await api.patch(`/cabs/${id}`, patch))
+  const removeCab = async (id) => { await api.del(`/cabs/${id}`); setCabs((l) => l.filter((c) => c.id !== id)) }
   const addServiceLocation = async (s) => { const rec = await api.post('/services', s); prepend(setServiceLocations)(rec); return rec }
   const updateServiceLocation = async (id, patch) => replace(setServiceLocations)(await api.patch(`/services/${id}`, patch))
   const addActivity = async (a) => { const rec = await api.post('/activities', a); prepend(setActivities)(rec); return rec }
@@ -229,6 +239,9 @@ export function AppProvider({ children }) {
     const rec = await api.post('/packages/from-template', { templateId: tpl.id, clientId: client?.id })
     prepend(setPackages)(rec); reload('quotations', 'packageTemplates'); return rec
   }
+  const addItineraryTemplate = async (tpl) => { const rec = await api.post('/itinerary-templates', tpl); prepend(setTemplates)(rec); return rec }
+  const updateItineraryTemplate = async (id, patch) => replace(setTemplates)(await api.patch(`/itinerary-templates/${id}`, patch))
+  const removeItineraryTemplate = async (id) => { await api.del(`/itinerary-templates/${id}`); setTemplates((l) => l.filter((t) => t.id !== id)) }
 
   /* ---------- bookings ---------- */
   const createBookingFromPackage = async (pkg) => {
@@ -306,10 +319,9 @@ export function AppProvider({ children }) {
     ready, authed, session, login, logout,
     features, limitsMap, hasFeature, limitFor,
     agency, setAgency, respondRenewal,
-    agency, setAgency, respondRenewal,
     destinations, addDestination, updateDestination,
     hotels, addHotel, updateHotel,
-    cabs, addCab, updateCab,
+    cabs, addCab, updateCab, removeCab,
     serviceLocations, addServiceLocation, updateServiceLocation,
     activities, addActivity, updateActivity,
     clients, addClient, updateClient, addClientDoc, removeClientDoc,
@@ -321,7 +333,7 @@ export function AppProvider({ children }) {
     gallery, approveStory, addStory,
     users, addUser, updateUser, removeUser,
     currentUser, currentUserId, setCurrentUser, canSeePricing, isAdmin,
-    templates, themes, toggleTheme,
+    templates, addItineraryTemplate, updateItineraryTemplate, removeItineraryTemplate, themes, toggleTheme,
     inclusionPresets, addInclusionPreset, removeInclusionPreset, updateInclusionPreset, clearDestinationPresets, presetsForDest, categoryGroups,
     vouchers, addVoucher, removeVoucher,
     landing, updateLanding,

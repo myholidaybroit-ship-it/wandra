@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useApp, inr } from '../../../store/AppContext'
+import { useApp, inr, DEFAULT_INVOICE_SETTINGS } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select } from '../../../components/ui/UI'
+import { AgencyLogo } from '../../../components/ui/AgencyBrand'
 import { downloadElementPdf } from '../../../utils/pdf'
 import './invoice.css'
 
@@ -20,6 +21,7 @@ export default function InvoiceDetail() {
   const tax = inv.items.reduce((s, it) => s + it.qty * it.rate * (it.tax / 100), 0)
   const total = subtotal + tax
   const paid = (inv.payments || []).reduce((s, p) => s + p.amount, 0)
+  const invSettings = { ...DEFAULT_INVOICE_SETTINGS, ...(agency.invoiceSettings || {}) }
 
   const record = () => {
     if (!pay.amount) return toast('Enter an amount')
@@ -45,7 +47,7 @@ export default function InvoiceDetail() {
         </div>
         <div className="inv-body">
           <div className="grid grid-2">
-            <div>{agency.logo && <img src={agency.logo} alt={agency.name} className="inv-agency-logo" />}<div className="t-caption-upper c-muted">From</div><div className="t-title-sm mt-xs">{agency.name}</div><div className="t-body-sm c-body">{agency.address}</div><div className="t-body-sm c-body">{agency.gstin && `GSTIN: ${agency.gstin}`}</div></div>
+            <div><AgencyLogo agency={agency} className="inv-agency-logo" fallback="name" /><div className="t-caption-upper c-muted">From</div><div className="t-title-sm mt-xs">{agency.name}</div><div className="t-body-sm c-body">{agency.address}</div><div className="t-body-sm c-body">{agency.gstin && `GSTIN: ${agency.gstin}`}</div></div>
             <div><div className="t-caption-upper c-muted">Bill To</div><div className="t-title-sm mt-xs">{inv.clientName}</div><div className="t-body-sm c-body">{client?.email}</div><div className="t-body-sm c-body">{client?.phone}</div></div>
           </div>
           <div className="row gap-xl mt-base t-body-sm c-body"><span>Issue Date: <strong className="c-ink">{inv.issueDate}</strong></span><span>Due Date: <strong className="c-ink">{inv.dueDate || '—'}</strong></span></div>
@@ -66,6 +68,12 @@ export default function InvoiceDetail() {
             <div className="fin-line"><span className="c-success">Paid</span><span className="c-success">{inr(paid)}</span></div>
             <div className="fin-line"><span className="c-error">Balance</span><span className="c-error">{inr(total - paid)}</span></div>
           </div>
+          {(invSettings.terms || invSettings.footer) && (
+            <div className="inv-terms">
+              {invSettings.terms && <div><strong>Payment Terms</strong><p>{invSettings.terms}</p></div>}
+              {invSettings.footer && <p>{invSettings.footer}</p>}
+            </div>
+          )}
 
           {inv.payments?.length > 0 && <>
             <div className="t-title-sm mt-lg mb-sm">Payment History</div>

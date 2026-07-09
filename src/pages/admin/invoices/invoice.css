@@ -7,6 +7,10 @@
 
 /* agency logo on invoices (fixed box — safe for PDF capture) */
 .inv-agency-logo { width: 150px; height: 44px; object-fit: contain; object-position: left center; display: block; margin-bottom: 10px; }
+.inv-terms { margin-top: 24px; padding: 14px 16px; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); color: var(--color-body); font-size: 13px; line-height: 1.55; }
+.inv-terms strong { display: block; color: var(--color-ink); margin-bottom: 4px; }
+.inv-terms p { margin: 0 0 8px; white-space: pre-line; }
+.inv-terms p:last-child { margin-bottom: 0; }
 
 /* ============================================================
    Create Invoice — premium two-column composer

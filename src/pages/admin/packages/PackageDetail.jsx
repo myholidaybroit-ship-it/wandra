@@ -50,12 +50,24 @@ export default function PackageDetail() {
     const optCount = pkg.builderV2?.options?.length || 1
     const activeOptName = optCount > 1 ? (pkg.builderV2.options[pkg.activeOption ?? 0]?.name || '') : ''
     const services = pkg.builderV2?.options?.[pkg.activeOption ?? 0]?.services || []
+    const optionStays = (pkg.builderV2?.options || []).map((o, oi) => ({
+      name: o.name || `Option ${oi + 1}`,
+      stays: (o.stays || []).map((st) => {
+        const ns = st.nights?.length ? st.nights : [1]
+        const m = hotels.find((x) => x.id === st.hotelId) || hotels.find((x) => x.name === st.hotelName)
+        return {
+          name: st.hotelName || m?.name || '—', room: st.roomType || '', meal: st.mealPlan || '', city: st.hotelCity || m?.city || '',
+          star: Number(st.hotelStar || m?.rating) || 0, image: m?.image || '', nightsCount: ns.length,
+          from: addDays(pkg.startDate, Math.min(...ns) - 1), to: addDays(pkg.startDate, Math.max(...ns)),
+        }
+      }),
+    })).filter((o) => o.stays.length)
     const days = (pkg.itinerary || []).map((d) => ({
       n: d.day, title: d.title || `Day ${d.day}`, city: d.stops?.[0]?.destination || '', meal: d.mealPlan || '',
       transfers: services.filter((s) => s.kind === 'transport' && (s.days || []).includes(d.day)),
       acts: services.filter((s) => s.kind === 'activity' && (s.days || []).includes(d.day)),
     }))
-    return { sectors, destShort, cover, stays, optCount, activeOptName, days }
+    return { sectors, destShort, cover, stays, optionStays, optCount, activeOptName, days }
   }, [pkg, hotels, destinations])
 
   if (!pkg) return <div className="t-body-md">Package not found. <Link className="c-link" to="/app/packages">Back to Packages</Link></div>
@@ -124,21 +136,26 @@ export default function PackageDetail() {
         {/* ================= LEFT ================= */}
         <div className="pd-main">
           {/* Stay */}
-          {model.stays.length > 0 && (
+          {(model.optionStays.length || model.stays.length) > 0 && (
             <section className="pd-card">
               <div className="pd-card-head">
                 <span className="pd-card-title">Stay</span>
-                <span className="pd-card-sub">{model.stays.length} hotel{model.stays.length > 1 ? 's' : ''} · {pkg.nights} nights{model.optCount > 1 ? ` · Option: ${model.activeOptName}` : ''}</span>
+                <span className="pd-card-sub">{model.optCount > 1 ? `${model.optCount} options` : `${model.stays.length} hotel${model.stays.length > 1 ? 's' : ''}`} · {pkg.nights} nights</span>
               </div>
               <div className="pd-stays">
-                {model.stays.map((s, i) => (
-                  <div className="pd-stay" key={i}>
-                    <div className="pd-stay-img" style={s.image ? { backgroundImage: `url("${s.image}")` } : undefined} />
-                    <div className="pd-stay-b">
-                      <div className="pd-stay-n">{s.name}{s.star ? <span className="pd-stars">{'★'.repeat(s.star)}</span> : null}</div>
-                      <div className="pd-stay-m">{[s.city, s.room, s.meal].filter(Boolean).join(' · ')}</div>
-                      <div className="pd-stay-d">{fmtD(s.from)} → {fmtD(s.to)} · {s.nightsCount} night{s.nightsCount > 1 ? 's' : ''}</div>
-                    </div>
+                {(model.optionStays.length ? model.optionStays : [{ name: model.activeOptName || 'Package', stays: model.stays }]).map((o, oi) => (
+                  <div className="pd-stay-option" key={oi}>
+                    {model.optCount > 1 && <div className="pd-opt-title">Option {oi + 1}: {o.name}</div>}
+                    {o.stays.map((s, i) => (
+                      <div className="pd-stay" key={i}>
+                        <div className="pd-stay-img" style={s.image ? { backgroundImage: `url("${s.image}")` } : undefined} />
+                        <div className="pd-stay-b">
+                          <div className="pd-stay-n">{s.name}{s.star ? <span className="pd-stars">{'★'.repeat(s.star)}</span> : null}</div>
+                          <div className="pd-stay-m">{[s.city, s.room, s.meal].filter(Boolean).join(' · ')}</div>
+                          <div className="pd-stay-d">{fmtD(s.from)} → {fmtD(s.to)} · {s.nightsCount} night{s.nightsCount > 1 ? 's' : ''}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

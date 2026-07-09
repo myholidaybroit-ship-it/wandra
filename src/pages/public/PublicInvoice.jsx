@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { inr } from '../../store/AppContext'
+import { inr, DEFAULT_INVOICE_SETTINGS } from '../../store/AppContext'
 import { usePublic } from '../../hooks/usePublic'
 import { Card, Button, Badge } from '../../components/ui/UI'
+import { AgencyLogo } from '../../components/ui/AgencyBrand'
 import { downloadElementPdf } from '../../utils/pdf'
 import '../admin/invoices/invoice.css'
 
@@ -21,6 +22,7 @@ export default function PublicInvoice() {
   const tax = inv.items.reduce((s, it) => s + it.qty * it.rate * (it.tax / 100), 0)
   const total = subtotal + tax
   const paid = (inv.payments || []).reduce((s, p) => s + p.amount, 0)
+  const invSettings = { ...DEFAULT_INVOICE_SETTINGS, ...(agency.invoiceSettings || {}) }
   return (
     <div className="section" style={{ maxWidth: 820, margin: '0 auto' }}>
       <div ref={docRef}>
@@ -28,7 +30,7 @@ export default function PublicInvoice() {
         <div className="inv-banner"><div><div className="inv-title">INVOICE</div><div className="mono inv-no">{inv.code}</div></div><Badge tone={inv.status}>{inv.status}</Badge></div>
         <div className="inv-body">
           <div className="grid grid-2">
-            <div>{agency.logo && <img src={agency.logo} alt={agency.name} className="inv-agency-logo" />}<div className="t-caption-upper c-muted">From</div><div className="t-title-sm mt-xs">{agency.name}</div><div className="t-body-sm c-body">{agency.address}</div></div>
+            <div><AgencyLogo agency={agency} className="inv-agency-logo" fallback="name" /><div className="t-caption-upper c-muted">From</div><div className="t-title-sm mt-xs">{agency.name}</div><div className="t-body-sm c-body">{agency.address}</div><div className="t-body-sm c-body">{agency.gstin && `GSTIN: ${agency.gstin}`}</div></div>
             <div><div className="t-caption-upper c-muted">Bill To</div><div className="t-title-sm mt-xs">{inv.clientName}</div><div className="t-body-sm c-body">{client?.phone}</div></div>
           </div>
           <table className="data-table mt-lg" style={{ border: '1px solid var(--color-hairline)', borderRadius: 8 }}>
@@ -40,6 +42,12 @@ export default function PublicInvoice() {
             <div className="fin-line"><span className="c-success">Paid</span><span className="c-success">{inr(paid)}</span></div>
             <div className="fin-line"><span className="c-error">Balance</span><span className="c-error">{inr(total - paid)}</span></div>
           </div>
+          {(invSettings.terms || invSettings.footer) && (
+            <div className="inv-terms">
+              {invSettings.terms && <div><strong>Payment Terms</strong><p>{invSettings.terms}</p></div>}
+              {invSettings.footer && <p>{invSettings.footer}</p>}
+            </div>
+          )}
           <div className="pdf-powered" style={{ marginTop: 24 }}>Powered by <strong>Wandra</strong></div>
           <div className="row gap-sm center mt-lg no-print"><Button onClick={download} disabled={busy}>{busy ? 'Preparing…' : 'Download PDF'}</Button></div>
         </div>

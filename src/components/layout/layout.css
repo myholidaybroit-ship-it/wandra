@@ -95,6 +95,9 @@
 .icon { display: block; flex-shrink: 0; }
 .brand { display: inline-flex; align-items: center; }
 .logo-lockup { display: block; width: auto; }
+.brand-agency { min-width: 0; max-width: 100%; }
+.agency-side-logo { display: block; width: 154px; height: 46px; object-fit: contain; object-position: left center; }
+.agency-side-logo.collapsed { width: 34px; height: 34px; object-position: center; }
 .logo-nav { height: 48px; }
 .logo-side { height: 64px; }
 .logo-foot { height: 84px; filter: brightness(0) invert(1); }
