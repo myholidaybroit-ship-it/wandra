@@ -5,6 +5,19 @@ import { PageHeader, Button, Modal, Field, Input, Textarea } from '../../compone
 import { Icon } from '../../components/ui/icons'
 import './billing.css'
 
+/* Fallback plan cards — used only if the backend config hasn't returned plans yet
+   (empty Plan collection / older backend), so this page never shows a blank gap. */
+const FALLBACK_FREE = {
+  id: 'free', name: 'Free', price: 0, period: 'forever',
+  tagline: 'Everything you need to start selling trips.',
+  perks: ['Up to 100 clients', 'Quote builder with markup pricing', 'Itineraries, quotations & PDF downloads', 'WhatsApp & email sharing', 'Basic reports', 'Email support'],
+}
+const FALLBACK_PRO = {
+  id: 'pro', name: 'Pro', price: 3999, priceYear: 2999, oldPrice: 9999, period: 'mo',
+  tagline: 'The complete engine for a growing agency.', plus: 'Everything in Free, plus:',
+  perks: ['Unlimited clients & enquiries', 'Bookings, invoices & payment tracking', 'Vouchers — hotel, transport & activity', 'Lead-capture landing page', 'Auto lead assignment (round robin)', 'In-depth reports with Excel / CSV export', 'Team accounts with roles & permissions', 'Your branding on every document', 'Priority WhatsApp support'],
+}
+
 export default function Billing() {
   const { plans, agency, clients, toast } = useApp()
   const nav = useNavigate()
@@ -17,8 +30,9 @@ export default function Billing() {
     setTalk(false)
     toast(`Message sent — we'll reply to ${msg.email} within a working day`)
   }
-  const free = plans.find((p) => p.id === 'free')
-  const pro = plans.find((p) => p.id === 'pro')
+  const byId = (id) => plans.find((p) => (p.id || p.key || p.name || '').toLowerCase() === id)
+  const free = byId('free') || FALLBACK_FREE
+  const pro = byId('pro') || FALLBACK_PRO
   const isPro = (agency?.plan?.name || '').toLowerCase() === 'pro'
   const used = clients.length
   const unlimited = agency?.plan?.limit === -1
