@@ -1,0 +1,19 @@
+/* ===== Settings — Lead Sources editor ===== */
+.src-list { display: flex; flex-direction: column; gap: 8px; }
+.src-row { display: flex; align-items: center; gap: 10px; }
+.src-dot {
+  flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--color-brand-blue, #2d55fb);
+}
+.src-input { flex: 1; }
+.src-del {
+  flex: 0 0 auto; display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--color-hairline); background: var(--color-canvas);
+  color: var(--color-steel); cursor: pointer;
+  transition: color var(--ease-ui), border-color var(--ease-ui), background var(--ease-ui);
+}
+.src-del:hover { color: #dc2626; border-color: #f0c4c4; background: #fdf3f3; }
+
+.src-add { display: flex; gap: 8px; margin-top: 14px; }
+.src-add .control { flex: 1; }

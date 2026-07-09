@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useApp, AUTO_ASSIGNEE } from '../../../store/AppContext'
 import { Card, Button, Field, Input, Textarea, PillSelect, PillMultiSelect, DatePicker, formatDate } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
+import { useLeadSources } from '../../../utils/sources'
 import './query.css'
 
-const SOURCES = ['Website', 'Ad Form', 'Referral', 'WhatsApp', 'Walk-in', 'B2B Agent', 'Instagram']
 const SALUTATIONS = ['Mr.', 'Mrs.', 'Ms.', 'Dr.']
 const PHONE_CODES = ['+91 IN', '+971 AE', '+1 US', '+44 UK']
 const AGES = Array.from({ length: 17 }, (_, i) => String(i + 1))
@@ -22,11 +22,12 @@ function ReviewRow({ k, v }) {
 
 export default function ClientCreate() {
   const { addClient, destinations, users, toast } = useApp()
+  const SOURCES = useLeadSources()
   const nav = useNavigate()
   const [step, setStep] = useState(1)
 
   const [f, setF] = useState({
-    source: 'Website', refId: '', assignee: AUTO_ASSIGNEE,
+    source: SOURCES[0] || 'Website', refId: '', assignee: AUTO_ASSIGNEE,
     dests: [], startDate: '', nights: 1, adults: 2, children: 0, childAges: [],
     salutation: 'Mr.', name: '', email: '', city: '', comments: '',
     phones: [{ code: '+91 IN', number: '' }],

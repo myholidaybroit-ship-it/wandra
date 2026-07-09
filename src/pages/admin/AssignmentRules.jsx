@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useApp } from '../../store/AppContext'
 import { PageHeader, Button, PillSelect, PillMultiSelect } from '../../components/ui/UI'
 import { Icon } from '../../components/ui/icons'
+import { useLeadSources } from '../../utils/sources'
 import './assignment.css'
 
 const FIELDS = [
@@ -9,7 +10,6 @@ const FIELDS = [
   { key: 'source', label: 'Lead source' },
   { key: 'city', label: 'Travelling from' },
 ]
-const SOURCES = ['Website', 'Landing Page', 'Ad Form', 'Referral', 'WhatsApp', 'Walk-in', 'B2B Agent', 'Instagram']
 const FB_MODES = { all: 'Round robin — whole team', members: 'Round robin — chosen members', unassigned: 'Leave unassigned' }
 
 const initials = (n) => n.split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
@@ -54,6 +54,7 @@ function MemberPicker({ team, selected = [], nextName, onToggle }) {
 
 export default function AssignmentRules() {
   const { assignment, updateAssignment, addAssignRule, updateAssignRule, removeAssignRule, users, clients, destinations, toast } = useApp()
+  const SOURCES = useLeadSources()
   const [openId, setOpenId] = useState(assignment.rules[0]?.id || '')
   const dragIdx = useRef(null)
   const [overIdx, setOverIdx] = useState(null)

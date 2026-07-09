@@ -5,6 +5,7 @@ import { api } from '../../../api'
 import { fileToUploadable } from '../../../utils/image'
 import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, DataTable, EmptyState, PillSelect } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
+import { useLeadSources } from '../../../utils/sources'
 import '../packages/detail.css'
 import './client-hub.css'
 
@@ -19,6 +20,7 @@ const fmtSize = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math
 export default function ClientDetail() {
   const { id } = useParams()
   const { clients, packages, bookings, invoices, quotations, setQuotationStatus, updateClient, addClientDoc, removeClientDoc, toast, canSeePricing } = useApp()
+  const sources = useLeadSources()
   const c = clients.find((x) => x.id === id)
   const [tab, setTab] = useState('Overview')
   const [edit, setEdit] = useState(false)
@@ -291,7 +293,7 @@ export default function ClientDetail() {
           <Field label="Email"><Input value={f.email || ''} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
           <Field label="Interest"><Input value={f.interest || ''} onChange={(e) => setF({ ...f, interest: e.target.value })} /></Field>
           <Field label="Budget"><Input value={f.budget || ''} onChange={(e) => setF({ ...f, budget: Number(e.target.value) || 0 })} /></Field>
-          <Field label="Source"><Select value={f.source || ''} onChange={(e) => setF({ ...f, source: e.target.value })}><option value="">—</option><option>Ad Form</option><option>Referral</option><option>Walk-in</option><option>Lead Form</option></Select></Field>
+          <Field label="Source"><Select value={f.source || ''} onChange={(e) => setF({ ...f, source: e.target.value })}><option value="">—</option>{(sources.includes(f.source) || !f.source ? sources : [f.source, ...sources]).map((s) => <option key={s}>{s}</option>)}</Select></Field>
           <Field label="Trip Status"><Select value={f.tripStatus || 'New Query'} onChange={(e) => setF({ ...f, tripStatus: e.target.value })}>{TRIP_STATUSES.map((s) => <option key={s}>{s}</option>)}</Select></Field>
           <Field label="Note"><Input value={f.note || ''} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
           <Field label="Address" full><Textarea value={f.address || ''} onChange={(e) => setF({ ...f, address: e.target.value })} /></Field>

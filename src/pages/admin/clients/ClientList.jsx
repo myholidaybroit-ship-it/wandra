@@ -4,6 +4,7 @@ import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, Button, DataTable, Badge, formatDate, ListSearch, Modal, PillMultiSelect, DatePicker, Field, Input } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
+import { useLeadSources } from '../../../utils/sources'
 import './query.css'
 
 const STATUSES = ['New Query', 'In Progress', 'Converted', 'On Trip', 'Past Trips', 'Canceled', 'Dropped']
@@ -28,19 +29,20 @@ const day = (iso) => (iso || '').slice(0, 10)
 
 export default function ClientList() {
   const { clients } = useApp()
+  const configuredSources = useLeadSources()
   const nav = useNavigate()
   const [q, setQ] = useState('')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(1)
 
-  // options derived live from the real client data
+  // options derived from configured sources + whatever the data actually contains
   const opts = useMemo(() => ({
-    sources: uniq(clients.map((c) => c.source)),
+    sources: uniq([...configuredSources, ...clients.map((c) => c.source)]),
     assignees: uniq(clients.map((c) => c.query?.assignee)),
     interests: uniq(clients.map((c) => c.interest)),
     tags: uniq(clients.flatMap((c) => c.tags || [])),
-  }), [clients])
+  }), [clients, configuredSources])
 
   const rows = useMemo(() => clients.filter((c) => {
     const f = filters
