@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { publicApi } from '../../api'
 import { Button, Card, Badge, Modal, Field, Input, Textarea } from '../../components/ui/UI'
 import './landing.css'
@@ -40,13 +40,22 @@ const STEPS = ['Capture lead', 'Build package', 'Send itinerary', 'Confirm booki
 
 export default function Landing() {
   const [idx, setIdx] = useState(0)
+  const [sp, setSp] = useSearchParams()
   const [trialOpen, setTrialOpen] = useState(false)
   const [trialDone, setTrialDone] = useState(false)
   const [trialErr, setTrialErr] = useState('')
   const [trial, setTrial] = useState({ name: '', agencyName: '', phone: '', email: '', city: '', website: '', teamSize: '', note: '' })
+  const trialQuery = sp.get('trial')
   useEffect(() => { const t = setInterval(() => setIdx((i) => (i + 1) % ROTATE.length), 2200); return () => clearInterval(t) }, [])
   const setTrialField = (k) => (e) => setTrial({ ...trial, [k]: e.target.value })
   const openTrial = () => { setTrialOpen(true); setTrialDone(false); setTrialErr('') }
+  const closeTrial = () => {
+    setTrialOpen(false)
+    if (trialQuery) setSp({}, { replace: true })
+  }
+  useEffect(() => {
+    if (trialQuery === '1') openTrial()
+  }, [trialQuery])
   const submitTrial = async () => {
     if (!trial.name.trim() || !trial.agencyName.trim() || !trial.phone.trim()) return setTrialErr('Name, agency name and phone are required')
     try {
@@ -168,7 +177,7 @@ export default function Landing() {
             <div className="section-eyebrow">Pricing</div>
             <h2 className="t-heading-lg mt-xs">70% off during early access</h2>
           </div>
-          <PricingTiers />
+          <PricingTiers onTrial={openTrial} />
         </div>
       </section>
 
@@ -204,10 +213,10 @@ export default function Landing() {
           </div>
         </div>
       </section>
-      <Modal open={trialOpen} onClose={() => setTrialOpen(false)} title={trialDone ? 'Free trial request received' : 'Start Free Trial'} width={620}
+      <Modal open={trialOpen} onClose={closeTrial} title={trialDone ? 'Free trial request received' : 'Start Free Trial'} width={620}
         footer={trialDone
-          ? <Button onClick={() => setTrialOpen(false)}>Close</Button>
-          : <><Button variant="tertiary" onClick={() => setTrialOpen(false)}>Cancel</Button><Button onClick={submitTrial}>Send Request</Button></>}>
+          ? <Button onClick={closeTrial}>Close</Button>
+          : <><Button variant="tertiary" onClick={closeTrial}>Cancel</Button><Button onClick={submitTrial}>Send Request</Button></>}>
         {trialDone ? (
           <div className="trial-done">
             <div className="feat-icon trial-check">✓</div>
@@ -235,7 +244,7 @@ export default function Landing() {
   )
 }
 
-function PricingTiers() {
+function PricingTiers({ onTrial }) {
   const [yearly, setYearly] = useState(false)
   const tiers = [
     { name: 'Free Trial', monthly: 0, sub: '100 clients / month', perks: ['Itineraries & quotations', '6 themes', 'Shareable links & PDF'], featured: false },
@@ -272,7 +281,7 @@ function PricingTiers() {
                 </li>
               ))}
             </ul>
-            <Button as="a" href="/app" className="w-full mt-lg" variant={t.featured ? 'tertiary' : 'primary'}>Get started</Button>
+            <Button className="w-full mt-lg" variant={t.featured ? 'tertiary' : 'primary'} onClick={onTrial}>Get started</Button>
           </Card>
         ))}
       </div>

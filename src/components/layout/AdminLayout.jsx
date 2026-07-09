@@ -127,7 +127,7 @@ function SearchModal({ open, onClose }) {
 }
 
 export default function AdminLayout() {
-  const { agency, clients, currentUser, ready, authed, logout, hasFeature } = useApp()
+  const { agency, clients, currentUser, ready, authed, logout, hasFeature, sessionExpiresAt } = useApp()
   const nav = useNavigate()
   const [open, setOpen] = useState(false)
   const [promo, setPromo] = useState(() => sessionStorage.getItem('wandra-admin-promo') !== 'off')
@@ -165,7 +165,9 @@ export default function AdminLayout() {
   }, [])
 
   // auth guard — bounce to login once bootstrap resolves without a session
-  useEffect(() => { if (ready && !authed) nav('/login', { replace: true }) }, [ready, authed, nav])
+  useEffect(() => {
+    if (ready && !authed) nav('/login', { replace: true, state: { from: pathname } })
+  }, [ready, authed, nav, pathname])
   if (!ready || !authed) {
     return <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', color: '#6b7280' }}>Loading…</div>
   }
@@ -175,6 +177,10 @@ export default function AdminLayout() {
   const isPro = String(planName).toLowerCase() === 'pro'
   const planLimit = planLimitValue === -1 ? '∞' : planLimitValue
   const usedPct = planLimitValue === -1 ? 0 : Math.min(100, (clients.length / planLimitValue) * 100)
+  const sessionExpiry = sessionExpiresAt?.()
+  const sessionLabel = sessionExpiry
+    ? sessionExpiry.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'Browser session'
 
   return (
     <div className="admin-shell">
@@ -300,6 +306,7 @@ export default function AdminLayout() {
                       <div>
                         <div className="acct-name">{currentUser?.name || agency.name}</div>
                         <div className="acct-menu-email">{currentUser?.email || agency.email} · {currentUser?.role || 'Admin'}</div>
+                        <div className="acct-session">Session active until {sessionLabel}</div>
                       </div>
                     </div>
                     <div className="acct-menu-sep" />

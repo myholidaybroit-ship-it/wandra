@@ -13,7 +13,7 @@ export default function PublicLayout() {
       {promo && (
         <div className="promo-banner">
           <span className="promo-copy">
-            Early access — all plans <strong>70% off</strong>. <Link to="/login" className="promo-link">Claim the launch offer</Link>
+            Early access — all plans <strong>70% off</strong>. <Link to="/?trial=1" className="promo-link">Claim the launch offer</Link>
           </span>
           <button className="promo-x" onClick={dismissPromo} title="Dismiss">✕</button>
         </div>
@@ -30,7 +30,7 @@ export default function PublicLayout() {
         </div>
         <div className="pnav-right">
           <Link to="/login"><Button size="sm" variant="secondary">Log In</Button></Link>
-          <Button as="a" href="/app" size="sm">Start Free Trial</Button>
+          <Link to="/?trial=1"><Button size="sm">Start Free Trial</Button></Link>
         </div>
       </nav>
 

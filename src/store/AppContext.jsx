@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
-import { api, publicApi, isAuthed, setToken } from '../api'
+import { api, publicApi, isAuthed, setToken, sessionExpiresAt } from '../api'
 
 const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
@@ -181,15 +181,17 @@ export function AppProvider({ children }) {
     return () => { alive = false }
   }, [bootstrap])
 
-  async function login(email, password) {
-    const data = await api.login(email, password)
+  async function login(email, password, opts = {}) {
+    const data = await api.login(email, password, opts)
     await bootstrap()
     setAuthed(true)
     return data
   }
   function logout() {
     api.logout(); setAuthed(false); setSession(null)
+    setAgencyState(null); setFeatures({}); setLimitsMap({})
     setClients([]); setPackages([]); setBookings([]); setInvoices([]); setQuotations([])
+    setVouchers([]); setGallery([]); setUsers([]); setRoles([])
   }
 
   /* ---------- helpers ---------- */
@@ -316,7 +318,7 @@ export function AppProvider({ children }) {
   const limitFor = useCallback((key) => (limitsMap[key] == null ? -1 : limitsMap[key]), [limitsMap])
 
   const value = {
-    ready, authed, session, login, logout,
+    ready, authed, session, login, logout, sessionExpiresAt,
     features, limitsMap, hasFeature, limitFor,
     agency, setAgency, respondRenewal,
     destinations, addDestination, updateDestination,
