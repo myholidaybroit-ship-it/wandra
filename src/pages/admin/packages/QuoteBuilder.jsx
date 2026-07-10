@@ -37,7 +37,7 @@ const longDate = (startISO, off) => offDate(startISO, off, { weekday: 'long', da
    Quote Builder — Sembark-style sections, Wandra styling
    ============================================================ */
 export default function QuoteBuilder() {
-  const { clients, hotels, cabs, destinations, packages, packageTemplates, serviceLocations, activities, addPackage, updatePackage, toast, inclusionPresets, canSeePricing } = useApp()
+  const { clients, hotels, cabs, destinations, packages, packageTemplates, serviceLocations, activities, addPackage, updatePackage, toast, inclusionPresets, canSeePricing, templates } = useApp()
   const activityCats = [...new Set((activities || []).map((a) => a.category))]
   const nav = useNavigate()
   const { id: editId } = useParams()
@@ -174,6 +174,28 @@ export default function QuoteBuilder() {
   const dupService = (i) => setOpt({ services: [...opt.services.slice(0, i + 1), { ...opt.services[i], id: uid(), days: [] }, ...opt.services.slice(i + 1)] })
   const rmService = (i) => setOpt({ services: opt.services.filter((_, x) => x !== i) })
   const setService = (i, patch) => setOpt({ services: opt.services.map((s, x) => (x === i ? { ...s, ...patch } : s)) })
+
+  /* ---------- attach a pre-built Day Itinerary (fills a day fast) ---------- */
+  const dayTemplates = templates || []
+  const [dayTplModal, setDayTplModal] = useState(false)
+  const [dayTpl, setDayTpl] = useState({ id: '', day: 1 })
+  const openDayTpl = () => { setDayTpl({ id: dayTemplates[0]?.id || '', day: 1 }); setDayTplModal(true) }
+  const attachDayTpl = () => {
+    const tpl = dayTemplates.find((t) => t.id === dayTpl.id)
+    if (!tpl) return toast('Pick a day itinerary')
+    const day = Math.min(Math.max(1, num(dayTpl.day)), q.days)
+    const svcs = (tpl.services || []).map((s) => ({
+      id: uid(), kind: s.kind === 'activity' ? 'activity' : 'transport', days: [day],
+      location: s.location || '', serviceType: s.serviceType || '', description: s.description || '',
+      durationMins: s.durationMins ? String(s.durationMins) : '', qty: num(s.qty) || (s.kind === 'activity' ? (num(q.adults) || 1) : 1),
+      cabId: s.cabId || '', cabName: s.cabName || '', image: s.image || '',
+      rate: s.rate != null ? String(s.rate) : '', given: s.given != null ? String(s.given) : '',
+    }))
+    if (!svcs.length) return toast('That day itinerary has no services yet')
+    setOpt({ services: [...opt.services, ...svcs] })
+    setDayTplModal(false)
+    toast(`Added ${svcs.length} service${svcs.length > 1 ? 's' : ''} from “${tpl.name}”`)
+  }
 
   /* ---------- flights ---------- */
   const addFlight = (kind) => setOpt({ flights: [...opt.flights, blankFlight(kind)] })
@@ -354,6 +376,7 @@ export default function QuoteBuilder() {
             </label>
           }
           actions={<>
+            {dayTemplates.length > 0 && <Button size="sm" variant="tertiary" onClick={openDayTpl}><Icon name="calendar" size={14} /> From saved day</Button>}
             <Button size="sm" variant="secondary" onClick={() => addService('transport')}><Icon name="plus" size={14} /> Transport service</Button>
             <Button size="sm" variant="secondary" onClick={() => addService('activity')}><Icon name="plus" size={14} /> Activity / ticket</Button>
           </>}>
@@ -647,6 +670,39 @@ export default function QuoteBuilder() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* ---------- Attach a saved Day Itinerary ---------- */}
+      <Modal open={dayTplModal} onClose={() => setDayTplModal(false)} title="Attach a saved day itinerary" width={560}
+        footer={<><Button variant="tertiary" onClick={() => setDayTplModal(false)}>Cancel</Button><Button onClick={attachDayTpl}>Add to day</Button></>}>
+        <div className="col gap-base">
+          <p className="t-body-sm c-muted">Drop a pre-built day — its transfers &amp; activities are added to the day you pick. Manage these under <strong>Packages → Day Itineraries</strong>.</p>
+          <Field label="Day itinerary">
+            <PillSelect value={dayTemplates.find((t) => t.id === dayTpl.id)?.name || 'Select a day'}
+              options={dayTemplates.map((t) => t.name)}
+              onChange={(name) => setDayTpl((s) => ({ ...s, id: (dayTemplates.find((t) => t.name === name) || {}).id || '' }))} />
+          </Field>
+          <Field label="Apply to day">
+            <PillSelect value={`Day ${dayTpl.day}`} options={dayList.map((d) => `Day ${d}`)} onChange={(v) => setDayTpl((s) => ({ ...s, day: Number(v.replace('Day ', '')) || 1 }))} />
+          </Field>
+          {(() => {
+            const tpl = dayTemplates.find((t) => t.id === dayTpl.id)
+            const svcs = tpl?.services || []
+            return svcs.length ? (
+              <div className="qb-price-panel">
+                <div className="qb-pp-head">{svcs.length} service{svcs.length > 1 ? 's' : ''}{tpl.destination ? ` · ${tpl.destination}` : ''}</div>
+                <div className="qb-pp-rows">
+                  {svcs.map((s, i) => (
+                    <div className="qb-pp-row" key={i}>
+                      <div className="qb-pp-date">{s.location || s.serviceType}<span className="qb-pp-sub">{s.kind === 'activity' ? 'Activity' : 'Transport'}</span></div>
+                      {canSeePricing && <div className="qb-pp-val">{inr(num(s.given))}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : <p className="t-body-sm c-muted">This day itinerary has no services yet.</p>
+          })()}
+        </div>
       </Modal>
 
       {/* Sticky pricing footer (active option) — hidden for roles without pricing access */}
