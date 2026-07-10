@@ -4,7 +4,7 @@ import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, Textarea, ListSearch, PillSelect } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
-import { ImageInput } from '../../../components/ui/ImageInput'
+import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
 const optionalMins = (v) => Number(v) > 0 ? `${Number(v)} mins` : '—'
 const optionalNumber = (v) => String(v ?? '').trim() === '' ? null : Number(v) || 0
@@ -58,7 +58,8 @@ export default function ActivityList() {
             <Field label="Category"><Input value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /></Field>
             <Field label="City"><Input value={edit.city || ''} onChange={(e) => setEdit({ ...edit, city: e.target.value })} /></Field>
             <Field label="Duration (mins)"><Input value={edit.durationMins ?? ''} onChange={(e) => setEdit({ ...edit, durationMins: e.target.value })} placeholder="Optional" /></Field>
-            <div className="field-full"><ImageInput label="Activity photo" value={edit.image || ''} onChange={(v) => setEdit({ ...edit, image: v })} /></div>
+            <div className="field-full"><ImageInput label="Main activity photo" value={edit.image || ''} onChange={(v) => setEdit({ ...edit, image: v })} folder="activities" /></div>
+            <div className="field-full"><GalleryInput label="More activity photos" hint="Extra photos for a richer PDF" value={edit.gallery || []} onChange={(v) => setEdit({ ...edit, gallery: v })} folder="activities" /></div>
             <Field label="Cost (₹)"><Input value={edit.cost ?? ''} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></Field>
             <Field label="Selling (₹)"><Input value={edit.sell ?? ''} onChange={(e) => setEdit({ ...edit, sell: e.target.value })} /></Field>
             <Field label="Description" full><Textarea rows={3} value={edit.description || ''} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></Field>

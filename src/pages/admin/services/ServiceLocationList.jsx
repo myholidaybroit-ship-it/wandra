@@ -4,7 +4,7 @@ import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, PillSelect, ListSearch, Textarea } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
-import { ImageInput } from '../../../components/ui/ImageInput'
+import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
 const SERVICE_TYPES = ['Arrival Transfer', 'Departure Transfer', 'Intercity Transfer', 'Sightseeing', 'Excursion', 'Half-day Transfer', 'Full-day Transfer']
 const optionalMins = (v) => Number(v) > 0 ? `${Number(v)} mins` : '—'
@@ -63,7 +63,8 @@ export default function ServiceLocationList() {
             <Field label="City"><Input value={edit.city || ''} onChange={(e) => setEdit({ ...edit, city: e.target.value })} /></Field>
             <Field label="Cost (₹)"><Input value={edit.cost ?? ''} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} /></Field>
             <Field label="Selling (₹)"><Input value={edit.sell ?? ''} onChange={(e) => setEdit({ ...edit, sell: e.target.value })} /></Field>
-            <div className="field-full"><ImageInput label="Service photo" hint="Shown on the quote PDF day pages" value={edit.image || ''} onChange={(v) => setEdit({ ...edit, image: v })} /></div>
+            <div className="field-full"><ImageInput label="Main service photo" hint="The hero photo on quote PDF day pages" value={edit.image || ''} onChange={(v) => setEdit({ ...edit, image: v })} folder="services" /></div>
+            <div className="field-full"><GalleryInput label="More service photos" hint="Extra photos for a richer PDF" value={edit.gallery || []} onChange={(v) => setEdit({ ...edit, gallery: v })} folder="services" /></div>
             <Field label="Description" full hint="Free notes about this route — auto-fills the transfer in the quote builder">
               <Textarea rows={3} value={edit.description || ''} onChange={(e) => setEdit({ ...edit, description: e.target.value })} placeholder="e.g. Private cab with meet & greet, bottled water on board." />
             </Field>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Badge, Modal, Field, Input, PillSelect, Textarea } from '../../../components/ui/UI'
-import { ImageInput } from '../../../components/ui/ImageInput'
+import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
 export default function HotelDetail() {
   const { id } = useParams()
@@ -60,7 +60,8 @@ export default function HotelDetail() {
           <Field label="Extra Bed — Child (CWEB)"><Input value={f.extraBedChild ?? ''} onChange={(e) => setF({ ...f, extraBedChild: e.target.value })} /></Field>
           <Field label="Child No Bed (CNB)"><Input value={f.childNoBed ?? ''} onChange={(e) => setF({ ...f, childNoBed: e.target.value })} /></Field>
           <Field label="Room Types" full><Input value={f.roomTypes || ''} onChange={(e) => setF({ ...f, roomTypes: e.target.value })} /></Field>
-          <div className="field-full"><ImageInput label="Hotel photo" hint="Used on quote PDFs and hotel cards" value={f.image || ''} onChange={(v) => setF({ ...f, image: v })} /></div>
+          <div className="field-full"><ImageInput label="Main hotel photo" hint="The hero photo on quote PDFs and hotel cards" value={f.image || ''} onChange={(v) => setF({ ...f, image: v })} folder="hotels" /></div>
+          <div className="field-full"><GalleryInput label="More hotel photos" hint="Rooms, pool, lobby… shown as a photo collage on the PDF" value={f.gallery || []} onChange={(v) => setF({ ...f, gallery: v })} folder="hotels" /></div>
           <Field label="Description" full><Textarea value={f.description || ''} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
         </div>
       </Modal>

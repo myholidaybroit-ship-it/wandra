@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Field, Input, Textarea, PillSelect } from '../../../components/ui/UI'
-import { ImageInput } from '../../../components/ui/ImageInput'
+import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
 export default function HotelCreate() {
   const { addHotel, destinations, toast } = useApp()
   const nav = useNavigate()
-  const [f, setF] = useState({ name: '', destination: '', address: '', city: '', phone: '', email: '', rating: 5, buyingPrice: '', extraBedAdult: '', extraBedChild: '', childNoBed: '', roomTypes: '', description: '', image: '' })
+  const [f, setF] = useState({ name: '', destination: '', address: '', city: '', phone: '', email: '', rating: 5, buyingPrice: '', extraBedAdult: '', extraBedChild: '', childNoBed: '', roomTypes: '', description: '', image: '', gallery: [] })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
     if (!f.name) return toast('Hotel name is required')
@@ -35,7 +35,8 @@ export default function HotelCreate() {
           <Field label="Extra Bed — Child (₹ / night)" hint="CWEB rate — child with an extra bed"><Input value={f.extraBedChild} onChange={set('extraBedChild')} placeholder="4500" /></Field>
           <Field label="Child No Bed (₹ / night)" hint="CNB rate — child sharing, no extra bed"><Input value={f.childNoBed} onChange={set('childNoBed')} placeholder="2500" /></Field>
           <Field label="Room Types" full><Input value={f.roomTypes} onChange={set('roomTypes')} placeholder="Deluxe, Palace Room, Suite" /></Field>
-          <div className="field-full"><ImageInput label="Hotel photo" hint="Shown on quote PDFs and hotel cards" value={f.image} onChange={(v) => setF({ ...f, image: v })} /></div>
+          <div className="field-full"><ImageInput label="Main hotel photo" hint="The hero photo on quote PDFs and hotel cards" value={f.image} onChange={(v) => setF({ ...f, image: v })} folder="hotels" /></div>
+          <div className="field-full"><GalleryInput label="More hotel photos" hint="Rooms, pool, lobby… shown as a photo collage on the PDF" value={f.gallery} onChange={(v) => setF({ ...f, gallery: v })} folder="hotels" /></div>
           <Field label="Description" full><Textarea value={f.description} onChange={set('description')} placeholder="Hotel description, amenities…" /></Field>
         </div>
         <div className="row gap-sm mt-lg">

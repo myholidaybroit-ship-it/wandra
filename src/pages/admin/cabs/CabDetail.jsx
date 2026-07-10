@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Badge, Modal, Field, Input, PillSelect } from '../../../components/ui/UI'
-import { ImageInput } from '../../../components/ui/ImageInput'
+import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
 export default function CabDetail() {
   const { id } = useParams()
@@ -51,7 +51,8 @@ export default function CabDetail() {
           <Field label="Capacity"><Input value={f.capacity || ''} onChange={(e) => setF({ ...f, capacity: e.target.value })} /></Field>
           <Field label="Rate / KM"><Input value={f.ratePerKm || ''} onChange={(e) => setF({ ...f, ratePerKm: e.target.value })} /></Field>
           <Field label="Rate / Day" hint="Auto-fills the quote builder"><Input value={f.ratePerDay || ''} onChange={(e) => setF({ ...f, ratePerDay: e.target.value })} /></Field>
-          <div className="field-full"><ImageInput label="Vehicle photo" value={f.image || ''} onChange={(v) => setF({ ...f, image: v })} /></div>
+          <div className="field-full"><ImageInput label="Main vehicle photo" value={f.image || ''} onChange={(v) => setF({ ...f, image: v })} folder="cabs" /></div>
+          <div className="field-full"><GalleryInput label="More vehicle photos" hint="Interior, luggage space…" value={f.gallery || []} onChange={(v) => setF({ ...f, gallery: v })} folder="cabs" /></div>
           <Field label="Contact"><Input value={f.contact || ''} onChange={(e) => setF({ ...f, contact: e.target.value })} /></Field>
         </div>
       </Modal>

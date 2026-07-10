@@ -87,6 +87,8 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
       room: st.roomType || '', meal: st.mealPlan || '', rooms: N(st.rooms) || 1,
       nightsCount: ns.length, checkIn: addDays(start, Math.min(...ns) - 1), checkOut: addDays(start, Math.max(...ns)),
       desc: st.hotelDescription || h?.description || '', image: st.hotelImage || h?.image || destImg(st.hotelCity),
+      // the hotel's own uploaded photos drive the accommodation collage; city gallery fills any gaps
+      gallery: [...new Set([st.hotelImage, h?.image, ...(h?.gallery || []), ...destGal(st.hotelCity)].filter(Boolean))],
     }
   })
 
@@ -145,7 +147,7 @@ function groupLegacy(pkg, start, hotels) {
     if (last && last.name === h.name && last.room === h.roomType) { last.nightsCount++; last.checkOut = addDays(start, h.night) }
     else {
       const m = hotels.find((x) => x.id === h.hotelId || x.name === h.name)
-      groups.push({ city: h.city || m?.city || '', name: h.name, star: N(h.star || m?.rating), room: h.roomType || '', meal: h.mealPlan || '', rooms: N(h.rooms) || 1, nightsCount: 1, checkIn: addDays(start, h.night - 1), checkOut: addDays(start, h.night), desc: h.description || m?.description || '', image: h.image || m?.image || '' })
+      groups.push({ city: h.city || m?.city || '', name: h.name, star: N(h.star || m?.rating), room: h.roomType || '', meal: h.mealPlan || '', rooms: N(h.rooms) || 1, nightsCount: 1, checkIn: addDays(start, h.night - 1), checkOut: addDays(start, h.night), desc: h.description || m?.description || '', image: h.image || m?.image || '', gallery: [...new Set([h.image, m?.image, ...(m?.gallery || [])].filter(Boolean))] })
     }
   })
   return groups
@@ -745,10 +747,11 @@ function Holiday({ m, cfg }) {
           <div key={oi}>
             {m.options.length > 1 && <div className="hd-opt">Option {oi + 1}: {o.name}</div>}
             {o.stays.map((s, i) => {
-              const gal = [...new Set([s.image, ...m.gallery])].filter(Boolean).slice(0, 3)
+              const gal = (s.gallery?.length ? s.gallery : [s.image, ...m.gallery]).filter(Boolean).slice(0, 5)
+              const shown = gal.length ? gal : ['']
               return (
                 <div className="hd-hotel pdf-avoid" key={i}>
-                  <div className="hd-gal">{(gal.length ? gal : ['']).map((g, x) => <Img key={x} src={g} className="hd-gal-img" />)}</div>
+                  <div className={`hd-gal n${Math.min(shown.length, 5)}`}>{shown.map((g, x) => <Img key={x} src={g} className="hd-gal-img" />)}</div>
                   <div className="hd-hotel-b">
                     <div className="hd-hotel-n">{s.name} <Stars n={s.star} /></div>
                     <div className="hd-hotel-sub">{[s.city, `${s.nightsCount} night${s.nightsCount > 1 ? 's' : ''}`, `Check-in ${fmtD(s.checkIn, { day: '2-digit', month: 'short' })}`, `Check-out ${fmtD(s.checkOut, { day: '2-digit', month: 'short' })}`].filter(Boolean).join('   ·   ')}</div>

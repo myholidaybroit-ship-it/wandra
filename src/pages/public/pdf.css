@@ -325,8 +325,17 @@
 
 /* hotels */
 .pdf-holiday .hd-hotel { border: 1px solid var(--pdf-hair); border-radius: var(--pdf-radius); overflow: hidden; margin-bottom: 14px; background: var(--pdf-paper); box-shadow: 0 3px 14px rgba(20,16,12,.05); }
-.pdf-holiday .hd-gal { display: grid; grid-template-columns: 1.7fr 1fr 1fr; gap: 3px; }
-.pdf-holiday .hd-gal-img { height: 44mm; }
+/* accommodation photo collage — one hero photo + a grid of the hotel's own
+   uploaded images (falls back to city gallery), sized by how many exist */
+.pdf-holiday .hd-gal { display: grid; gap: 3px; }
+.pdf-holiday .hd-gal-img { height: 100%; min-height: 20mm; }
+.pdf-holiday .hd-gal.n1 { grid-template-columns: 1fr; grid-template-rows: 46mm; }
+.pdf-holiday .hd-gal.n2 { grid-template-columns: 1fr 1fr; grid-template-rows: 42mm; }
+.pdf-holiday .hd-gal.n3 { grid-template-columns: 2fr 1fr; grid-template-rows: 22mm 22mm; }
+.pdf-holiday .hd-gal.n4, .pdf-holiday .hd-gal.n5 { grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 22mm 22mm; }
+.pdf-holiday .hd-gal.n3 .hd-gal-img:first-child,
+.pdf-holiday .hd-gal.n4 .hd-gal-img:first-child,
+.pdf-holiday .hd-gal.n5 .hd-gal-img:first-child { grid-row: 1 / span 2; }
 .pdf-holiday .hd-hotel-b { padding: 13px 16px; }
 .pdf-holiday .hd-hotel-n { font-size: 16px; font-weight: 800; color: var(--pdf-ink); }
 .pdf-holiday .hd-hotel-sub { font-size: 10.5px; color: var(--pdf-ink-soft); margin-top: 4px; }
