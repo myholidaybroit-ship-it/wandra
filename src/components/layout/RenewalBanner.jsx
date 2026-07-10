@@ -23,7 +23,10 @@ export default function RenewalBanner() {
 
   const renewal = agency?.renewal
   const requested = renewal?.status === 'requested'
-  const proPrice = plans?.find((p) => p.id === 'pro')?.price || 3999
+  const pro = plans?.find((p) => p.id === 'pro') || {}
+  const proPrice = Number(pro.price) || 999
+  const billedYearly = (pro.billingCycle || 'yearly') === 'yearly'
+  const renewalPrice = billedYearly ? (Number(pro.annualTotal) || proPrice * 12) : proPrice
 
   const respond = async (answer) => {
     setDone(answer)
@@ -53,7 +56,7 @@ export default function RenewalBanner() {
         <span style={S.dot} />
         <span style={S.msg}>
           Your <strong>Wandra {agency.plan?.name || 'Pro'}</strong> plan renews on <strong>{prettyDate(agency.billing?.renewalOn)}</strong>
-          {proPrice ? <> — <strong>{inr(proPrice)}/mo</strong></> : null}. Renew now to keep all your features active.
+          {proPrice ? <> — <strong>{inr(proPrice)}/mo{billedYearly ? `, billed ${inr(renewalPrice)}/yr` : ''}</strong></> : null}. Renew now to keep all your features active.
         </span>
         <button style={{ ...S.btn, ...S.yes }} onClick={() => respond('accepted')}>Yes, renew</button>
         <button style={{ ...S.btn, ...S.no }} onClick={() => respond('declined')}>Not now</button>

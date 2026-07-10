@@ -13,7 +13,7 @@ const FALLBACK_FREE = {
   perks: ['Up to 100 clients', 'Quote builder with markup pricing', 'Itineraries, quotations & PDF downloads', 'WhatsApp & email sharing', 'Basic reports', 'Email support'],
 }
 const FALLBACK_PRO = {
-  id: 'pro', name: 'Pro', price: 3999, period: 'mo',
+  id: 'pro', name: 'Pro', price: 999, period: 'mo', billingCycle: 'yearly', annualDiscountPercent: 0, annualTotal: 11988,
   tagline: 'The complete engine for a growing agency.', plus: 'Everything in Free, plus:',
   perks: ['Unlimited clients & enquiries', 'Bookings, invoices & payment tracking', 'Vouchers — hotel, transport & activity', 'Lead-capture landing page', 'Auto lead assignment (round robin)', 'In-depth reports with Excel / CSV export', 'Team accounts with roles & permissions', 'Your branding on every document', 'Priority WhatsApp support'],
 }
@@ -95,6 +95,9 @@ export default function Billing() {
                 <span className="bl-price">{inr(pro.price)}</span>
                 <span className="bl-per">/ month</span>
               </div>
+              {(pro.billingCycle === 'yearly' || pro.annualTotal) && (
+                <div className="bl-billed-yearly">Billed yearly · {inr(pro.annualTotal || Math.round(pro.price * 12))}/yr{pro.annualDiscountPercent > 0 ? ` — save ${pro.annualDiscountPercent}%` : ''}</div>
+              )}
               <p className="bl-tagline">{pro.tagline}</p>
               <hr className="bl-rule" />
               <div className="bl-plus">{pro.plus}</div>

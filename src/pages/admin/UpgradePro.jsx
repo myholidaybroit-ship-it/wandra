@@ -23,11 +23,15 @@ const STEPS = [
 
 export default function UpgradePro() {
   const { plans, agency, toast } = useApp()
-  const pro = plans.find((p) => p.id === 'pro') || { price: 3999 }
-  const monthlyPrice = Number(pro.price) || 3999
+  const pro = plans.find((p) => p.id === 'pro') || { price: 999 }
+  const monthlyPrice = Number(pro.price) || 999
+  const billedYearly = (pro.billingCycle || 'yearly') === 'yearly'
+  const annualDiscount = Number(pro.annualDiscountPercent) || 0
+  const annual = Number(pro.annualTotal) || Math.round(monthlyPrice * 12 * (1 - annualDiscount / 100))
+  const payNow = billedYearly ? annual : monthlyPrice
 
   const copy = (v, label) => { navigator.clipboard?.writeText(v); toast(`${label} copied`) }
-  const waMsg = encodeURIComponent(`Hi Wandra! I've made the monthly payment for the Pro plan (${inr(monthlyPrice)}) for ${agency.name}. Sharing the payment proof here.`)
+  const waMsg = encodeURIComponent(`Hi Wandra! I've made the ${billedYearly ? 'yearly' : 'monthly'} payment for the Pro plan (${inr(payNow)}) for ${agency.name}. Sharing the payment proof here.`)
 
   return (
     <div className="up">
@@ -60,7 +64,7 @@ export default function UpgradePro() {
               </div>
             </div>
           ))}
-          <p className="lb-note">Pro renews monthly at the managed price. Contact the Wandra team if you need help.</p>
+          <p className="lb-note">Pro is ₹{monthlyPrice.toLocaleString('en-IN')}/month, {billedYearly ? 'billed yearly' : 'billed monthly'}. Contact the Wandra team if you need help.</p>
         </div>
 
         {/* ---------- order summary + payment details ---------- */}
@@ -68,7 +72,8 @@ export default function UpgradePro() {
           <div className="up-card">
             <div className="up-card-title">Your order</div>
             <div className="up-line"><span>Wandra Pro</span><span>{inr(monthlyPrice)} / month</span></div>
-            <div className="up-line total"><span>Pay now</span><span>{inr(monthlyPrice)}</span></div>
+            {billedYearly && <div className="up-line"><span>Billed yearly (12 months){annualDiscount > 0 ? ` · ${annualDiscount}% off` : ''}</span><span>{inr(annual)} / yr</span></div>}
+            <div className="up-line total"><span>Pay now</span><span>{inr(payNow)}</span></div>
           </div>
 
           <div className="up-card">

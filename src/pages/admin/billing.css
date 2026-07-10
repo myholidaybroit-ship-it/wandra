@@ -42,6 +42,8 @@
 .bl-per { font-size: 13.5px; font-weight: 600; color: var(--color-stone); }
 .bl-card.pro .bl-per { color: rgba(255, 255, 255, .6); }
 
+.bl-billed-yearly { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--color-stone); }
+.bl-card.pro .bl-billed-yearly { color: rgba(255, 255, 255, .72); }
 .bl-tagline { margin-top: 10px; font-size: 13.5px; color: var(--color-stone); }
 .bl-card.pro .bl-tagline { color: rgba(255, 255, 255, .72); }
 

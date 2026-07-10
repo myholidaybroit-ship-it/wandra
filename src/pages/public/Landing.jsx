@@ -6,7 +6,7 @@ import './landing.css'
 
 const DEFAULT_PRICING = [
   { id: 'free', name: 'Free', price: 'Free', suffix: 'forever', description: 'Everything you need to start selling trips.', features: ['CRM and enquiries', 'Itinerary builder', 'PDF and WhatsApp sharing'] },
-  { id: 'pro', name: 'Pro', price: '₹3,999', suffix: '/ month', description: 'The complete engine for a growing agency.', features: ['Everything in Free', 'Invoices and vouchers', 'Team roles and reports'], featured: true },
+  { id: 'pro', name: 'Pro', price: '₹999', suffix: '/ mo · billed yearly', description: 'The complete engine for a growing agency.', features: ['Everything in Free', 'Invoices and vouchers', 'Team roles and reports'], featured: true },
 ]
 
 const formatPrice = (value) => Number(value) === 0 ? 'Free' : `₹${Number(value || 0).toLocaleString('en-IN')}`
