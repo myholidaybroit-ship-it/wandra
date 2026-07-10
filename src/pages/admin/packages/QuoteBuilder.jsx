@@ -188,11 +188,11 @@ export default function QuoteBuilder() {
   /* ---------- save ---------- */
   const save = async () => {
     if (!q.clientName.trim()) return toast('Client name is required')
-    const rec = serialize(q, oi, t, destinations, inclusionPresets)
     try {
+      const rec = serialize(q, oi, t, destinations, inclusionPresets)
       if (editing) { await updatePackage(editing.id, rec); toast('Quote updated'); nav(`/app/packages/${editing.id}/share`) }
       else { const created = await addPackage(rec); toast('Quote created'); nav(`/app/packages/${created.id}/share`) }
-    } catch (ex) { toast(ex.message || 'Could not save the quote') }
+    } catch (ex) { console.error('Quote save failed', ex); toast(ex.message || 'Could not save the quote') }
   }
 
   return (
@@ -1239,6 +1239,7 @@ function serialize(q, oi, t, destinations, presets) {
     ...opt.extras.map((e) => ({ name: e.name, description: e.note || '', amount: num(e.sell) })),
     ...opt.flights.map((f) => ({ name: `Flight · ${f.kind}`, description: `${f.fromCode || f.fromCity || ''} → ${f.toCode || f.toCity || ''}`, amount: num(f.sell) })),
   ]
+  const dayCity = (d) => cityForNight(q.sectors, Math.min(d, q.nights))
   const itinerary = Array.from({ length: q.days }, (_, i) => {
     const dnum = i + 1
     const svcs = opt.services.filter((s) => s.days.includes(dnum))
