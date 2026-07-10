@@ -10,9 +10,9 @@ export default function CabDetail() {
   const c = cabs.find((x) => x.id === id)
   const [edit, setEdit] = useState(false)
   const [f, setF] = useState(c || {})
-  if (!c) return <div>Cab not found. <Link className="c-link" to="/app/cabs">Back</Link></div>
+  if (!c) return <div>Cab type not found. <Link className="c-link" to="/app/cabs">Back</Link></div>
   const usedIn = packages.filter((p) => p.cabs?.some((a) => a.cabId === c.id || a.name === c.name) || p.builderV2?.options?.some((o) => o.sameCabId === c.id || o.services?.some((s) => s.cabId === c.id || s.cabName === c.name)))
-  const save = () => { updateCab(c.id, { ...f, capacity: Number(f.capacity), ratePerKm: Number(f.ratePerKm) || 0, ratePerDay: Number(f.ratePerDay) || 0 }); toast('Cab updated'); setEdit(false) }
+  const save = () => { updateCab(c.id, { ...f, capacity: Number(f.capacity), ratePerKm: Number(f.ratePerKm) || 0, ratePerDay: Number(f.ratePerDay) || 0 }); toast('Cab type updated'); setEdit(false) }
   const remove = async () => {
     if (usedIn.length && !window.confirm(`This cab is used in ${usedIn.length} package(s). Delete it from master data anyway? Existing packages will keep their saved cab text.`)) return
     await removeCab(c.id)
@@ -42,7 +42,7 @@ export default function CabDetail() {
           {usedIn.map((p) => <Link key={p.id} to={`/app/packages/${p.id}`} className="fin-line c-link mono">{p.code}</Link>)}
         </Card>
       </div>
-      <Modal open={edit} onClose={() => setEdit(false)} title="Edit Cab" width={560}
+      <Modal open={edit} onClose={() => setEdit(false)} title="Edit Cab Type" width={560}
         footer={<><Button variant="secondary" onClick={() => setEdit(false)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         <div className="form-grid">
           <Field label="Name"><Input value={f.name || ''} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>

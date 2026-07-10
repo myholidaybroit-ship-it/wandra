@@ -13,16 +13,16 @@ export default function ServiceLocationCreate() {
   const [f, setF] = useState({ name: '', destination: '', serviceType: 'Arrival Transfer', durationMins: '', city: '', cost: '', sell: '', description: '', image: '', gallery: [] })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
-    if (!f.name) return toast('Service location name is required')
+    if (!f.name) return toast('Transport name is required')
     addServiceLocation({ ...f, durationMins: optionalNumber(f.durationMins), cost: Number(f.cost) || 0, sell: Number(f.sell) || 0 })
-    toast('Service location added'); nav('/app/services')
+    toast('Transport added'); nav('/app/services')
   }
   return (
     <div className="master-page">
-      <PageHeader title="Add Service Location" subtitle="A transport route the builder can pick — rates auto-fill the quote." />
+      <PageHeader title="Add Transport" subtitle="A transport route the builder can pick — rates auto-fill the quote." />
       <Card>
         <div className="form-grid">
-          <Field label="Service location / route" required><Input value={f.name} onChange={set('name')} placeholder="e.g. Airport to Hotel" /></Field>
+          <Field label="Transport / route" required><Input value={f.name} onChange={set('name')} placeholder="e.g. Airport to Hotel" /></Field>
           <Field label="Destination" hint="Scopes this route to a destination so it only shows up when building quotes for that place">
             <PillSelect value={f.destination || 'Select destination'} options={['Select destination', ...destinations.map((d) => d.name)]}
               onChange={(v) => setF({ ...f, destination: v === 'Select destination' ? '' : v })} />

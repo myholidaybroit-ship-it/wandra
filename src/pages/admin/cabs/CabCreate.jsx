@@ -16,10 +16,10 @@ export default function CabCreate() {
   }
   return (
     <div className="master-page">
-      <PageHeader title="Add New Cab" subtitle="Vehicle with per-km and per-day rates — the builder auto-fills from here." />
+      <PageHeader title="Add New Cab Type" subtitle="Vehicle with per-km and per-day rates — the builder auto-fills from here." />
       <Card>
         <div className="form-grid">
-          <Field label="Cab Name" required><Input value={f.name} onChange={set('name')} placeholder="e.g. Swift Dzire" /></Field>
+          <Field label="Cab type name" required><Input value={f.name} onChange={set('name')} placeholder="e.g. Swift Dzire" /></Field>
           <Field label="Type"><PillSelect value={f.type} options={['Sedan', 'SUV', 'Tempo Traveller', 'Universal']} onChange={(v) => setF({ ...f, type: v })} /></Field>
           <Field label="AC"><PillSelect value={f.acType} options={['AC', 'Non-AC']} onChange={(v) => setF({ ...f, acType: v })} /></Field>
           <Field label="Capacity (pax)"><Input type="number" min="1" value={f.capacity} onChange={set('capacity')} /></Field>
@@ -30,7 +30,7 @@ export default function CabCreate() {
           <div className="field-full"><GalleryInput label="More vehicle photos" hint="Interior, luggage space… for a richer PDF" value={f.gallery} onChange={(v) => setF({ ...f, gallery: v })} folder="cabs" /></div>
         </div>
         <div className="row gap-sm mt-lg">
-          <Button onClick={save}>⤓ Save Cab</Button>
+          <Button onClick={save}>⤓ Save Cab Type</Button>
           <Button variant="secondary" onClick={() => nav('/app/cabs')}>Cancel</Button>
         </div>
       </Card>

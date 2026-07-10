@@ -93,3 +93,11 @@
 /* iframe preview — A4 scaled down */
 .pdfm-preview { background: var(--color-surface); border: 1px solid var(--color-hairline-soft); border-radius: var(--radius-lg); overflow: hidden; height: 560px; }
 .pdfm-frame { width: 200%; height: 1120px; border: none; transform: scale(.5); transform-origin: 0 0; }
+
+/* per-option quotation selector (multi-option packages) */
+.pdfm-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 2px 14px; margin-bottom: 4px; border-bottom: 1px solid var(--color-hairline-soft); }
+.pdfm-options-k { font-size: 12px; font-weight: 700; color: var(--color-stone); }
+.pdfm-opt { padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-hairline); background: var(--color-canvas); font-size: 12px; font-weight: 600; color: var(--color-charcoal); cursor: pointer; transition: background .15s ease; }
+.pdfm-opt:hover { background: var(--color-surface); }
+.pdfm-opt.on { background: var(--color-ink); color: #fff; border-color: var(--color-ink); }
+.pdfm-options-hint { flex-basis: 100%; font-size: 11px; color: var(--color-muted-soft); }

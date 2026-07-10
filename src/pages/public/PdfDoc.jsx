@@ -41,11 +41,35 @@ function ieGroupsOf(pkg) {
   return raw.filter((g) => (g.inclusions?.length || g.exclusions?.length))
 }
 
+/* Selling total for one builder option — mirrors the builder's Markup → Tax →
+   Rounding engine so each option's PDF shows its own price, not the active one. */
+function optionGrandTotal(opt, s = {}) {
+  if (!opt) return 0
+  const nn = (v) => Number(v) || 0
+  const bed = (st) => nn(st.aweb) * nn(st.awebRate) + nn(st.cweb) * nn(st.cwebRate) + nn(st.cnb) * nn(st.cnbRate)
+  const hotelCost = (opt.stays || []).reduce((a, st) => a + (nn(st.rate) * nn(st.rooms) + bed(st)) * ((st.nights || []).length), 0)
+  const svcCost = (kind) => (opt.services || []).filter((x) => x.kind === kind).reduce((a, x) => a + nn(x.rate) * (nn(x.qty) || 1) * Math.max(1, (x.days || []).length), 0)
+  const flightCost = (opt.flights || []).reduce((a, f) => a + nn(f.cost), 0)
+  const extraCost = (opt.extras || []).reduce((a, e) => a + nn(e.cost), 0)
+  const costPrice = hotelCost + svcCost('transport') + svcCost('activity') + flightCost + extraCost
+  const markup = s.markupMode === 'flat' ? nn(s.markupValue) : costPrice * nn(s.markupValue) / 100
+  const taxBase = s.taxOn === 'cost_markup' ? costPrice + markup : costPrice
+  const tax = s.taxEnabled ? Math.round(taxBase * nn(s.taxPercent) / 100 * 100) / 100 : 0
+  const preRound = costPrice + markup + tax
+  const roundTo = nn(s.roundTo)
+  return roundTo ? Math.round(preRound / roundTo) * roundTo : Math.round(preRound)
+}
+
 /* ---------- build one flat model from the package ---------- */
-function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster, serviceLocationsMaster = [], cabsMaster = []) {
+function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster, serviceLocationsMaster = [], cabsMaster = [], optionIdx = null) {
   const opts = pkg.builderV2?.options || []
-  const activeIdx = pkg.activeOption ?? 0
+  const defaultIdx = pkg.activeOption ?? 0
+  const activeIdx = optionIdx != null && opts[optionIdx] ? optionIdx : defaultIdx
   const active = opts[activeIdx] || opts[0]
+  // the stored pkg.pricing belongs to the default option; any other option is priced live
+  const grandTotal = activeIdx === defaultIdx
+    ? (N(pkg.pricing?.grandTotal) || optionGrandTotal(active, pkg.builderV2))
+    : (optionGrandTotal(active, pkg.builderV2) || N(pkg.pricing?.grandTotal))
   const start = pkg.startDate
   const pax = pkg.pax || {}
   const sectors = (pkg.sectors || []).filter((s) => s.destination)
@@ -92,9 +116,10 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     }
   })
 
-  // legacy fallback: group hotelsAlloc when no builder options exist
-  let options = opts.length
-    ? opts.map((o, i) => ({ name: o.name || `Option ${i + 1}`, stays: stayRows(o) }))
+  // each PDF is one option's quotation — show only the selected option's hotels
+  // (legacy packages with no builder option fall back to grouping hotelsAlloc)
+  let options = active
+    ? [{ name: active.name || `Option ${activeIdx + 1}`, stays: stayRows(active) }]
     : [{ name: 'Package', stays: groupLegacy(pkg, start, hotels) }]
   options = options.filter((o) => o.stays.length)
 
@@ -134,9 +159,9 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     options, flights: active?.flights || [], days,
     inclusions: pkg.inclusions || [], exclusions: pkg.exclusions || [],
     ieGroups: ieGroupsOf(pkg), ieMulti: ieGroupsOf(pkg).length > 1,
-    total: N(pkg.pricing?.grandTotal), optionName: opts.length > 1 ? (active?.name || '') : '',
+    total: grandTotal, optionName: opts.length > 1 ? (active?.name || `Option ${activeIdx + 1}`) : '',
     adults: N(pax.adults), children: N(pax.children),
-    perPax: (N(pax.adults) + N(pax.children)) ? Math.round(N(pkg.pricing?.grandTotal) / (N(pax.adults) + N(pax.children))) : N(pkg.pricing?.grandTotal),
+    perPax: (N(pax.adults) + N(pax.children)) ? Math.round(grandTotal / (N(pax.adults) + N(pax.children))) : grandTotal,
     remarks: pkg.customerRemarks || '', agency,
   }
 }
@@ -171,7 +196,8 @@ export default function PdfDoc() {
   const cabs = masters.cabs || []
   const v = sp.get('v') || 'classic'
   const premium = isPremiumVariant(v)
-  const m = useMemo(() => (pkg ? buildModel(pkg, client, agency, hotels, destinations, activities, serviceLocations, cabs) : null), [pkg, agency, data]) // eslint-disable-line react-hooks/exhaustive-deps
+  const optionParam = sp.get('option') != null ? Number(sp.get('option')) : null
+  const m = useMemo(() => (pkg ? buildModel(pkg, client, agency, hotels, destinations, activities, serviceLocations, cabs, optionParam) : null), [pkg, agency, data, optionParam]) // eslint-disable-line react-hooks/exhaustive-deps
   const docRef = useRef(null)
   const [busy, setBusy] = useState(false)
 

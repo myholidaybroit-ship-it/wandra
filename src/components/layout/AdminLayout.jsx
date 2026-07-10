@@ -15,8 +15,8 @@ const NAV_TOP = [
 const MASTER_DATA = [
   { to: '/app/destinations', label: 'Destinations', icon: 'destinations', feature: 'master.destinations' },
   { to: '/app/hotels', label: 'Hotels', icon: 'hotels', feature: 'master.hotels' },
-  { to: '/app/cabs', label: 'Cabs', icon: 'cabs', feature: 'master.cabs' },
-  { to: '/app/services', label: 'Service Locations', icon: 'destinations', feature: 'master.service_locations' },
+  { to: '/app/cabs', label: 'Cab Types', icon: 'cabs', feature: 'master.cabs' },
+  { to: '/app/services', label: 'Transport', icon: 'destinations', feature: 'master.service_locations' },
   { to: '/app/activities', label: 'Activities', icon: 'gallery', feature: 'master.activities' },
   { to: '/app/packages/templates', label: 'Day-wise Plans', icon: 'file', feature: 'builder.templates' },
   { to: '/app/packages/inclusions', label: 'Incl. & Excl.', icon: 'check', feature: 'master.inclusions' },
@@ -79,7 +79,7 @@ function SearchModal({ open, onClose }) {
         { label: 'Invoices', items: invoices.filter((i) => match(i.code, i.clientName)).slice(0, 5).map((i) => ({ icon: 'invoices', title: i.clientName, sub: i.code, to: `/app/invoices/${i.id}` })) },
         { label: 'Hotels', items: hotels.filter((h) => match(h.name, h.city)).slice(0, 5).map((h) => ({ icon: 'hotels', title: h.name, sub: h.city, to: `/app/hotels/${h.id}` })) },
         { label: 'Destinations', items: destinations.filter((d) => match(d.name, d.location)).slice(0, 5).map((d) => ({ icon: 'destinations', title: d.name, sub: d.location, to: `/app/destinations/${d.id}` })) },
-        { label: 'Cabs', items: cabs.filter((c) => match(c.name, c.type)).slice(0, 5).map((c) => ({ icon: 'cabs', title: c.name, sub: c.type, to: `/app/cabs/${c.id}` })) },
+        { label: 'Cab Types', items: cabs.filter((c) => match(c.name, c.type)).slice(0, 5).map((c) => ({ icon: 'cabs', title: c.name, sub: c.type, to: `/app/cabs/${c.id}` })) },
       ].filter((g) => g.items.length)
     : []
   const first = groups[0]?.items[0]

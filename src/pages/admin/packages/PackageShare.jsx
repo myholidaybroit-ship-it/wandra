@@ -21,7 +21,10 @@ export default function PackageShare() {
   const [pdfOpen, setPdfOpen] = useState(false)
   const [pdfV, setPdfV] = useState('classic')
   const pkg = packages.find((p) => p.id === id)
+  const [pdfOption, setPdfOption] = useState(pkg?.activeOption ?? 0)
   if (!pkg) return <div className="pshare-missing">Quote not found. <Link className="c-link" to="/app/packages">Back to packages</Link></div>
+  const options = pkg.builderV2?.options || []
+  const multiOption = options.length > 1
 
   const client = clients.find((c) => c.id === pkg.clientId)
   const link = `${window.location.origin}/i/${pkg.code}`
@@ -40,7 +43,7 @@ export default function PackageShare() {
   const openMail = () => { window.location.href = `mailto:${email}?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(mail.body)}` }
   const copyMail = () => { navigator.clipboard?.writeText(`Subject: ${mail.subject}\n\n${mail.body}`); toast('Email copied') }
   const onPdf = () => setPdfOpen(true)
-  const pdfUrl = (variant, dl) => `/pdf/${pkg.code}?v=${variant}${dl ? '&download=1' : ''}`
+  const pdfUrl = (variant, dl) => `/pdf/${pkg.code}?v=${variant}&option=${pdfOption}${dl ? '&download=1' : ''}`
   const activeVariant = PDF_VARIANTS.find((v) => v.key === pdfV)
   const isPremium = !!activeVariant?.pro
 
@@ -102,6 +105,17 @@ export default function PackageShare() {
             : <Button variant="secondary" onClick={() => window.open(pdfUrl(pdfV), '_blank')}>Open full preview ↗</Button>}
           <Button onClick={() => window.open(pdfUrl(pdfV, true), '_blank')}><Icon name="upload" size={14} className="pdf-dl-ic" /> Download PDF</Button>
         </>}>
+        {multiOption && (
+          <div className="pdfm-options">
+            <span className="pdfm-options-k">Quotation for</span>
+            {options.map((o, i) => (
+              <button key={i} className={`pdfm-opt ${pdfOption === i ? 'on' : ''}`} onClick={() => setPdfOption(i)}>
+                Option {i + 1}{o.name ? `: ${o.name}` : ''}
+              </button>
+            ))}
+            <span className="pdfm-options-hint">Each option is a separate PDF / quote — pick one to preview &amp; download.</span>
+          </div>
+        )}
         <div className="pdfm">
           <div className="pdfm-list">
             {PDF_VARIANTS.map((va) => (
@@ -116,7 +130,7 @@ export default function PackageShare() {
             <p className="pdfm-hint">{isPremium ? '✦ Premium layouts open in the PDF Studio — recolour, restyle and drag-to-reorder every section.' : 'Download saves a real PDF file of the selected layout.'}</p>
           </div>
           <div className="pdfm-preview">
-            <iframe key={pdfV} title="PDF preview" src={`${pdfUrl(pdfV)}${isPremium ? '&studio=0' : ''}`} className="pdfm-frame" />
+            <iframe key={`${pdfV}-${pdfOption}`} title="PDF preview" src={`${pdfUrl(pdfV)}${isPremium ? '&studio=0' : ''}`} className="pdfm-frame" />
           </div>
         </div>
       </Modal>

@@ -391,7 +391,7 @@ export default function QuoteBuilder() {
                 </div>
                 <div className="qb-grid-2">
                   {s.kind === 'transport' ? (
-                    <Field label="Service location">
+                    <Field label="Transport">
                       <MasterPicker value={s.location} items={serviceLocations} placeholder="Select or search a route…"
                         destFilter={s.days.length ? [...new Set(s.days.map(dayCity).filter(Boolean))] : ieDests}
                         sub={(it) => `${it.serviceType}${it.durationMins ? ` · ${it.durationMins} mins` : ''}${it.sell != null ? ` · ${inr(it.sell)}` : ''}`}

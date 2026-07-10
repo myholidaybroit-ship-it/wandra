@@ -31,8 +31,8 @@ export default function CabList() {
   ]
   return (
     <div>
-      <PageHeader title="Cabs & Vehicles" subtitle="Fleet with per-km and per-day rates — the builder auto-fills from here."
-        actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/cabs/new"><Button>+ Add New Cab</Button></Link></>} />
+      <PageHeader title="Cab Types" subtitle="Fleet with per-km and per-day rates — the builder auto-fills from here."
+        actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/cabs/new"><Button>+ Add New Cab Type</Button></Link></>} />
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search cabs by name, contact…" count={rows.length} />
         <PillSelect value={type} options={['All Types', 'Sedan', 'SUV', 'Tempo Traveller']} onChange={setType} />

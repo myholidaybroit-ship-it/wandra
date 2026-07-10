@@ -22,11 +22,11 @@ export default function ServiceLocationList() {
 
   const save = () => {
     updateServiceLocation(edit.id, { ...edit, durationMins: optionalNumber(edit.durationMins), cost: Number(edit.cost) || 0, sell: Number(edit.sell) || 0 })
-    toast('Service location updated'); setEdit(null)
+    toast('Transport updated'); setEdit(null)
   }
 
   const columns = [
-    { key: 'name', head: 'Service location / route', render: (r) => (
+    { key: 'name', head: 'Transport / route', render: (r) => (
       <div className="row gap-sm">
         <span className="master-thumb" style={r.image ? { backgroundImage: `url("${r.image}")` } : undefined} />
         <span className="cell-strong">{r.name}</span>
@@ -42,14 +42,14 @@ export default function ServiceLocationList() {
   ]
   return (
     <div>
-      <PageHeader title="Service Locations" subtitle="Transport routes — type, duration & rates auto-fill the quote builder."
-        actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/services/new"><Button>+ Add Service Location</Button></Link></>} />
+      <PageHeader title="Transport" subtitle="Transport routes — type, duration & rates auto-fill the quote builder."
+        actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/services/new"><Button>+ Add Transport</Button></Link></>} />
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search by route, type, city…" count={rows.length} />
       </div>
-      <DataTable columns={columns} rows={rows} empty="No service locations yet." />
+      <DataTable columns={columns} rows={rows} empty="No transport routes yet." />
 
-      <Modal open={!!edit} onClose={() => setEdit(null)} title="Edit Service Location" width={560}
+      <Modal open={!!edit} onClose={() => setEdit(null)} title="Edit Transport" width={560}
         footer={<><Button variant="tertiary" onClick={() => setEdit(null)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         {edit && (
           <div className="form-grid">
