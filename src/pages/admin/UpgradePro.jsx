@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../store/AppContext'
 import { PageHeader, Button } from '../../components/ui/UI'
 import { Icon } from '../../components/ui/icons'
@@ -24,15 +23,11 @@ const STEPS = [
 
 export default function UpgradePro() {
   const { plans, agency, toast } = useApp()
-  const [sp] = useSearchParams()
-  const [cycle, setCycle] = useState(sp.get('cycle') === 'monthly' ? 'monthly' : 'yearly')
-  const pro = plans.find((p) => p.id === 'pro')
-  const yearly = cycle === 'yearly'
-  const perMonth = yearly ? pro.priceYear : pro.price
-  const dueNow = yearly ? pro.priceYear * 12 : pro.price
+  const pro = plans.find((p) => p.id === 'pro') || { price: 3999 }
+  const monthlyPrice = Number(pro.price) || 3999
 
   const copy = (v, label) => { navigator.clipboard?.writeText(v); toast(`${label} copied`) }
-  const waMsg = encodeURIComponent(`Hi Wandra! I've made the payment for the Pro plan (${inr(dueNow)}, ${yearly ? 'yearly' : 'monthly'}) for ${agency.name}. Sharing the payment proof here.`)
+  const waMsg = encodeURIComponent(`Hi Wandra! I've made the monthly payment for the Pro plan (${inr(monthlyPrice)}) for ${agency.name}. Sharing the payment proof here.`)
 
   return (
     <div className="up">
@@ -65,20 +60,15 @@ export default function UpgradePro() {
               </div>
             </div>
           ))}
-          <p className="lb-note">Prefer to switch cycles later? No problem — write to us any time and we'll adjust it.</p>
+          <p className="lb-note">Pro renews monthly at the managed price. Contact the Wandra team if you need help.</p>
         </div>
 
         {/* ---------- order summary + payment details ---------- */}
         <div className="up-side">
           <div className="up-card">
             <div className="up-card-title">Your order</div>
-            <div className="qs-toggle up-cycle">
-              <button className={`qs-pill ${!yearly ? 'on' : ''}`} onClick={() => setCycle('monthly')}>Monthly</button>
-              <button className={`qs-pill ${yearly ? 'on' : ''}`} onClick={() => setCycle('yearly')}>Yearly · save 33%</button>
-            </div>
-            <div className="up-line"><span>Wandra Pro</span><span>{inr(perMonth)} / mo</span></div>
-            {yearly && <div className="up-line dim"><span>Billed once a year</span><span>{inr(perMonth)} × 12</span></div>}
-            <div className="up-line total"><span>Pay now</span><span>{inr(dueNow)}</span></div>
+            <div className="up-line"><span>Wandra Pro</span><span>{inr(monthlyPrice)} / month</span></div>
+            <div className="up-line total"><span>Pay now</span><span>{inr(monthlyPrice)}</span></div>
           </div>
 
           <div className="up-card">

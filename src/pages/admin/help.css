@@ -1,0 +1,17 @@
+.support-page { max-width: 1080px; }
+.support-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); }
+.support-whatsapp-card { min-height: 270px; display: flex; flex-direction: column; align-items: flex-start; }
+.support-reach-card { min-height: 270px; }
+.support-card-kicker { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.support-card-icon { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.24); border-radius: 7px; }
+.support-card-icon-light { border-color: var(--color-hairline); color: var(--color-ink); }
+.support-detail-line { display: flex; justify-content: space-between; gap: 18px; padding: 10px 0; font-size: 14px; }
+.support-detail-line span { color: var(--color-body); }
+.support-detail-line a, .support-detail-line strong { color: var(--color-ink); font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.support-form-wrap { max-width: 760px; margin: var(--space-xxl) auto 0; }
+.support-contact-card { padding: 28px; }
+.support-contact-form { margin-top: 26px; }
+.support-submit-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; }
+.support-success { color: var(--color-success-text); font-size: 13px; opacity: 0; transition: opacity var(--ease-ui); }
+.support-success.visible { opacity: 1; }
+@media (max-width: 720px) { .support-hero-grid { grid-template-columns: 1fr; } .support-submit-row { align-items: flex-start; flex-direction: column; } }

@@ -13,7 +13,7 @@ const FALLBACK_FREE = {
   perks: ['Up to 100 clients', 'Quote builder with markup pricing', 'Itineraries, quotations & PDF downloads', 'WhatsApp & email sharing', 'Basic reports', 'Email support'],
 }
 const FALLBACK_PRO = {
-  id: 'pro', name: 'Pro', price: 3999, priceYear: 2999, oldPrice: 9999, period: 'mo',
+  id: 'pro', name: 'Pro', price: 3999, period: 'mo',
   tagline: 'The complete engine for a growing agency.', plus: 'Everything in Free, plus:',
   perks: ['Unlimited clients & enquiries', 'Bookings, invoices & payment tracking', 'Vouchers — hotel, transport & activity', 'Lead-capture landing page', 'Auto lead assignment (round robin)', 'In-depth reports with Excel / CSV export', 'Team accounts with roles & permissions', 'Your branding on every document', 'Priority WhatsApp support'],
 }
@@ -21,7 +21,6 @@ const FALLBACK_PRO = {
 export default function Billing() {
   const { plans, agency, clients, toast } = useApp()
   const nav = useNavigate()
-  const [cycle, setCycle] = useState('yearly') // 'monthly' | 'yearly'
   const [talk, setTalk] = useState(false)
   const [msg, setMsg] = useState({ name: '', email: '', message: '' })
   const openTalk = () => { setMsg({ name: agency.name, email: agency.email, message: '' }); setTalk(true) }
@@ -38,8 +37,6 @@ export default function Billing() {
   const unlimited = agency?.plan?.limit === -1
   const limit = unlimited ? '∞' : (agency?.plan?.limit ?? 0)
   const usedPct = unlimited || !agency?.plan?.limit ? 0 : Math.min(100, (used / agency.plan.limit) * 100)
-  const yearly = cycle === 'yearly'
-
   return (
     <div className="bl">
       <PageHeader title="Billing & Subscription" subtitle={isPro
@@ -58,7 +55,7 @@ export default function Billing() {
         </div>
         {isPro
           ? <span className="bl-offer" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>Active subscription</span>
-          : <span className="bl-offer">Launch offer · 70% off</span>}
+          : null}
       </div>
 
       {/* Pro members don't get an upgrade push — just their status + support */}
@@ -72,23 +69,14 @@ export default function Billing() {
         </div>
       ) : (
         <>
-          {/* billing cycle */}
-          <div className="bl-cycle">
-            <div className="qs-toggle">
-              <button className={`qs-pill ${!yearly ? 'on' : ''}`} onClick={() => setCycle('monthly')}>Monthly</button>
-              <button className={`qs-pill ${yearly ? 'on' : ''}`} onClick={() => setCycle('yearly')}>Yearly</button>
-            </div>
-            <span className="bl-cycle-save">Save 33% on yearly</span>
-          </div>
-
           {/* the two plans */}
           {free && pro && (
           <div className="bl-grid">
             <div className="bl-card">
               <div className="bl-name">{free.name}</div>
               <div className="bl-price-row">
-                <span className="bl-price">Free</span>
-                <span className="bl-per">forever</span>
+                <span className="bl-price">{free.price === 0 ? 'Free' : inr(free.price)}</span>
+                <span className="bl-per">{free.price === 0 ? 'forever' : '/ month'}</span>
               </div>
               <p className="bl-tagline">{free.tagline}</p>
               <hr className="bl-rule" />
@@ -104,11 +92,9 @@ export default function Billing() {
               <span className="bl-pop">Most popular</span>
               <div className="bl-name">{pro.name}</div>
               <div className="bl-price-row">
-                <span className="bl-old">{inr(yearly ? pro.price : pro.oldPrice)}</span>
-                <span className="bl-price">{inr(yearly ? pro.priceYear : pro.price)}</span>
-                <span className="bl-per">/ month{yearly ? ' · billed yearly' : ''}</span>
+                <span className="bl-price">{inr(pro.price)}</span>
+                <span className="bl-per">/ month</span>
               </div>
-              {yearly && <div className="bl-year-note">{inr((pro.priceYear || 0) * 12)} once a year — 33% less than monthly</div>}
               <p className="bl-tagline">{pro.tagline}</p>
               <hr className="bl-rule" />
               <div className="bl-plus">{pro.plus}</div>
@@ -117,23 +103,14 @@ export default function Billing() {
                   <li key={x}><span className="bl-tick"><Icon name="check" size={11} strokeWidth={3} /></span>{x}</li>
                 ))}
               </ul>
-              <button className="bl-cta-pro" onClick={() => nav(`/app/upgrade?cycle=${cycle}`)}>Upgrade to Pro</button>
+              <button className="bl-cta-pro" onClick={() => nav('/app/upgrade')}>Upgrade to Pro</button>
             </div>
           </div>
           )}
         </>
       )}
 
-      {/* custom needs — a conversation, not a third plan */}
-      <div className="bl-custom">
-        <div>
-          <span className="bl-custom-t">Need something custom?</span>
-          <p className="bl-custom-s">Multiple branches, white-label or API access — we'll tailor Pro around your agency.</p>
-        </div>
-        <Button variant="secondary" onClick={openTalk}>Talk to us</Button>
-      </div>
-
-      {/* custom-needs message — name & email prefilled from the agency profile */}
+      {/* billing message — name & email prefilled from the agency profile */}
       <Modal open={talk} onClose={() => setTalk(false)} title="Talk to us" width={500}
         footer={<><Button variant="tertiary" onClick={() => setTalk(false)}>Cancel</Button><Button onClick={sendTalk}>Send Message</Button></>}>
         <div className="col gap-base">

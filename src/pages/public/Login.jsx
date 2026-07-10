@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useApp } from '../../store/AppContext'
+import { Icon } from '../../components/ui/icons'
 import './login.css'
-
-const VISUAL = 'https://res.cloudinary.com/dyxxkrq8r/image/upload/w_1600,q_auto,f_auto/v1783197372/beautiful-girl-standing-viewpoint-koh-nangyuan-island-near-koh-tao-island-surat-thani-thailand_1_qz5qy8.jpg'
 
 export default function Login() {
   const nav = useNavigate()
@@ -29,26 +28,14 @@ export default function Login() {
 
   return (
     <div className="lg">
-      {/* left — full-height visual */}
-      <div className="lg-visual">
-        <img src={VISUAL} alt="Traveller overlooking Koh Nangyuan island viewpoint, Thailand" />
-        <div className="lg-quote">
-          <span className="lg-secure-pill">Secure agency workspace</span>
-          <div className="lg-quote-line">Every great trip starts with a plan.</div>
-          <div className="lg-quote-sub">Wandra runs your agency — leads, quotes, bookings & payments in one place.</div>
-        </div>
-      </div>
-
-      {/* right — secure auth card (accounts are provisioned manually) */}
       <div className="lg-panel">
         <div className="lg-box">
           <Link to="/"><img className="lg-logo" src="/brand/wandra-logo.png" alt="Wandra — Travel Software" /></Link>
 
           <div className="lg-card">
             <div className="lg-card-head">
-              <span className="lg-auth-tag">CRM Admin Login</span>
               <h1 className="lg-title">Welcome back</h1>
-              <p className="lg-sub">Sign in to your agency dashboard. Your session is verified against the server on every refresh.</p>
+              <p className="lg-sub">Sign in to your agency workspace.</p>
             </div>
 
             <form className="lg-form" onSubmit={go}>
@@ -68,12 +55,9 @@ export default function Login() {
               <button className="lg-submit" type="submit" disabled={busy}>{busy ? 'Checking session…' : 'Log in securely'}</button>
             </form>
 
-            <div className="lg-security">
-              <span>Protected by role permissions</span>
-              <span>Auto-clears expired sessions</span>
-            </div>
+            <div className="lg-note"><Icon name="check" size={13} /> Secure session · Auto-clears on expiry</div>
           </div>
-          <p className="lg-help">Need trial access? <Link to="/?trial=1">Request an agency account</Link>.</p>
+          <p className="lg-help">Need agency access? <Link to="/#demo">Book a demo</Link>.</p>
         </div>
       </div>
     </div>

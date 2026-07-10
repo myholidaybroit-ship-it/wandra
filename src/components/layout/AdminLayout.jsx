@@ -130,7 +130,6 @@ export default function AdminLayout() {
   const { agency, clients, currentUser, ready, authed, logout, hasFeature, sessionExpiresAt } = useApp()
   const nav = useNavigate()
   const [open, setOpen] = useState(false)
-  const [promo, setPromo] = useState(() => sessionStorage.getItem('wandra-admin-promo') !== 'off')
   const [searchOpen, setSearchOpen] = useState(false)
   const [acctOpen, setAcctOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('wandra-sidebar') === 'collapsed')
@@ -147,7 +146,6 @@ export default function AdminLayout() {
   useEffect(() => { if (masterActive) setMasterOpen(true) }, [masterActive])
   useEffect(() => { setFlyout(null) }, [pathname, collapsed])
 
-  const dismissPromo = () => { sessionStorage.setItem('wandra-admin-promo', 'off'); setPromo(false) }
   const toggleSidebar = () => {
     setCollapsed((c) => {
       localStorage.setItem('wandra-sidebar', c ? 'expanded' : 'collapsed')
@@ -260,15 +258,6 @@ export default function AdminLayout() {
 
       {/* Main column */}
       <div className="main-col">
-        {promo && !isPro && (
-          <div className="promo-banner">
-            <span className="promo-copy">
-              Launch offer — all plans <strong>70% off</strong> during early access.{' '}
-              <Link to="/app/billing" className="promo-link">Upgrade now</Link>
-            </span>
-            <button className="promo-x" onClick={dismissPromo} title="Dismiss">✕</button>
-          </div>
-        )}
         <header className="topbar">
           <button className="hamburger" onClick={() => setOpen((o) => !o)}>☰</button>
           <button className="collapse-btn" onClick={toggleSidebar} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>

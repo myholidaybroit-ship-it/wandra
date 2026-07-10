@@ -1,5 +1,12 @@
 {
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
+    { "source": "/robots.txt", "destination": "/robots.txt" },
+    { "source": "/seo/seo.css", "destination": "/seo/seo.css" },
+    { "source": "/seo", "destination": "/seo/index.html" },
+    { "source": "/seo/", "destination": "/seo/index.html" },
+    { "source": "/seo/:slug", "destination": "/seo/:slug/index.html" },
+    { "source": "/seo/:slug/", "destination": "/seo/:slug/index.html" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }
