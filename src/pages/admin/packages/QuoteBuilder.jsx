@@ -15,6 +15,9 @@ const COMP_CHILD = ['No comp', 'Upto 5y (0C)', 'Upto 6y (0C)', 'Upto 8y (0C)', '
 const STARS = ['3 Star', '4 Star', '5 Star', 'Luxury']
 const ROUND_OPTS = [0, 100, 500, 1000]
 const PRICING_DEFAULTS = { markupMode: 'percent', markupValue: 20, taxOn: 'cost_markup', taxEnabled: true, taxPercent: 5, roundTo: 0, customerRemarks: '' }
+// A package that has already moved past the quote stage must never be pulled
+// back to Draft/Quoted by re-saving the builder.
+const LOCKED_STATUSES = ['Booked', 'Confirmed', 'Completed', 'Cancelled']
 
 let seq = 0
 const uid = () => `b${++seq}`
@@ -185,13 +188,21 @@ export default function QuoteBuilder() {
   /* ---------- live totals for the active option ---------- */
   const t = useMemo(() => optionTotals(opt, q), [opt, q.markupMode, q.markupValue, q.taxOn, q.taxEnabled, q.taxPercent, q.roundTo])
 
-  /* ---------- save ---------- */
+  /* ---------- save ----------
+     A quote can always be saved — partial data just stays a Draft. Once every
+     core section is filled (guest, date, destination, hotels covering the
+     nights, a real price) serialize() flags it "Quoted" (ready to share/book).
+     Editing a package that's already past the quote stage keeps its status. */
   const save = async () => {
-    if (!q.clientName.trim()) return toast('Client name is required')
     try {
       const rec = serialize(q, oi, t, destinations, inclusionPresets)
-      if (editing) { await updatePackage(editing.id, rec); toast('Quote updated'); nav(`/app/packages/${editing.id}/share`) }
-      else { const created = await addPackage(rec); toast('Quote created'); nav(`/app/packages/${created.id}/share`) }
+      if (editing && LOCKED_STATUSES.includes(editing.status)) rec.status = editing.status
+      const isDraft = rec.status === 'Draft'
+      let id
+      if (editing) { await updatePackage(editing.id, rec); id = editing.id }
+      else { id = (await addPackage(rec)).id }
+      toast(isDraft ? 'Saved as draft — fill the rest to finish the quote' : (editing ? 'Quote updated' : 'Quote created'))
+      nav(`/app/packages/${id}/share`)
     } catch (ex) { console.error('Quote save failed', ex); toast(ex.message || 'Could not save the quote') }
   }
 
@@ -1222,9 +1233,26 @@ function fromTemplate(tpl, preClient, hotels, presets) {
   }
 }
 
+/* ---------- completeness → drives Draft vs Quoted ----------
+   A quote is "complete" (ready = Quoted) only when every core section is
+   filled: a named guest, a start date, at least one destination, hotels
+   covering every night, and a real selling price. Anything missing keeps it a
+   Draft that can still be saved now and finished later. */
+function isQuoteComplete(q, opt, t) {
+  const hasClient = !!(q.clientName || '').trim()
+  const hasDate = !!q.startDate
+  const hasDest = (q.sectors || []).some((s) => s.destination)
+  const nights = num(q.nights)
+  const covered = new Set((opt?.stays || []).filter((s) => s.hotelName).flatMap((s) => s.nights || []))
+  const hotelsCoverNights = nights > 0 && Array.from({ length: nights }, (_, i) => i + 1).every((n) => covered.has(n))
+  const hasPrice = num(t?.grandTotal) > 0
+  return hasClient && hasDate && hasDest && hotelsCoverNights && hasPrice
+}
+
 /* ---------- serialize (active option → package record) ---------- */
 function serialize(q, oi, t, destinations, presets) {
   const opt = q.options[oi]
+  const complete = isQuoteComplete(q, opt, t)
   const sectors = (q.sectors || []).filter((s) => s.destination)
   const destLabel = sectors.length === 1
     ? (() => { const d = destinations.find((x) => x.name === sectors[0].destination); return d ? `${d.name} - ${d.location}` : (sectors[0].destination || q.destShort) })()
@@ -1275,7 +1303,7 @@ function serialize(q, oi, t, destinations, presets) {
     pax: { total: num(q.adults) + num(q.children), adults: num(q.adults), children: num(q.children), infants: num(q.infants), childrenNoBed: 0, extraBeds: 0, rooms: num(q.rooms), roomType: opt.stays[0]?.roomType || 'Deluxe' },
     flightIncluded: opt.flights.length > 0, flights: opt.flights,
     flight: opt.flights[0] ? { ...opt.flights[0], depart: `${opt.flights[0].fromCode || ''} ${opt.flights[0].depTime || ''}`.trim(), arrive: `${opt.flights[0].toCode || ''} ${opt.flights[0].arrTime || ''}`.trim() } : { airline: '', flightNo: '', depart: '', arrive: '' },
-    status: 'Quoted',
+    status: complete ? 'Quoted' : 'Draft',
     cabs: cabsOut, hotelsAlloc, itinerary,
     inclusions: flatInclusions, exclusions: flatExclusions, inclusionGroups,
     categories,
