@@ -98,10 +98,17 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
 
   const services = active?.services || []
   const days = (pkg.itinerary || []).map((d) => {
+    // Resolve this day's services from the builder option first (it carries the
+    // days, rates & picked photos); fall back to the package's own stored
+    // per-day itinerary services so legacy / template-built packages still show
+    // their transfers & activities (name → location, plus master-data photos).
+    const stored = (d.services || []).map((s) => ({ ...s, location: s.location || s.name || '', kind: s.kind || 'transport' }))
+    const fromOpt = services.filter((s) => (s.days || []).includes(d.day))
+    const dayServices = fromOpt.length ? fromOpt : stored
     // transfers carry their own resolved photo + description (own value, else the route master's)
-    const transfers = services.filter((s) => s.kind === 'transport' && (s.days || []).includes(d.day))
+    const transfers = dayServices.filter((s) => s.kind === 'transport')
       .map((t) => { const sm = svcMaster(t.location); return { ...t, image: t.image || sm?.image || cabImg(t.cabName || t.location, t.cabId, t.serviceType) || '', description: t.description || sm?.description || '' } })
-    const dayActs = services.filter((s) => s.kind === 'activity' && (s.days || []).includes(d.day))
+    const dayActs = dayServices.filter((s) => s.kind === 'activity')
     const city = d.stops?.[0]?.destination || ''
     // collage pool: this day's activity + service photos, then the city's gallery rotated by day number so consecutive days differ
     const actImgs = dayActs.map((a) => a.image || actImg(a.location)).filter(Boolean)
