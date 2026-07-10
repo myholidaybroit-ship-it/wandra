@@ -1,0 +1,52 @@
+/* ============================================================
+   VoucherCard — one unified pass card, used in-app + on the public
+   share page + PDF. Concrete colours (no CSS vars) so html2canvas
+   renders the PDF faithfully. Prefix .vcard- is unique to this file.
+   ============================================================ */
+.vcard {
+  display: grid; grid-template-columns: 1fr 148px;
+  background: #121216; color: #fff; border-radius: 22px; overflow: hidden;
+  position: relative; font-family: inherit;
+  background-image: radial-gradient(130% 90% at 85% -10%, rgba(255, 255, 255, .09), transparent 60%);
+}
+
+.vcard-main { padding: 22px 24px; display: flex; flex-direction: column; min-width: 0; }
+.vcard-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.vcard-brand { font-size: 14px; font-weight: 800; letter-spacing: .3px; overflow-wrap: anywhere; }
+.vcard-tag { flex: 0 0 auto; font-size: 10px; font-weight: 800; letter-spacing: .6px; padding: 4px 11px; border-radius: 999px; white-space: nowrap; }
+
+.vcard-title { font-size: 20px; font-weight: 700; letter-spacing: -.3px; line-height: 1.28; margin: 16px 0; overflow-wrap: anywhere; }
+
+.vcard-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 18px; }
+.vcard-field { min-width: 0; }
+.vcard-k { display: block; font-size: 9px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: rgba(255, 255, 255, .5); }
+.vcard-v { font-size: 13px; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+
+.vcard-notes { font-size: 11.5px; color: rgba(255, 255, 255, .72); line-height: 1.5; margin-top: 14px; border-top: 1px dashed rgba(255, 255, 255, .22); padding-top: 10px; }
+.vcard-foot { margin-top: auto; padding-top: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 10px; color: rgba(255, 255, 255, .5); }
+
+.vcard-stub {
+  background: #0b0b0e; border-left: 2px dashed #34343c;
+  padding: 20px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center;
+}
+.vcard-logo { width: 66px; padding: 7px 9px; border-radius: 12px; background: #fff; display: grid; place-items: center; }
+.vcard-logo img { width: 100%; height: auto; display: block; }
+.vcard-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: .8px; color: rgba(255, 255, 255, .9); }
+
+.vcard-acts { display: flex; gap: 6px; }
+.vcard-act {
+  width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px;
+  background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .16); color: #fff; cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.vcard-act:hover { background: rgba(255, 255, 255, .22); transform: translateY(-1px); }
+.vcard-act.danger:hover { background: #b91c1c; border-color: #b91c1c; }
+.vcard-open-ic { transform: rotate(90deg); }
+
+/* narrow screens (WhatsApp in-app browser, phones): stub drops below the main
+   body so nothing is cramped and the card still reads as one ticket */
+@media (max-width: 460px) {
+  .vcard { grid-template-columns: 1fr; }
+  .vcard-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vcard-stub { flex-direction: row; gap: 14px; border-left: 0; border-top: 2px dashed #34343c; padding: 14px 18px; }
+}

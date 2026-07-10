@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AgencyLogo } from '../../../components/ui/AgencyBrand'
+import { VoucherCard } from '../../../components/ui/VoucherCard'
 import { useParams, Link } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
 import { PageHeader, Button, Modal, Field, Input, PillSelect, DatePicker, Textarea } from '../../../components/ui/UI'
@@ -7,11 +7,6 @@ import { Icon } from '../../../components/ui/icons'
 import './vouchers.css'
 
 const TYPES = ['Hotel', 'Transport', 'Activity']
-const TYPE_META = {
-  Hotel: { tag: 'HOTEL', pass: 'HOTEL PASS', cls: 'v-tag-hotel' },
-  Transport: { tag: 'TRANSPORT', pass: 'CAB PASS', cls: 'v-tag-transport' },
-  Activity: { tag: 'ACTIVITY', pass: 'ENTRY PASS', cls: 'v-tag-activity' },
-}
 
 function addDays(iso, n) {
   if (!iso) return ''
@@ -22,7 +17,7 @@ const fmtD = (iso) => (iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-
 
 export default function Vouchers() {
   const { id } = useParams()
-  const { packages, clients, hotels, cabs, vouchers, addVoucher, removeVoucher, toast } = useApp()
+  const { packages, clients, hotels, cabs, vouchers, addVoucher, removeVoucher, toast, agency } = useApp()
   const pkg = packages.find((p) => p.id === id)
   const [open, setOpen] = useState(false)
   const [f, setF] = useState(null)
@@ -119,36 +114,13 @@ export default function Vouchers() {
       )}
 
       <div className="voucher-grid">
-        {pkgVouchers.map((v) => {
-          const meta = TYPE_META[v.type] || TYPE_META.Hotel
-          return (
-            <div className="voucher" key={v.id}>
-              <div className="v-left">
-                <div className="row-between">
-                  <span className="v-brand">Wandra Travels</span>
-                  <span className={`v-tag ${meta.cls}`}>{meta.tag}</span>
-                </div>
-                <div className="v-hotel-name">{v.title}</div>
-                <div className="v-meta">
-                  <div><span className="v-k">GUEST</span><span className="v-v">{v.clientName || '—'}</span></div>
-                  {(v.fields || []).slice(0, 3).map((x, i) => (
-                    <div key={i}><span className="v-k">{x.k.toUpperCase()}</span><span className="v-v">{x.v}</span></div>
-                  ))}
-                </div>
-              </div>
-              <div className="v-right">
-                <div className="v-pass">{meta.pass}</div>
-                <div className="v-logo"><AgencyLogo /></div>
-                <span className="v-code">{v.code}</span>
-                <div className="v-acts">
-                  <Link to={`/voucher/${v.id}`} target="_blank" className="v-act" title="Preview"><Icon name="upload" size={13} className="v-open-ic" /></Link>
-                  <button className="v-act" title="Download PDF" onClick={() => window.open(`/voucher/${v.id}?download=1`, '_blank')}><Icon name="file" size={13} /></button>
-                  <button className="v-act danger" title="Remove" onClick={() => { removeVoucher(v.id); toast('Voucher removed') }}><Icon name="trash" size={13} /></button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
+        {pkgVouchers.map((v) => (
+          <VoucherCard key={v.id} voucher={v} agency={agency} actions={<>
+            <Link to={`/voucher/${v.id}`} target="_blank" className="vcard-act" title="Preview"><Icon name="upload" size={13} className="vcard-open-ic" /></Link>
+            <button className="vcard-act" title="Download PDF" onClick={() => window.open(`/voucher/${v.id}?download=1`, '_blank')}><Icon name="file" size={13} /></button>
+            <button className="vcard-act danger" title="Remove" onClick={() => { removeVoucher(v.id); toast('Voucher removed') }}><Icon name="trash" size={13} /></button>
+          </>} />
+        ))}
       </div>
 
       {/* ---------- Create voucher ---------- */}
