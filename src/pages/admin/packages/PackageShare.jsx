@@ -28,10 +28,7 @@ export default function PackageShare() {
   const multiOption = options.length > 1
 
   const client = clients.find((c) => c.id === pkg.clientId)
-  const link = `${window.location.origin}/i/${pkg.code}`
   const total = packageTotal(pkg)
-  const firstName = (client?.name || pkg.clientName || '').split(' ').slice(-1)[0]
-  const msg = `Hi${firstName ? ` ${firstName}` : ''}! Here's your travel quote ${pkg.code} — ${pkg.destination} (${pkg.nights}N / ${pkg.days}D). View it here: ${link}`
   const phone = (pkg.clientPhone || client?.phone || '').replace(/\D/g, '')
   const email = pkg.clientEmail || client?.email || ''
 

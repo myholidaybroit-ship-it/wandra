@@ -50,7 +50,6 @@ export default function PublicLayout() {
               <a className="foot-link" href="/#features">Features</a>
               <a className="foot-link" href="/#pricing">Free trial</a>
               <Link className="foot-link" to="/seo/">Destination guides</Link>
-              <Link className="foot-link" to="/i/PKG-202602-0003">Sample Itinerary</Link>
             </div>
             <div>
               <div className="foot-head">For Travelers</div>
