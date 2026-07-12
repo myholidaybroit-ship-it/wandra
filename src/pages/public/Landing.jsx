@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '../../components/ui/icons'
 import { Sparkline, AreaChart, DonutChart } from '../../components/ui/UI'
@@ -55,24 +55,35 @@ function useScrollFx() {
 
 export default function Landing() {
   const calendlyRef = useRef(null)
+  const [demoOpen, setDemoOpen] = useState(false)
   useScrollFx()
 
+  // load the Calendly script once, up front
   useEffect(() => {
     const source = 'https://assets.calendly.com/assets/external/widget.js'
-    const init = () => {
-      if (window.Calendly && calendlyRef.current) {
-        window.Calendly.initInlineWidget({ url: 'https://calendly.com/getwandra/30min', parentElement: calendlyRef.current })
-      }
-    }
-    const existing = document.querySelector(`script[src="${source}"]`)
-    if (existing) { init(); return undefined }
+    if (document.querySelector(`script[src="${source}"]`)) return
     const script = document.createElement('script')
     script.src = source
     script.async = true
-    script.addEventListener('load', init)
     document.body.appendChild(script)
-    return () => script.removeEventListener('load', init)
   }, [])
+
+  // init the widget into the modal each time it opens; lock scroll + Esc to close
+  useEffect(() => {
+    if (!demoOpen) return
+    let tries = 0
+    const timer = setInterval(() => {
+      if (window.Calendly && calendlyRef.current) {
+        calendlyRef.current.innerHTML = ''
+        window.Calendly.initInlineWidget({ url: 'https://calendly.com/getwandra/30min', parentElement: calendlyRef.current })
+        clearInterval(timer)
+      } else if (++tries > 50) clearInterval(timer)
+    }, 100)
+    const onKey = (e) => e.key === 'Escape' && setDemoOpen(false)
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => { clearInterval(timer); document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
+  }, [demoOpen])
 
   return (
     <div className="wl">
@@ -317,13 +328,23 @@ export default function Landing() {
 
       {/* ================= DEMO ================= */}
       <section id="demo" className="wl-section wl-demo">
-        <div className="wl-demo-copy" data-reveal>
+        <div className="wl-demo-inner" data-reveal>
           <span className="wl-label">See it in your workflow</span>
           <h2 className="wl-h2">A calmer way to run the agency.</h2>
           <p>Pick a time and we will show Wandra around the way your team actually works.</p>
+          <button className="wl-btn wl-btn-dark wl-btn-lg" onClick={() => setDemoOpen(true)}><Icon name="calendar" size={15} /> Book it</button>
         </div>
-        <div ref={calendlyRef} className="calendly-inline-widget" data-url="https://calendly.com/getwandra/30min" />
       </section>
+
+      {/* ================= DEMO MODAL ================= */}
+      {demoOpen && (
+        <div className="wl-modal" onClick={(e) => { if (e.target === e.currentTarget) setDemoOpen(false) }}>
+          <div className="wl-modal-card">
+            <button className="wl-modal-x" onClick={() => setDemoOpen(false)} aria-label="Close"><Icon name="x" size={18} /></button>
+            <div ref={calendlyRef} className="calendly-inline-widget" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
