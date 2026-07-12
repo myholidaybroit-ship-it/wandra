@@ -278,26 +278,11 @@ export function AppProvider({ children }) {
     return saved
   }
 
-  /* ---------- roles ---------- */
-  const addRole = async (name) => { const rec = await api.post('/roles', { name }); setRoles((l) => [...l, rec]); return rec }
-  const removeRole = async (id) => { await api.del(`/roles/${id}`); setRoles((l) => l.filter((r) => r.id !== id)) }
-  const setRolePerm = async (id, key, val) => replace(setRoles)(await api.patch(`/roles/${id}/perm`, { key, value: val }))
-
   /* ---------- assignment ---------- */
   const updateAssignment = async (patch) => { setAssignment((a) => ({ ...a, ...patch })); setAssignment(await api.patch('/assignment', patch)) }
   const addAssignRule = async () => { const cfg = await api.post('/assignment/rules', {}); setAssignment(cfg); return cfg.rules[cfg.rules.length - 1] }
   const updateAssignRule = async (id, patch) => setAssignment(await api.patch(`/assignment/rules/${id}`, patch))
   const removeAssignRule = async (id) => setAssignment(await api.del(`/assignment/rules/${id}`))
-
-  /* ---------- users ---------- */
-  const addUser = async (u) => { const rec = await api.post('/users', u); prepend(setUsers)(rec); return rec }
-  const updateUser = async (id, patch) => {
-    const prev = users.find((u) => u.id === id)
-    const rec = await api.patch(`/users/${id}`, patch)
-    replace(setUsers)(rec)
-    if (patch.name && prev && patch.name !== prev.name) reload('clients', 'assignment')
-  }
-  const removeUser = async (id) => { await api.del(`/users/${id}`); setUsers((l) => l.filter((x) => x.id !== id)); reload('assignment') }
 
   /* ---------- themes (static demo) ---------- */
   const toggleTheme = (id, key) => setThemes((l) => l.map((t) => (t.id === id ? { ...t, [key]: !t[key] } : t)))
@@ -333,13 +318,13 @@ export function AppProvider({ children }) {
     invoices, addInvoice, addPayment,
     quotations, setQuotationStatus,
     gallery, approveStory, addStory,
-    users, addUser, updateUser, removeUser,
+    users, // read-only — the Wandra team manages users (paid seats) from the admin panel
     currentUser, currentUserId, setCurrentUser, canSeePricing, isAdmin,
     templates, addItineraryTemplate, updateItineraryTemplate, removeItineraryTemplate, themes, toggleTheme,
     inclusionPresets, addInclusionPreset, removeInclusionPreset, updateInclusionPreset, clearDestinationPresets, presetsForDest, categoryGroups,
     vouchers, addVoucher, removeVoucher,
     landing, updateLanding,
-    roles, addRole, removeRole, setRolePerm,
+    roles, // read-only — the Wandra team manages roles from the admin panel
     assignment, updateAssignment, addAssignRule, updateAssignRule, removeAssignRule,
     dashboardSeries: dashboard.series, recentActivity: dashboard.recentActivity, plans,
     dashboardAnalytics: dashboard.analytics, dashboardKpis: dashboard.kpis,

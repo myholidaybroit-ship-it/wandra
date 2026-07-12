@@ -119,7 +119,7 @@ export default function PackageDetail() {
       <div className="pd-toolbar">
         <div className="pd-toolbar-r">
           <Link to={`/app/packages/${pkg.id}/edit`}><Button variant="secondary" size="sm">Edit quote</Button></Link>
-          <Link to={`/app/packages/${pkg.id}/vouchers`}><Button variant="secondary" size="sm">Vouchers</Button></Link>
+          <Link to={`/app/packages/${pkg.id}/vouchers`}><Button variant="secondary" size="sm">Travel Pass</Button></Link>
           <Link to={`/app/packages/${pkg.id}/share`}><Button variant="secondary" size="sm">Share…</Button></Link>
           {activeBooking ? (
             <>

@@ -13,7 +13,7 @@ const EMPTY_SUPPORT = {
   hours: '',
   description: 'We are one message away.',
 }
-const CATEGORIES = ['Technical issue', 'How-to question', 'Billing', 'Account access', 'Feature request', 'Other']
+const CATEGORIES = ['Technical issue', 'How-to question', 'Billing', 'Account access', 'Feature request', 'Roles & team', 'Other']
 
 export default function HelpSupport() {
   const { currentUser, toast } = useApp()

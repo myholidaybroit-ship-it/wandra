@@ -1,9 +1,28 @@
 /* ============================================================
-   Roles & Permissions — feature × role matrix
+   Roles & Permissions — read-only feature × role matrix.
+   Roles are provisioned by the Wandra team from the admin panel;
+   agencies request changes via the "Request a change" form.
    ============================================================ */
 .rl { max-width: 1100px; margin: 0 auto; }
 .rl-card { background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-xxl); overflow: hidden; }
 .rl-scroll { overflow-x: auto; }
+
+/* pricing / contact banner */
+.rl-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--color-surface-soft); border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 18px;
+}
+.rl-banner-ic {
+  display: inline-grid; place-items: center; flex: none;
+  width: 26px; height: 26px; border-radius: var(--radius-full);
+  background: var(--color-ink); color: #fff; margin-top: 1px;
+}
+.rl-banner p { font-size: 13px; line-height: 1.55; color: var(--color-body); margin: 0; }
+.rl-banner-link {
+  border: none; background: none; padding: 0; font: inherit; font-weight: 700;
+  color: var(--color-ink); text-decoration: underline; cursor: pointer;
+}
 
 .rl-table { width: 100%; border-collapse: collapse; }
 .rl-table th { border-bottom: 1px solid var(--color-hairline); background: var(--color-surface-soft); }
@@ -12,13 +31,6 @@
 .rl-role-name { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 800; }
 .rl-lock { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: var(--radius-full); background: var(--color-ink); color: #fff; }
 .rl-role-sub { font-size: 10.5px; font-weight: 600; color: var(--color-stone); margin-top: 2px; }
-.rl-role-x {
-  display: inline-grid; place-items: center; width: 22px; height: 22px;
-  border: none; background: none; padding: 0; border-radius: var(--radius-full);
-  color: var(--color-muted-soft); cursor: pointer; opacity: 0; transition: all var(--ease-ui);
-}
-.rl-role-h:hover .rl-role-x { opacity: 1; }
-.rl-role-x:hover { background: var(--color-error-bg); color: #b91c1c; }
 
 .rl-table td { border-bottom: 1px solid var(--color-hairline-soft); }
 .rl-table tbody tr:last-child td { border-bottom: none; }
@@ -27,11 +39,18 @@
 .rl-feat-name { display: block; font-size: 14px; font-weight: 700; }
 .rl-feat-desc { display: block; font-size: 11.5px; color: var(--color-stone); margin-top: 1px; }
 .rl-cell { text-align: center; padding: 14px 18px; }
-.rl-cell .lb-switch { vertical-align: middle; }
-.rl-locked { opacity: .55; cursor: default; }
-.rl-locked .lb-switch-track { cursor: default; }
 
-/* pricing visibility is a special opt-out toggle — set it apart from the page perms */
+/* read-only assignment indicator: ✓ = included, empty dash = not included */
+.rl-dot {
+  display: inline-grid; place-items: center; width: 22px; height: 22px;
+  border-radius: var(--radius-full); background: var(--color-surface);
+  border: 1px solid var(--color-hairline); color: transparent; vertical-align: middle;
+}
+.rl-dot::after { content: ''; width: 8px; height: 2px; border-radius: 2px; background: var(--color-hairline); }
+.rl-dot.on { background: var(--color-success-bg, #e7f6ec); border-color: transparent; color: var(--color-success, #1a7f43); }
+.rl-dot.on::after { display: none; }
+
+/* pricing visibility is a special opt-out permission — set it apart from the page perms */
 .rl-row-pricing td { border-top: 2px solid var(--color-hairline); background: var(--color-surface-soft); }
 .rl-row-pricing:hover td { background: var(--color-surface-soft); }
 .rl-row-pricing .rl-feat-name { display: inline-flex; align-items: center; gap: 6px; }

@@ -4,7 +4,7 @@ import { inr, DEFAULT_INVOICE_SETTINGS } from '../../store/AppContext'
 import { usePublic } from '../../hooks/usePublic'
 import { Card, Button, Badge } from '../../components/ui/UI'
 import { AgencyLogo } from '../../components/ui/AgencyBrand'
-import { downloadElementPdf } from '../../utils/pdf'
+import { preloadAndDownload } from '../../utils/pdf'
 import '../admin/invoices/invoice.css'
 
 export default function PublicInvoice() {
@@ -14,7 +14,7 @@ export default function PublicInvoice() {
   const agency = data?.agency || {}
   const docRef = useRef(null)
   const [busy, setBusy] = useState(false)
-  const download = async () => { if (!docRef.current) return; setBusy(true); try { await downloadElementPdf(docRef.current, `${inv.code}.pdf`) } finally { setBusy(false) } }
+  const download = async () => { if (!docRef.current) return; setBusy(true); try { await preloadAndDownload(docRef.current, `${inv.code}.pdf`) } finally { setBusy(false) } }
   if (loading) return <div className="section">Loading invoice…</div>
   if (!inv) return <div className="section">Invoice not found.</div>
   const client = { name: inv.clientName }

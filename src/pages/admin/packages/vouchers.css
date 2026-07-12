@@ -1,5 +1,7 @@
 .voucher-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 @media (max-width: 900px) { .voucher-grid { grid-template-columns: 1fr; } }
+/* the unified Travel Pass is the hero — it takes the full row */
+.voucher-grid .vcard-pass { grid-column: 1 / -1; max-width: 860px; }
 .voucher { display: grid; grid-template-columns: 1fr 150px; background: var(--color-primary); color: var(--color-on-dark); border-radius: var(--radius-xxl); overflow: hidden;
   background-image: radial-gradient(120% 90% at 80% -10%, rgba(255,255,255,.10), transparent 60%); }
 .v-left { padding: 20px; }

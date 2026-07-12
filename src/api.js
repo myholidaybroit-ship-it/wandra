@@ -4,6 +4,7 @@
    The backend also sets/clears an HttpOnly cookie when available. */
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+export const API_BASE = BASE
 const TOKEN_KEY = 'wandra-crm-token'
 const TOKEN_META_KEY = 'wandra-crm-token-meta'
 

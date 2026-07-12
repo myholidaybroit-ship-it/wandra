@@ -1,65 +1,45 @@
 import { useState } from 'react'
 import { useApp } from '../../store/AppContext'
-import { PageHeader, Button, Badge, DataTable, Modal, Field, Input, PillSelect } from '../../components/ui/UI'
+import { api } from '../../api'
+import { PageHeader, Button, Badge, DataTable, Modal, Field, Select } from '../../components/ui/UI'
 import { Icon } from '../../components/ui/icons'
 import './users.css'
 
-const BLANK = { name: '', email: '', password: '', role: 'Sales', phone: '', department: '', designation: '' }
-const genPassword = () => {
-  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789'
-  return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-}
+/* Team is managed by the Wandra team — every user is a paid seat (₹999/user/month,
+   the owner counts too). Agencies request add/edit/password/remove via the form. */
+
+const REQUEST_TYPES = ['Add a new user', "Update a user's details", 'Reset a password', 'Remove a user', 'Something else']
+
 const initials = (n) => (n || '?').split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 
 export default function UserManagement() {
-  const { users, roles, addUser, updateUser, removeUser, toast } = useApp()
-  const roleNames = roles.map((r) => r.name)
-  const [open, setOpen] = useState(false)          // add
-  const [edit, setEdit] = useState(null)           // edit user (copy)
-  const [reset, setReset] = useState(null)         // { user, password }
-  const [del, setDel] = useState(null)             // user pending delete
-  const [f, setF] = useState(BLANK)
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+  const { users, currentUser, limitFor, toast } = useApp()
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ type: REQUEST_TYPES[0], message: '' })
+  const [sending, setSending] = useState(false)
 
   const isOwner = (u) => u.designation === 'Owner'
+  const seatLimit = limitFor('team')
+  const seatsUsed = users.length
+  const seatsLabel = seatLimit === -1 ? `${seatsUsed} seat${seatsUsed === 1 ? '' : 's'} in use` : `${seatsUsed} of ${seatLimit} seats in use`
 
-  const create = () => {
-    if (!f.name.trim() || !f.email.trim()) return toast('Name & email required')
-    if (!f.password) return toast('Set a password so they can log in — hit generate')
-    addUser({ ...f, name: f.name.trim() })
-    toast(`${f.name.trim()} added — share their login: ${f.email}`)
-    setOpen(false); setF(BLANK)
-  }
-
-  const saveEdit = () => {
-    if (!edit.name.trim() || !edit.email.trim()) return toast('Name & email required')
-    const before = users.find((u) => u.id === edit.id)
-    updateUser(edit.id, { ...edit, name: edit.name.trim() })
-    toast(before && before.name !== edit.name.trim()
-      ? 'User updated — new name synced to lead assignments'
-      : 'User updated')
-    setEdit(null)
-  }
-
-  const toggleStatus = (u) => {
-    if (isOwner(u)) return
-    const status = u.status === 'Active' ? 'Inactive' : 'Active'
-    updateUser(u.id, { status })
-    toast(status === 'Inactive' ? `${u.name} deactivated — auto-assignment will skip them` : `${u.name} is active again`)
-  }
-
-  const savePassword = () => {
-    if (!reset.password || reset.password.length < 6) return toast('Password needs at least 6 characters')
-    updateUser(reset.user.id, { password: reset.password })
-    navigator.clipboard?.writeText(reset.password)
-    toast(`Password reset for ${reset.user.name} — copied to clipboard`)
-    setReset(null)
-  }
-
-  const confirmDelete = () => {
-    removeUser(del.id)
-    toast(`${del.name} removed — taken out of every assignment rotation`)
-    setDel(null)
+  const submit = async () => {
+    if (!form.message.trim()) return toast('Tell us what you need')
+    setSending(true)
+    try {
+      await api.post('/support/inquiries', {
+        subject: form.type,
+        category: 'Roles & team',
+        message: form.message.trim(),
+        contactEmail: currentUser?.email || '',
+        contactPhone: currentUser?.phone || '',
+      })
+      toast('Request sent — the Wandra team will handle it for you')
+      setForm({ type: REQUEST_TYPES[0], message: '' })
+      setOpen(false)
+    } catch (e) {
+      toast(e.message || 'Could not send the request')
+    } finally { setSending(false) }
   }
 
   const columns = [
@@ -77,89 +57,41 @@ export default function UserManagement() {
     { key: 'designation', head: 'Designation', render: (r) => <span className="cell-sub">{r.designation || '—'}</span> },
     { key: 'department', head: 'Department', render: (r) => <span className="cell-sub">{r.department || '—'}</span> },
     { key: 'status', head: 'Status', render: (r) => (
-      <label className={`lb-switch ${isOwner(r) ? 'um-locked' : ''}`} title={isOwner(r) ? 'The owner is always active' : r.status === 'Active' ? 'Deactivate' : 'Activate'}>
-        <input type="checkbox" checked={r.status === 'Active'} disabled={isOwner(r)} onChange={() => toggleStatus(r)} />
-        <span className="lb-switch-track"><span className="lb-switch-thumb" /></span>
-      </label>
-    ) },
-    { key: 'actions', head: '', align: 'right', render: (r) => (
-      <div className="um-acts">
-        <button className="um-act" onClick={() => setEdit({ ...r })}>Edit</button>
-        <button className="um-act" onClick={() => setReset({ user: r, password: genPassword() })}>Reset password</button>
-        {!isOwner(r) && (
-          <button className="um-act danger" title="Delete user" onClick={() => setDel(r)}><Icon name="trash" size={13} /></button>
-        )}
-      </div>
+      <Badge tone={r.status === 'Active' ? 'success' : 'neutral'}>{r.status || 'Active'}</Badge>
     ) },
   ]
 
   return (
     <div>
-      <PageHeader title="User Management" subtitle="Give staff limited, role-scoped access to their own dashboard."
-        actions={<Button onClick={() => { setF({ ...BLANK, password: genPassword() }); setOpen(true) }}>+ Add New User</Button>} />
+      <PageHeader title="User Management"
+        subtitle={`Your team's logins, managed for you by the Wandra team. ₹999 per user / month · ${seatsLabel}.`}
+        actions={<Button onClick={() => setOpen(true)}>Request a change</Button>} />
+
+      <div className="um-banner">
+        <span className="um-banner-ic"><Icon name="users" size={15} /></span>
+        <p>
+          Every user is a paid seat at <strong>₹999 per user / month</strong> — the owner account counts too.
+          To add a teammate, change someone's name, email, role or password, or remove a user —{' '}
+          <button className="um-banner-link" onClick={() => setOpen(true)}>send us a request</button> and our operations team will do it for you.
+        </p>
+      </div>
+
       <DataTable columns={columns} rows={users} />
 
-      {/* ---------- Add ---------- */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Add New User" width={560}
-        footer={<><Button variant="tertiary" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={create}>Create User</Button></>}>
-        <div className="form-grid">
-          <Field label="Name" required><Input value={f.name} onChange={set('name')} placeholder="e.g. Rika Sharma" /></Field>
-          <Field label="Email" required><Input value={f.email} onChange={set('email')} placeholder="name@agency.com" /></Field>
-          <Field label="Password" full hint="They log in with this — hit ↻ for a fresh one, it's copied on create">
-            <div className="input-action-row">
-              <Input value={f.password} onChange={set('password')} />
-              <button className="btn-icon" title="Generate password" onClick={() => setF({ ...f, password: genPassword() })}><Icon name="refresh" size={15} /></button>
-            </div>
-          </Field>
-          <Field label="Role"><PillSelect value={f.role} options={roleNames} onChange={(v) => setF({ ...f, role: v })} /></Field>
-          <Field label="Phone"><Input value={f.phone} onChange={set('phone')} /></Field>
-          <Field label="Department"><Input value={f.department} onChange={set('department')} /></Field>
-          <Field label="Designation"><Input value={f.designation} onChange={set('designation')} /></Field>
-        </div>
-      </Modal>
-
-      {/* ---------- Edit / rename ---------- */}
-      <Modal open={!!edit} onClose={() => setEdit(null)} title="Edit User" width={560}
-        footer={<><Button variant="tertiary" onClick={() => setEdit(null)}>Cancel</Button><Button onClick={saveEdit}>Save Changes</Button></>}>
-        {edit && (
-          <div className="form-grid">
-            <Field label="Name" required hint={isOwner(edit) ? '' : 'Renaming syncs their assignment rotations & leads'}>
-              <Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
-            <Field label="Email" required><Input value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></Field>
-            <Field label="Role">
-              {isOwner(edit)
-                ? <Input value={edit.role} disabled />
-                : <PillSelect value={edit.role} options={roleNames} onChange={(v) => setEdit({ ...edit, role: v })} />}
-            </Field>
-            <Field label="Phone"><Input value={edit.phone || ''} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} /></Field>
-            <Field label="Department"><Input value={edit.department || ''} onChange={(e) => setEdit({ ...edit, department: e.target.value })} /></Field>
-            <Field label="Designation"><Input value={edit.designation || ''} onChange={(e) => setEdit({ ...edit, designation: e.target.value })} /></Field>
-          </div>
-        )}
-      </Modal>
-
-      {/* ---------- Reset password ---------- */}
-      <Modal open={!!reset} onClose={() => setReset(null)} title="Reset Password" width={460}
-        footer={<><Button variant="tertiary" onClick={() => setReset(null)}>Cancel</Button><Button onClick={savePassword}>Reset & Copy</Button></>}>
-        {reset && (
-          <div className="col gap-base">
-            <p className="um-reset-note">Set a new password for <strong>{reset.user.name}</strong> ({reset.user.email}). They'll use it on the login page.</p>
-            <Field label="New password">
-              <div className="input-action-row">
-                <Input value={reset.password} onChange={(e) => setReset({ ...reset, password: e.target.value })} />
-                <button className="btn-icon" title="Generate password" onClick={() => setReset({ ...reset, password: genPassword() })}><Icon name="refresh" size={15} /></button>
-              </div>
-            </Field>
-          </div>
-        )}
-      </Modal>
-
-      {/* ---------- Delete ---------- */}
-      <Modal open={!!del} onClose={() => setDel(null)} title="Delete User" width={440}
-        footer={<><Button variant="tertiary" onClick={() => setDel(null)}>Cancel</Button><Button onClick={confirmDelete}>Delete User</Button></>}>
-        {del && (
-          <p className="um-reset-note">Remove <strong>{del.name}</strong>? They'll be taken out of every lead-assignment rotation and can no longer log in. Leads they already own keep their name.</p>
-        )}
+      {/* ---------- Request a change ---------- */}
+      <Modal open={open} onClose={() => setOpen(false)} title="Request a change" width={480}
+        footer={<><Button variant="tertiary" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={submit} disabled={sending}>{sending ? 'Sending…' : 'Send request'}</Button></>}>
+        <Field label="What do you need?">
+          <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+            {REQUEST_TYPES.map((t) => <option key={t}>{t}</option>)}
+          </Select>
+        </Field>
+        <Field label="Details">
+          <textarea className="control" rows="5" autoFocus value={form.message}
+            onChange={(e) => setForm({ ...form, message: e.target.value })}
+            placeholder="e.g. Add Rika Sharma (rika@agency.com) as a Sales user — she joins Monday…" maxLength="5000" />
+        </Field>
+        <p className="um-modal-note">Your request goes straight to the Wandra team. New users are <strong>₹999 per user / month</strong> — we'll confirm the details with you before making changes.</p>
       </Modal>
     </div>
   )

@@ -96,7 +96,7 @@ export default function Billing() {
                 <span className="bl-per">/ month</span>
               </div>
               {(pro.billingCycle === 'yearly' || pro.annualTotal) && (
-                <div className="bl-billed-yearly">Billed yearly · {inr(pro.annualTotal || Math.round(pro.price * 12))}/yr{pro.annualDiscountPercent > 0 ? ` — save ${pro.annualDiscountPercent}%` : ''}</div>
+                <div className="bl-billed-yearly">Billed yearly</div>
               )}
               <p className="bl-tagline">{pro.tagline}</p>
               <hr className="bl-rule" />

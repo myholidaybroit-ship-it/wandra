@@ -22,6 +22,9 @@ export default function ItineraryPreview() {
   if (loading) return <div className="itin-wrap"><p>Loading itinerary…</p></div>
   if (!pkg) return <div className="itin-wrap"><p>Itinerary not found.</p></div>
   const pr = pkg.computed || computePricing(pkg)
+  // builder-v2 quotes store their price in pricing.grandTotal — the legacy engine returns 0 for them
+  const grandTotal = Number(pkg.pricing?.grandTotal) || pr.grandTotal || 0
+  const paxTotal = ['adults', 'children', 'infants'].reduce((s, k) => s + (Number(pkg.pax?.[k]) || 0), 0) || Number(pkg.pax?.total) || 0
   const accent = THEME_ACCENT[theme] || '#0d74ce'
   const findDest = (name) => {
     if (!name) return null
@@ -53,7 +56,7 @@ export default function ItineraryPreview() {
       <div className="itin-body">
         {/* summary chips */}
         <div className="itin-summary">
-          <div className="sum-chip"><span className="sc-k">Travelers</span><span className="sc-v">{pkg.pax?.total} pax</span></div>
+          <div className="sum-chip"><span className="sc-k">Travelers</span><span className="sc-v">{paxTotal ? `${paxTotal} pax` : '—'}</span></div>
           <div className="sum-chip"><span className="sc-k">Stay</span><span className="sc-v">{pkg.nights} nights</span></div>
           <div className="sum-chip"><span className="sc-k">Transport</span><span className="sc-v">Private cab</span></div>
           <div className="sum-chip"><span className="sc-k">Theme</span><span className="sc-v">{theme}</span></div>
@@ -88,7 +91,7 @@ export default function ItineraryPreview() {
         </div>
 
         {/* grand total */}
-        <div className="itin-total"><span>Grand Total</span><span>{inr(pr.grandTotal)}</span></div>
+        <div className="itin-total"><span>Grand Total</span><span>{inr(grandTotal)}</span></div>
 
         {/* secure booking */}
         <div className="secure-grid">

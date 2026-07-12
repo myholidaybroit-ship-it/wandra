@@ -163,7 +163,32 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     adults: N(pax.adults), children: N(pax.children),
     perPax: (N(pax.adults) + N(pax.children)) ? Math.round(grandTotal / (N(pax.adults) + N(pax.children))) : grandTotal,
     remarks: pkg.customerRemarks || '', agency,
+    // agency policy / payment blocks ticked "Show on PDF" (Policies & Notes page)
+    blocks: (agency?.docBlocks || []).filter((b) => b && b.show && b.title && b.content),
   }
+}
+
+/* render each ticked policy block with the host layout's own classes.
+   Payment-ish blocks also print the AGENCY'S OWN scan-to-pay QR (Settings →
+   UPI payment QR) — Wandra's billing details never appear on client documents. */
+const PRE = { whiteSpace: 'pre-line' }
+const isPaymentBlock = (b) => /payment|upi|bank|account/i.test(b?.title || '')
+function PayQr({ m, b }) {
+  if (!m.agency?.paymentQr || !isPaymentBlock(b)) return null
+  return (
+    <div style={{ marginTop: 8 }}>
+      <img src={m.agency.paymentQr} alt="Scan to pay — UPI QR" style={{ width: 110, height: 110, objectFit: 'contain', borderRadius: 8, background: '#fff', padding: 4 }} />
+      <div style={{ fontSize: 9, opacity: 0.75, marginTop: 2 }}>Scan to pay via any UPI app</div>
+    </div>
+  )
+}
+function DocBlocks({ m, render }) {
+  return (m.blocks || []).map((b, i) => (
+    <div className="pdf-avoid" key={i}>
+      {render(b)}
+      <PayQr m={m} b={b} />
+    </div>
+  ))
 }
 function groupLegacy(pkg, start, hotels) {
   const groups = []
@@ -464,6 +489,7 @@ function Classic({ m }) {
       ))}
 
       {m.remarks && <><div className="cl-sec red">Please Note:</div><p className="cl-day-p">{m.remarks}</p></>}
+      <DocBlocks m={m} render={(b) => <><div className="cl-sec red">{b.title}</div><p className="cl-day-p" style={PRE}>{b.content}</p></>} />
       <Sign m={m} />
       <Powered />
     </div>
@@ -536,6 +562,7 @@ function Vivid({ m }) {
           </div>
         </div>
       ))}
+      <DocBlocks m={m} render={(b) => <><h2 className="vv-h">{b.title}</h2><p className="vv-day-p" style={PRE}>{b.content}</p></>} />
       <Sign m={m} />
       <Powered />
     </div>
@@ -554,7 +581,7 @@ function Mono({ m }) {
       <div className="mn-facts">
         <div><span>Dates</span><strong>{fmtD(m.start)} – {fmtD(m.end)}</strong></div>
         <div><span>Travellers</span><strong>{m.paxLine}</strong></div>
-        <div><span>Route</span><strong>{m.sectors.map((s) => `${s.destination} ${s.nights}N`).join(' → ') || m.destTitle}</strong></div>
+        <div><span>Route</span><strong>{m.sectors.map((s) => (N(s.nights) ? `${s.destination} ${s.nights}N` : s.destination)).join(' → ') || m.destTitle}</strong></div>
         {m.total > 0 && <div><span>Package price</span><strong>{money(m.total)}</strong></div>}
       </div>
       {m.gallery.length > 1 && (
@@ -587,6 +614,7 @@ function Mono({ m }) {
         ))}</div>
       </div>
       {m.remarks && <><h2 className="mn-h">Notes</h2><p className="mn-day-p">{m.remarks}</p></>}
+      <DocBlocks m={m} render={(b) => <><h2 className="mn-h">{b.title}</h2><p className="mn-day-p" style={PRE}>{b.content}</p></>} />
       {m.total > 0 && <div className="mn-price"><span>Total package price</span><strong>{money(m.total)}</strong></div>}
       <Sign m={m} />
       <Powered />
@@ -649,6 +677,7 @@ function Luxe({ m }) {
           <div key={gi}><h2 className="lx-h">Not included{m.ieMulti && g.destination ? ` · ${g.destination}` : ''}</h2>{g.exclusions.map((x, i) => <div className="lx-li off" key={i}>◇ {x}</div>)}</div>
         ))}</div>
       </div>
+      <DocBlocks m={m} render={(b) => <><h2 className="lx-h">{b.title}</h2><p className="lx-day-p" style={PRE}>{b.content}</p></>} />
       <Sign m={m} light />
       <Powered light />
     </div>
@@ -809,7 +838,12 @@ function Holiday({ m, cfg }) {
         </>
       )
     },
-    notes: () => (m.remarks ? <div className="hd-notes pdf-avoid"><h3 className="hd-h3">Please note</h3><p>{m.remarks}</p></div> : null),
+    notes: () => ((m.remarks || m.blocks.length) ? (
+      <div className="hd-notes pdf-avoid">
+        {m.remarks && <><h3 className="hd-h3">Please note</h3><p>{m.remarks}</p></>}
+        {m.blocks.map((b, i) => <div key={i}><h3 className="hd-h3">{b.title}</h3><p style={PRE}>{b.content}</p><PayQr m={m} b={b} /></div>)}
+      </div>
+    ) : null),
     signature: () => (<div className="hd-sign pdf-avoid"><Sign m={m} /><Powered /></div>),
   }
   return (
@@ -936,7 +970,10 @@ function Coastal({ m, cfg }) {
         </>
       )
     },
-    notes: () => (m.remarks ? <><div className="cs-bar">Notes</div><p className="cs-day-p pdf-avoid">{m.remarks}</p></> : null),
+    notes: () => ((m.remarks || m.blocks.length) ? <>
+      {m.remarks && <><div className="cs-bar">Notes</div><p className="cs-day-p pdf-avoid">{m.remarks}</p></>}
+      {m.blocks.map((b, i) => <div className="pdf-avoid" key={i}><div className="cs-bar">{b.title}</div><p className="cs-day-p" style={PRE}>{b.content}</p><PayQr m={m} b={b} /></div>)}
+    </> : null),
     signature: () => (<div className="cs-sign pdf-avoid"><Sign m={m} /><Powered /></div>),
   }
   return (

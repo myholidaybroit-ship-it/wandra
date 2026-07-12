@@ -11,7 +11,9 @@ const TYPES = ['Hotel', 'Transport', 'Activity']
 function addDays(iso, n) {
   if (!iso) return ''
   const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
+  // format in LOCAL time — toISOString() shifts to UTC and lands a day early for IST
+  const p = (x) => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 const fmtD = (iso) => (iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '')
 
@@ -25,10 +27,11 @@ export default function Vouchers() {
 
   const pkgVouchers = vouchers.filter((v) => v.packageId === pkg.id)
 
-  /* ---------- generate records from the package ---------- */
-  const generate = () => {
-    const existingTitles = new Set(pkgVouchers.map((v) => `${v.type}:${v.title}`))
-    let made = 0
+  /* ---------- generate ONE unified Travel Pass from the package ----------
+     Every hotel stay, transfer and activity becomes a section of a single
+     pass — the traveller carries one document for the whole trip. */
+  const generate = async () => {
+    const sections = []
     // group consecutive hotel nights into stays
     const stays = []
     ;(pkg.hotelsAlloc || []).forEach((h) => {
@@ -37,30 +40,40 @@ export default function Vouchers() {
       else stays.push({ name: h.name, room: h.roomType, meal: h.mealPlan || '', nights: 1, in: addDays(pkg.startDate, h.night - 1), out: addDays(pkg.startDate, h.night) })
     })
     stays.forEach((s) => {
-      if (existingTitles.has(`Hotel:${s.name}`)) return
-      addVoucher({
-        type: 'Hotel', clientId: pkg.clientId || '', clientName: pkg.clientName, packageId: pkg.id, title: s.name,
+      sections.push({
+        tag: 'Hotel', title: s.name,
         fields: [
           { k: 'Room', v: s.room }, { k: 'Meal plan', v: s.meal },
           { k: 'Check-in', v: fmtD(s.in) }, { k: 'Check-out', v: fmtD(s.out) }, { k: 'Nights', v: String(s.nights) },
-        ],
-        notes: '',
-      }); made++
+        ].filter((x) => x.v),
+      })
     })
     ;(pkg.cabs || []).forEach((c) => {
-      const title = c.name || 'Transfer'
-      if (existingTitles.has(`Transport:${title}`)) return
-      addVoucher({
-        type: 'Transport', clientId: pkg.clientId || '', clientName: pkg.clientName, packageId: pkg.id, title,
+      sections.push({
+        tag: 'Transport', title: c.name || 'Transfer',
         fields: [
           { k: 'Vehicle', v: c.type || '—' }, { k: 'Service', v: c.serviceType || 'Private Transfer' },
           { k: 'Date', v: c.days?.length ? fmtD(addDays(pkg.startDate, c.days[0] - 1)) : fmtD(pkg.startDate) },
           { k: 'Driver', v: 'Local Vendor' },
-        ],
-        notes: '',
-      }); made++
+        ].filter((x) => x.v),
+      })
     })
-    toast(made ? `${made} voucher${made > 1 ? 's' : ''} generated` : 'Everything already generated')
+    if (!sections.length) return toast('Add hotels or transport to the package first')
+
+    const existing = pkgVouchers.find((v) => v.type === 'Pass')
+    if (existing) await removeVoucher(existing.id)
+    await addVoucher({
+      type: 'Pass', clientId: pkg.clientId || '', clientName: pkg.clientName, packageId: pkg.id,
+      title: `${pkg.destination || pkg.route || pkg.code} — Travel Pass`,
+      fields: [
+        { k: 'Trip', v: pkg.code },
+        { k: 'Start', v: fmtD(pkg.startDate) },
+        { k: 'Duration', v: pkg.days ? `${pkg.days}D / ${pkg.nights ?? Math.max(0, pkg.days - 1)}N` : '' },
+      ].filter((x) => x.v),
+      sections,
+      notes: '',
+    })
+    toast(existing ? 'Travel Pass refreshed with the latest package details' : 'Travel Pass generated — one pass for the whole trip')
   }
 
   /* ---------- create modal ---------- */
@@ -94,21 +107,21 @@ export default function Vouchers() {
 
   return (
     <div>
-      <PageHeader title="Vouchers" subtitle={`Hotel, transport & activity passes for ${pkg.code}`}
+      <PageHeader title="Travel Pass" subtitle={`One unified pass for ${pkg.code} — hotels, transport & activities in a single document.`}
         actions={<>
           <Link to={`/app/packages/${id}`}><Button variant="secondary">← Back to Package</Button></Link>
-          <Button variant="secondary" onClick={generate}><Icon name="refresh" size={14} /> Generate from package</Button>
-          <Button onClick={openCreate}>+ Create Voucher</Button>
+          <Button onClick={generate}><Icon name="refresh" size={14} /> {pkgVouchers.some((v) => v.type === 'Pass') ? 'Refresh Travel Pass' : 'Generate Travel Pass'}</Button>
+          <Button variant="secondary" onClick={openCreate}>+ Single voucher</Button>
         </>} />
 
       {pkgVouchers.length === 0 && (
         <div className="v-empty">
           <span className="v-empty-ic"><Icon name="file" size={20} /></span>
-          <div className="v-empty-t">No vouchers yet</div>
-          <p>Generate them from the package in one click, or create one manually and assign it to any client.</p>
+          <div className="v-empty-t">No travel pass yet</div>
+          <p>Generate one unified pass for the whole trip — every hotel stay, transfer and activity on a single document the traveller can carry.</p>
           <div className="row gap-sm center mt-md">
-            <Button onClick={generate}>Generate from package</Button>
-            <Button variant="tertiary" onClick={openCreate}>+ Create Voucher</Button>
+            <Button onClick={generate}>Generate Travel Pass</Button>
+            <Button variant="tertiary" onClick={openCreate}>+ Single voucher</Button>
           </div>
         </div>
       )}

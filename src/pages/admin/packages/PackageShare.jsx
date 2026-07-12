@@ -17,6 +17,7 @@ export default function PackageShare() {
   const { id } = useParams()
   const { packages, clients, agency, toast } = useApp()
   const [waOpen, setWaOpen] = useState(false)
+  const [waMode, setWaMode] = useState('hotels')   // 'hotels' = no day-wise · 'full' = hotels + day-wise cabs
   const [emailOpen, setEmailOpen] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [pdfV, setPdfV] = useState('classic')
@@ -34,7 +35,7 @@ export default function PackageShare() {
   const phone = (pkg.clientPhone || client?.phone || '').replace(/\D/g, '')
   const email = pkg.clientEmail || client?.email || ''
 
-  const waMsg = buildWaMessage(pkg, client, agency)
+  const waMsg = buildWaMessage(pkg, client, agency, waMode)
   const mail = buildEmail(pkg, client, agency)
   const onWhatsApp = () => setWaOpen(true)
   const openWa = () => window.open(`https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`, '_blank')
@@ -83,6 +84,12 @@ export default function PackageShare() {
           <Button onClick={openWa}>Open WhatsApp</Button>
         </>}>
         <p className="wa-hint">This is auto-built from the quote. Copy it and paste into WhatsApp, or hit Open WhatsApp.</p>
+        <div className="pdfm-options" style={{ marginBottom: 12 }}>
+          <span className="pdfm-options-k">Message style</span>
+          <button className={`pdfm-opt ${waMode === 'hotels' ? 'on' : ''}`} onClick={() => setWaMode('hotels')}>Hotels &amp; price</button>
+          <button className={`pdfm-opt ${waMode === 'full' ? 'on' : ''}`} onClick={() => setWaMode('full')}>Full day-wise</button>
+          <span className="pdfm-options-hint">{waMode === 'hotels' ? 'Hotel options with prices — no day-wise schedule.' : 'Everything together — hotels plus the day-wise plan with transfers & activities.'}</span>
+        </div>
         <div className="wa-preview">{waMsg}</div>
       </Modal>
 
@@ -193,10 +200,46 @@ function fmtD(iso) {
 function addDays(iso, n) {
   if (!iso) return ''
   const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
+  // format locally — toISOString() shifts to UTC and loses a day in IST
+  const p = (x) => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-export function buildWaMessage(pkg, client, agency) {
+/* Selling total for one builder option — mirrors the builder's Markup → Tax →
+   Rounding engine (same as PdfDoc) so every option shows its own price. */
+function optionGrandTotal(opt, s = {}) {
+  if (!opt) return 0
+  const nn = (v) => Number(v) || 0
+  const bed = (st) => nn(st.aweb) * nn(st.awebRate) + nn(st.cweb) * nn(st.cwebRate) + nn(st.cnb) * nn(st.cnbRate)
+  const hotelCost = (opt.stays || []).reduce((a, st) => a + (nn(st.rate) * nn(st.rooms) + bed(st)) * ((st.nights || []).length), 0)
+  const svcCost = (kind) => (opt.services || []).filter((x) => x.kind === kind).reduce((a, x) => a + nn(x.rate) * (nn(x.qty) || 1) * Math.max(1, (x.days || []).length), 0)
+  const flightCost = (opt.flights || []).reduce((a, f) => a + nn(f.cost), 0)
+  const extraCost = (opt.extras || []).reduce((a, e) => a + nn(e.cost), 0)
+  const costPrice = hotelCost + svcCost('transport') + svcCost('activity') + flightCost + extraCost
+  const markup = s.markupMode === 'flat' ? nn(s.markupValue) : costPrice * nn(s.markupValue) / 100
+  const taxBase = s.taxOn === 'cost_markup' ? costPrice + markup : costPrice
+  const tax = s.taxEnabled ? Math.round(taxBase * nn(s.taxPercent) / 100 * 100) / 100 : 0
+  const preRound = costPrice + markup + tax
+  const roundTo = nn(s.roundTo)
+  return roundTo ? Math.round(preRound / roundTo) * roundTo : Math.round(preRound)
+}
+
+/* one price line per option — the stored pkg.pricing belongs to the default
+   option; every other option is priced live with the same engine */
+function optionPrices(pkg) {
+  const opts = pkg.builderV2?.options || []
+  const defaultIdx = pkg.activeOption ?? 0
+  return opts.map((o, i) => ({
+    name: `Option ${i + 1}${o.name ? `: ${o.name}` : ''}`,
+    total: i === defaultIdx
+      ? (N(pkg.pricing?.grandTotal) || optionGrandTotal(o, pkg.builderV2))
+      : (optionGrandTotal(o, pkg.builderV2) || N(pkg.pricing?.grandTotal)),
+  }))
+}
+
+/* mode 'hotels' → hotel options + prices, no day-wise schedule.
+   mode 'full'   → hotels AND the day-wise plan (transfers & activities) together. */
+export function buildWaMessage(pkg, client, agency, mode = 'full') {
   const L = []
   const opts = pkg.builderV2?.options || []
   const activeOpt = opts[pkg.activeOption ?? 0] || opts[0] || {}
@@ -216,9 +259,14 @@ export function buildWaMessage(pkg, client, agency) {
   L.push(`${B('Traveler')}: ${total}`)
   L.push(`${B('Adults')}: ${N(pax.adults)} ${B('Children')}: ${N(pax.children)} ${B('Infants')}: ${N(pax.infants)}`)
   L.push(`${B('Destinations')}: ${sectors.map((s) => B(s.destination)).join(' ') || B(destTitle)}`)
-  if (quoteTotal) {
+  // Price — one line per option so the client sees every choice
+  const prices = optionPrices(pkg).filter((p) => p.total)
+  if (prices.length > 1) {
+    L.push('', `${B('Package Price')}`)
+    prices.forEach((p) => L.push(`${B(p.name)}: ₹${p.total.toLocaleString('en-IN')}`))
+  } else if (quoteTotal) {
     L.push('')
-    L.push(`${B('Package Price')}: ₹${quoteTotal.toLocaleString('en-IN')}${activeOpt.name ? ` (${activeOpt.name})` : ''}`)
+    L.push(`${B('Package Price')}: ₹${quoteTotal.toLocaleString('en-IN')}`)
   }
 
   // Hotels — per option
@@ -256,13 +304,12 @@ export function buildWaMessage(pkg, client, agency) {
       if (f.depDate || f.depTime) L.push(`${B('Departure')}: ${fmtD(f.depDate)}${f.depTime ? ` ${f.depTime}` : ''}`)
       if (f.arrDate || f.arrTime) L.push(`${B('Arrival')}: ${fmtD(f.arrDate)}${f.arrTime ? ` ${f.arrTime}` : ''}`)
       L.push(`${B('Class')}: ${f.cabinClass || 'Economy'}`)
-      L.push(`${B('Price')}: ₹${N(f.sell)}`)
     })
   }
 
-  // Day-wise itinerary
-  const services = activeOpt.services || []
-  ;(pkg.itinerary || []).forEach((d) => {
+  // Day-wise itinerary — only in the 'full' style; the 'hotels' style stops at hotel details
+  const services = mode === 'full' ? (activeOpt.services || []) : []
+  ;(mode === 'full' ? (pkg.itinerary || []) : []).forEach((d) => {
     const city = d.stops?.[0]?.destination || d.title
     L.push('')
     L.push(`${B(`Day – ${d.day}`)}`)
@@ -274,7 +321,6 @@ export function buildWaMessage(pkg, client, agency) {
       L.push(`${B('Service')}: ${tr.location || '—'}${tr.serviceType ? ` (${tr.serviceType})` : ''}`)
       if (tr.cabName) L.push(`${B('Vehicle')}: ${tr.cabName}`)
       L.push(`${B('Quantity')}: ${N(tr.qty) || 1}`)
-      if (tr.given) L.push(`${B('Price')}: ₹${N(tr.given).toLocaleString('en-IN')}`)
       if (tr.description) L.push(`${B('Remarks')}: ${tr.description}`)
     })
     services.filter((s) => s.kind === 'activity' && (s.days || []).includes(d.day)).forEach((a) => {
@@ -282,7 +328,6 @@ export function buildWaMessage(pkg, client, agency) {
       L.push(`${B('Activity')}: ${a.location || '—'}`)
       if (a.serviceType) L.push(`${B('Type')}: ${a.serviceType}`)
       L.push(`${B('Quantity')}: ${N(a.qty) || 1}`)
-      if (a.given) L.push(`${B('Price')}: ₹${N(a.given).toLocaleString('en-IN')}`)
       if (a.description) L.push(`${B('Description')}: ${a.description}`)
     })
   })
@@ -387,7 +432,11 @@ export function buildEmail(pkg, client, agency) {
       if (g.exclusions.length) { L.push('', multi && g.destination ? `EXCLUSIONS — ${g.destination.toUpperCase()}` : 'EXCLUSIONS'); g.exclusions.forEach((x) => L.push(`  - ${x}`)) }
     })
   }
-  if (quoteTotal) { L.push('', 'PACKAGE PRICE'); L.push(`  ${money(quoteTotal)}${activeOpt.name ? ` (${activeOpt.name})` : ''}`) }
+  {
+    const prices = optionPrices(pkg).filter((p) => p.total)
+    if (prices.length > 1) { L.push('', 'PACKAGE PRICE'); prices.forEach((p) => L.push(`  ${p.name}: ${money(p.total)}`)) }
+    else if (quoteTotal) { L.push('', 'PACKAGE PRICE'); L.push(`  ${money(quoteTotal)}`) }
+  }
   if (pkg.customerRemarks) { L.push('', 'NOTES'); L.push(`  ${pkg.customerRemarks}`) }
 
   L.push('')

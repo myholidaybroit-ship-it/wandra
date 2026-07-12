@@ -6,11 +6,12 @@ import './billing.css'
 
 /* Manual activation: the agency pays Wandra, sends proof, we verify & switch them to Pro. */
 const WANDRA_PAY = {
-  accountName: 'Wandra Software Pvt. Ltd.',
+  accountName: 'ARUSOL TECHNOLOGIES PVT LTD',
   bankName: 'HDFC Bank',
-  accountNumber: '5010 0042 8871 23',
-  ifsc: 'HDFC0001234',
-  upi: 'wandra@hdfcbank',
+  branch: 'Film Nagar',
+  accountType: 'Current Account',
+  accountNumber: '50200122592530',
+  ifsc: 'HDFC0003974',
   whatsapp: '+91 79066 22111',
   email: 'billing@wandra.travel',
 }
@@ -26,12 +27,9 @@ export default function UpgradePro() {
   const pro = plans.find((p) => p.id === 'pro') || { price: 999 }
   const monthlyPrice = Number(pro.price) || 999
   const billedYearly = (pro.billingCycle || 'yearly') === 'yearly'
-  const annualDiscount = Number(pro.annualDiscountPercent) || 0
-  const annual = Number(pro.annualTotal) || Math.round(monthlyPrice * 12 * (1 - annualDiscount / 100))
-  const payNow = billedYearly ? annual : monthlyPrice
 
   const copy = (v, label) => { navigator.clipboard?.writeText(v); toast(`${label} copied`) }
-  const waMsg = encodeURIComponent(`Hi Wandra! I've made the ${billedYearly ? 'yearly' : 'monthly'} payment for the Pro plan (${inr(payNow)}) for ${agency.name}. Sharing the payment proof here.`)
+  const waMsg = encodeURIComponent(`Hi Wandra! I've made the ${billedYearly ? 'yearly' : 'monthly'} payment for the Pro plan for ${agency.name}. Sharing the payment proof here.`)
 
   return (
     <div className="up">
@@ -72,8 +70,7 @@ export default function UpgradePro() {
           <div className="up-card">
             <div className="up-card-title">Your order</div>
             <div className="up-line"><span>Wandra Pro</span><span>{inr(monthlyPrice)} / month</span></div>
-            {billedYearly && <div className="up-line"><span>Billed yearly (12 months){annualDiscount > 0 ? ` · ${annualDiscount}% off` : ''}</span><span>{inr(annual)} / yr</span></div>}
-            <div className="up-line total"><span>Pay now</span><span>{inr(payNow)}</span></div>
+            {billedYearly && <div className="up-line total"><span>Billing</span><span>Billed yearly</span></div>}
           </div>
 
           <div className="up-card">
@@ -81,9 +78,10 @@ export default function UpgradePro() {
             {[
               ['Account name', WANDRA_PAY.accountName],
               ['Bank', WANDRA_PAY.bankName],
+              ['Branch', WANDRA_PAY.branch],
+              ['Account type', WANDRA_PAY.accountType],
               ['Account number', WANDRA_PAY.accountNumber],
               ['IFSC', WANDRA_PAY.ifsc],
-              ['UPI', WANDRA_PAY.upi],
             ].map(([k, v]) => (
               <button className="up-pay-row" key={k} title="Copy" onClick={() => copy(v, k)}>
                 <span className="up-pay-k">{k}</span>
@@ -91,6 +89,10 @@ export default function UpgradePro() {
                 <Icon name="copy" size={12} />
               </button>
             ))}
+            <div className="up-qr">
+              <img src="/brand/payment-qr.jpg" alt="Scan to pay — UPI QR code" loading="lazy" />
+              <span className="up-qr-caption">Or scan to pay via any UPI app</span>
+            </div>
             <p className="up-pay-note">Tap any row to copy. Add your agency name — <strong>{agency.name}</strong> — in the payment note so we can match it faster.</p>
           </div>
 

@@ -1,5 +1,7 @@
 /* ============================================================
-   User Management — CRUD row actions
+   User Management — read-only team roster.
+   Users are provisioned by the Wandra team from the admin panel;
+   agencies request changes via the "Request a change" form.
    ============================================================ */
 .um-avatar {
   flex: 0 0 auto; display: inline-grid; place-items: center; width: 36px; height: 36px;
@@ -12,19 +14,21 @@
   color: #fff; background: var(--color-ink); border-radius: var(--radius-full); padding: 2.5px 8px;
 }
 
-.um-acts { display: inline-flex; align-items: center; gap: 4px; opacity: 0; transition: opacity var(--ease-ui); }
-tr:hover .um-acts { opacity: 1; }
-.um-act {
-  border: none; background: none; font-family: inherit; font-size: 12.5px; font-weight: 700;
-  color: var(--color-steel); cursor: pointer; padding: 7px 10px; border-radius: var(--radius-full);
-  transition: background var(--ease-ui), color var(--ease-ui); white-space: nowrap;
+/* pricing / contact banner (mirrors the Roles page banner) */
+.um-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--color-surface-soft); border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 18px;
 }
-.um-act:hover { background: var(--color-surface-soft); color: var(--color-ink); }
-.um-act.danger { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; }
-.um-act.danger:hover { background: var(--color-error-bg); color: #b91c1c; }
+.um-banner-ic {
+  display: inline-grid; place-items: center; flex: none;
+  width: 26px; height: 26px; border-radius: var(--radius-full);
+  background: var(--color-ink); color: #fff; margin-top: 1px;
+}
+.um-banner p { font-size: 13px; line-height: 1.55; color: var(--color-body); margin: 0; }
+.um-banner-link {
+  border: none; background: none; padding: 0; font: inherit; font-weight: 700;
+  color: var(--color-ink); text-decoration: underline; cursor: pointer;
+}
 
-.um-locked { opacity: .45; }
-.um-locked .lb-switch-track { cursor: default; }
-
-.um-reset-note { font-size: 13.5px; line-height: 1.55; color: var(--color-charcoal); }
-.um-reset-note strong { font-weight: 800; }
+.um-modal-note { font-size: 12.5px; color: var(--color-stone); margin-top: 14px; line-height: 1.5; }

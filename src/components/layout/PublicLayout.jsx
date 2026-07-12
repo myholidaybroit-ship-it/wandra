@@ -15,7 +15,7 @@ export default function PublicLayout() {
         <div className="pnav-links">
           <a className="pnav-link" href="/#product">Product</a>
           <a className="pnav-link" href="/#features">Workflow</a>
-          <a className="pnav-link" href="/#pricing">Pricing</a>
+          <a className="pnav-link" href="/#pricing">Free trial</a>
         </div>
         <div className="pnav-right">
           <Link to="/login"><Button size="sm" variant="secondary">Log In</Button></Link>
@@ -48,7 +48,7 @@ export default function PublicLayout() {
               <div className="foot-head">Product</div>
               <a className="foot-link" href="/#product">Modules</a>
               <a className="foot-link" href="/#features">Features</a>
-              <a className="foot-link" href="/#pricing">Pricing</a>
+              <a className="foot-link" href="/#pricing">Free trial</a>
               <Link className="foot-link" to="/seo/">Destination guides</Link>
               <Link className="foot-link" to="/i/PKG-202602-0003">Sample Itinerary</Link>
             </div>

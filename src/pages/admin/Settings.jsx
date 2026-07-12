@@ -11,7 +11,7 @@ export default function Settings() {
   const [f, setF] = useState({ ...agency, ...agency.bank })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
-    setAgency({ ...agency, name: f.name, logo: f.logo || '', email: f.email, phone: f.phone, website: f.website, address: f.address, gstin: f.gstin,
+    setAgency({ ...agency, name: f.name, logo: f.logo || '', paymentQr: f.paymentQr || '', email: f.email, phone: f.phone, website: f.website, address: f.address, gstin: f.gstin,
       bank: { accountName: f.accountName, bankName: f.bankName, accountNumber: f.accountNumber, ifsc: f.ifsc } })
     toast('Settings saved — these details now appear on all itineraries, vouchers & invoices')
   }
@@ -43,6 +43,9 @@ export default function Settings() {
               <Field label="Bank Name"><Input value={f.bankName} onChange={set('bankName')} /></Field>
               <Field label="Account Number"><Input value={f.accountNumber} onChange={set('accountNumber')} /></Field>
               <Field label="IFSC Code"><Input value={f.ifsc} onChange={set('ifsc')} /></Field>
+              <ImageInput label="UPI payment QR" value={f.paymentQr || ''} maxW={600}
+                onChange={(v) => setF({ ...f, paymentQr: v })}
+                hint="Your own scan-to-pay QR — prints on quote PDFs next to your Payment Details block" />
             </div>
             <Button className="mt-lg" onClick={save}>Save Settings</Button>
           </Card>

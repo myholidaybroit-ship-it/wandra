@@ -1,35 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { publicApi } from '../../api'
 import { Icon } from '../../components/ui/icons'
 import './landing.css'
 
-const DEFAULT_PRICING = [
-  { id: 'free', name: 'Free', price: 'Free', suffix: 'forever', description: 'Everything you need to start selling trips.', features: ['CRM and enquiries', 'Itinerary builder', 'PDF and WhatsApp sharing'] },
-  { id: 'pro', name: 'Pro', price: '₹999', suffix: '/ mo · billed yearly', description: 'The complete engine for a growing agency.', features: ['Everything in Free', 'Invoices and vouchers', 'Team roles and reports'], featured: true },
-]
-
-const formatPrice = (value) => Number(value) === 0 ? 'Free' : `₹${Number(value || 0).toLocaleString('en-IN')}`
+/* No plans / pricing upfront — every agency starts on a free trial after a demo. */
 
 export default function Landing() {
-  const [pricing, setPricing] = useState(DEFAULT_PRICING)
   const calendlyRef = useRef(null)
-
-  useEffect(() => {
-    publicApi.get('/plans').then(({ items = [] }) => {
-      const livePlans = items.filter((plan) => plan.id === 'free' || plan.id === 'pro')
-      if (livePlans.length !== 2) return
-      setPricing(livePlans.map((plan) => ({
-        id: plan.id,
-        name: plan.name,
-        price: formatPrice(plan.price),
-        suffix: Number(plan.price) === 0 ? 'forever' : '/ month',
-        description: plan.tagline,
-        features: plan.perks?.slice(0, 4) || [],
-        featured: plan.id === 'pro',
-      })))
-    }).catch(() => {})
-  }, [])
 
   useEffect(() => {
     const source = 'https://assets.calendly.com/assets/external/widget.js'
@@ -70,9 +47,18 @@ export default function Landing() {
         <div className="minimal-workflow-visual"><ItineraryMock /><InvoiceMock /></div>
       </section>
 
-      <section id="pricing" className="minimal-section minimal-pricing">
-        <div className="minimal-section-head"><div><span className="minimal-label">Plans</span><h2>Simple plans for a growing agency.</h2></div><span className="minimal-section-note">Monthly pricing</span></div>
-        <div className="minimal-price-grid">{pricing.map((plan) => <article className={`minimal-price-card ${plan.featured ? 'featured' : ''}`} key={plan.id}>{plan.featured && <span className="minimal-popular">Most popular</span>}<span className="minimal-plan-name">{plan.name}</span><p>{plan.description}</p><strong>{plan.price}<small>{plan.suffix}</small></strong><ul>{plan.features.map((feature) => <li key={feature}><Icon name="check" size={13} />{feature}</li>)}</ul><a href="#demo" className={`minimal-price-button ${plan.featured ? 'inverted' : ''}`}>Book a demo</a></article>)}</div>
+      <section id="pricing" className="minimal-section minimal-trial">
+        <div className="minimal-trial-card">
+          <span className="minimal-label light">Getting started</span>
+          <h2>Start with a free trial.</h2>
+          <p>Every agency begins on a free trial — no card, no commitment. Book a demo, we'll show you Wandra around your workflow and set your workspace up for you.</p>
+          <ul>
+            <li><Icon name="check" size={13} /> Free trial for every new agency</li>
+            <li><Icon name="check" size={13} /> Guided setup by the Wandra team</li>
+            <li><Icon name="check" size={13} /> Your data, branding & inventory loaded in</li>
+          </ul>
+          <a href="#demo" className="minimal-price-button inverted"><Icon name="calendar" size={14} /> Book a demo</a>
+        </div>
       </section>
 
       <section id="demo" className="minimal-section minimal-demo">

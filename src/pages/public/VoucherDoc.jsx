@@ -32,7 +32,7 @@ export default function VoucherDoc() {
   return (
     <div className="pdf-root">
       <div className="pdf-toolbar no-print">
-        <span className="pdf-tb-name">{v.code} · {v.type} voucher</span>
+        <span className="pdf-tb-name">{v.code} · {v.type === 'Pass' ? 'Travel Pass' : `${v.type} voucher`}</span>
         <button className="pdf-tb-btn" onClick={download} disabled={busy}>{busy ? 'Preparing…' : 'Download PDF'}</button>
       </div>
 
@@ -40,7 +40,7 @@ export default function VoucherDoc() {
         <VoucherCard voucher={v} agency={agency} />
 
         <div className="vd-terms">
-          <strong>Please note:</strong> present this voucher at check-in / boarding. Valid only for the guest named above.
+          <strong>Please note:</strong> present this {v.type === 'Pass' ? 'pass at every check-in, transfer and activity on the trip' : 'voucher at check-in / boarding'}. Valid only for the guest named above.
           For any assistance contact {agency.name} — {agency.phone}.
         </div>
         <div className="pdf-powered">Powered by <strong>Wandra</strong></div>

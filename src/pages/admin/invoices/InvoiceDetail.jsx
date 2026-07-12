@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useApp, inr, DEFAULT_INVOICE_SETTINGS } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select } from '../../../components/ui/UI'
 import { AgencyLogo } from '../../../components/ui/AgencyBrand'
-import { downloadElementPdf } from '../../../utils/pdf'
+import { preloadAndDownload } from '../../../utils/pdf'
 import './invoice.css'
 
 export default function InvoiceDetail() {
@@ -13,7 +13,7 @@ export default function InvoiceDetail() {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const docRef = useRef(null)
-  const download = async () => { if (!docRef.current) return; setBusy(true); try { await downloadElementPdf(docRef.current, `${inv.code}.pdf`) } finally { setBusy(false) } }
+  const download = async () => { if (!docRef.current) return; setBusy(true); try { await preloadAndDownload(docRef.current, `${inv.code}.pdf`) } finally { setBusy(false) } }
   const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
   if (!inv) return <div>Invoice not found.</div>
   const client = clients.find((c) => c.id === inv.clientId)

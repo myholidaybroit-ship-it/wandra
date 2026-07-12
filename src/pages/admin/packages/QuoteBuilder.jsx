@@ -94,9 +94,18 @@ export default function QuoteBuilder() {
   const dayCity = (d) => cityForNight(q.sectors, Math.min(d, q.nights))
 
   /* ---------- option ops ---------- */
+  // options differ by HOTELS in most cases — a new option carries over the
+  // day-wise services, flights, extras & cab setup and only the stays start blank
+  const cloneExceptStays = (src, name) => ({
+    ...blankOption(name),
+    sameCab: src?.sameCab || false, sameCabId: src?.sameCabId || '', sameCabName: src?.sameCabName || '',
+    services: (src?.services || []).map((x) => ({ ...x, id: uid() })),
+    flights: (src?.flights || []).map((x) => ({ ...x, id: uid() })),
+    extras: (src?.extras || []).map((x) => ({ ...x, id: uid() })),
+  })
   const addOption = () => setQ((s) => {
     const star = STARS[Math.min(s.options.length, STARS.length - 1)]
-    return { ...s, options: [...s.options, blankOption(star)] }
+    return { ...s, options: [...s.options, cloneExceptStays(s.options[oi] || s.options[0], star)] }
   })
   const dupOption = () => setQ((s) => {
     const clone = { ...s.options[oi], id: uid(), stays: s.options[oi].stays.map((x) => ({ ...x, id: uid() })), services: s.options[oi].services.map((x) => ({ ...x, id: uid() })), flights: s.options[oi].flights.map((x) => ({ ...x, id: uid() })), extras: s.options[oi].extras.map((x) => ({ ...x, id: uid() })) }
@@ -114,7 +123,7 @@ export default function QuoteBuilder() {
   const saveOpts = () => {
     const newOptions = optDraft.map((d) => {
       const existing = q.options.find((o) => o.id === d.id)
-      return existing ? { ...existing, name: d.name || existing.name } : { ...blankOption(d.name || 'Option'), id: d.id }
+      return existing ? { ...existing, name: d.name || existing.name } : { ...cloneExceptStays(q.options[oi] || q.options[0], d.name || 'Option'), id: d.id }
     })
     setQ((s) => ({ ...s, options: newOptions }))
     setOi((cur) => Math.min(cur, newOptions.length - 1))

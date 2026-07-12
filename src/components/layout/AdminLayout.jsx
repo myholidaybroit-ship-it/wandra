@@ -20,6 +20,7 @@ const MASTER_DATA = [
   { to: '/app/activities', label: 'Activities', icon: 'gallery', feature: 'master.activities' },
   { to: '/app/packages/templates', label: 'Day-wise Plans', icon: 'file', feature: 'builder.templates' },
   { to: '/app/packages/inclusions', label: 'Incl. & Excl.', icon: 'check', feature: 'master.inclusions' },
+  { to: '/app/policies', label: 'Policies & Notes', icon: 'file', feature: 'branding.agency_profile' },
 ]
 const NAV_END = [
   { to: '/app/landing', label: 'Landing Page', icon: 'wand', feature: 'landing.builder' },
