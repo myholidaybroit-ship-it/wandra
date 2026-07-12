@@ -4,7 +4,7 @@ import './voucher-card.css'
 /* ------------------------------------------------------------------
    VoucherCard — ONE unified voucher/pass card for every type
    (hotel, transport/cab, activity/ticket, …). Rendered identically in
-   the admin list and on the public share page + PDF, so what the agent
+   the admin list and on the voucher / PDF view, so what the agent
    previews is exactly what the traveller receives on WhatsApp / email.
    The agency's own name & logo brand it — never "Wandra".
    ------------------------------------------------------------------ */

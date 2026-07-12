@@ -55,7 +55,6 @@ export default function PublicLayout() {
               <div className="foot-head">For Travelers</div>
               <Link className="foot-link" to="/inquiry">Plan a trip</Link>
               <Link className="foot-link" to="/stories/wandra">Traveler stories</Link>
-              <Link className="foot-link" to="/inv/INV-2026-0001">Pay an invoice</Link>
             </div>
             <div>
               <div className="foot-head">Company</div>

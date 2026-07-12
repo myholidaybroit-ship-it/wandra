@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '../../components/ui/icons'
+import { Sparkline, AreaChart, DonutChart } from '../../components/ui/UI'
 import './landing.css'
 
 /* ============================================================
@@ -215,7 +216,7 @@ export default function Landing() {
             {[
               ['Capture', 'Leads arrive from your site, ads and referrals — auto-assigned to your team.'],
               ['Build', 'Compose the trip once: day-wise plan, hotel options, transport, pricing.'],
-              ['Share', 'One link or PDF on WhatsApp — hotel choices and prices, beautifully laid out.'],
+              ['Send', 'As a WhatsApp message, an email, or a branded PDF — hotel choices and prices, beautifully laid out.'],
               ['Collect', 'Confirm the booking, invoice it, record payments, hand over the Travel Pass.'],
             ].map(([t, d], i) => (
               <li key={t} data-reveal style={{ transitionDelay: `${i * 90}ms` }}>
@@ -231,35 +232,36 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ================= SHARE / DARK ================= */}
+      {/* ================= SEND FORMATS / DARK ================= */}
       <section className="wl-section wl-dark">
         <span className="wl-orb wl-orb-c" data-parallax="0.4" />
         <div className="wl-dark-grid">
           <div className="wl-dark-copy" data-reveal>
-            <span className="wl-label light">Share anywhere</span>
-            <h2 className="wl-h2">One link.<br />Any phone.</h2>
+            <span className="wl-label light">Three ways to send</span>
+            <h2 className="wl-h2">WhatsApp,<br />email, or PDF.</h2>
             <p>
-              Every quote becomes a live page your client opens straight from WhatsApp — no app,
-              no download. They see the plan, the hotels and the price. You see it convert.
+              Send every quote the way your client prefers — a ready-made WhatsApp message,
+              a formatted email, or a branded PDF. Same beautiful layout, your logo on all three.
             </p>
             <div className="wl-checks">
-              <span><Icon name="check" size={14} /> Branded with your logo &amp; details</span>
-              <span><Icon name="check" size={14} /> Day-wise plan with photos</span>
-              <span><Icon name="check" size={14} /> PDF fallback, always under 1 MB</span>
+              <span><Icon name="check" size={14} /> Formatted WhatsApp message, ready to send</span>
+              <span><Icon name="check" size={14} /> Polished email with the full plan</span>
+              <span><Icon name="check" size={14} /> Branded PDF, always under 1 MB</span>
             </div>
           </div>
           <div className="wl-phone-wrap" data-parallax="0.2">
             <div className="wl-phone" data-reveal>
               <div className="wl-phone-notch" />
-              <div className="wl-phone-hero" style={{ '--phone-img': 'url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=560&q=62&auto=format&fit=crop")' }}>Kashmir · 6 days</div>
-              <div className="wl-phone-rows">
-                <div><strong>Day 1</strong><span>Arrival · Dal Lake shikara</span></div>
-                <div><strong>Day 2</strong><span>Gulmarg gondola</span></div>
-                <div><strong>Day 3</strong><span>Pahalgam valleys</span></div>
+              <div className="wl-phone-chat">
+                <div className="wl-chat-out">Here's your Kashmir itinerary ✈️</div>
+                <div className="wl-chat-media" style={{ '--phone-img': 'url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=560&q=62&auto=format&fit=crop")' }}>
+                  <span>Kashmir · 6 days</span>
+                </div>
+                <div className="wl-chat-file"><Icon name="file" size={15} /><div><strong>Kashmir-6D.pdf</strong><span>PDF · 0.8 MB</span></div></div>
+                <div className="wl-chat-out small">Day-wise plan, hotels &amp; price inside 👆</div>
               </div>
-              <div className="wl-phone-cta">View full itinerary</div>
             </div>
-            <div className="wl-bubble" data-reveal>Here's your itinerary — take a look! ✈️</div>
+            <div className="wl-bubble" data-reveal>Looks perfect — let's book it! 🙌</div>
           </div>
         </div>
       </section>
@@ -326,33 +328,85 @@ export default function Landing() {
   )
 }
 
-/* ================= product mock ================= */
+/* ================= product mock — mirrors the real Wandra dashboard ================= */
+const RAMP = ['#111113', '#3a3a40', '#71717a', '#9b9ba3', '#c9c9cf']
+const MONTHS = ['A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D', 'J', 'F', 'M']
+const GROSS = [180, 220, 260, 240, 300, 280, 340, 360, 320, 400, 380, 460]
+const COLLECTED = [140, 170, 210, 200, 250, 235, 290, 300, 275, 340, 330, 392]
+const LEAD_SOURCES = [
+  { label: 'Website', value: 34 }, { label: 'Instagram', value: 22 },
+  { label: 'Referral', value: 18 }, { label: 'WhatsApp', value: 14 }, { label: 'Walk-in', value: 8 },
+].map((s, i) => ({ ...s, color: RAMP[i % RAMP.length] }))
+
+const NAV = [
+  ['dashboard', 'Dashboard'], ['clients', 'Trips & Clients'], ['database', 'Master Data', true],
+  ['wand', 'Landing Page'], ['reports', 'Reports'], ['star', 'Reviews'],
+]
+const KPIS = [
+  { label: 'Total Revenue', value: '₹24,80,000', up: 12, spark: [9, 12, 11, 15, 14, 18, 20, 24] },
+  { label: 'Total Bookings', value: '34', up: 8, spark: [3, 4, 4, 6, 5, 7, 7, 9] },
+  { label: 'Active Packages', value: '28', up: 6, spark: [10, 12, 11, 14, 16, 15, 18, 20] },
+  { label: 'Total Clients', value: '96', up: 9, spark: [40, 48, 55, 60, 68, 74, 85, 96] },
+]
+
 function CrmDashboardMock() {
-  const nav = [['dashboard', 'Dashboard'], ['clients', 'Trips & Clients'], ['packages', 'Packages'], ['bookings', 'Bookings'], ['invoices', 'Invoices'], ['file', 'Travel Pass']]
-  const trips = [['Kashmir family trip', 'Rahul Sharma', 'Confirmed'], ['Dubai honeymoon', 'Aisha Travels', 'Quoted'], ['Ladakh group tour', 'Zoya Mir', 'Paid']]
   return (
     <div className="crm-screen">
       <aside className="crm-screen-sidebar">
         <img src="/brand/wandra-logo.png" alt="Wandra" />
-        {nav.map(([icon, label], index) => <span className={index === 0 ? 'active' : ''} key={label}><Icon name={icon} size={14} />{label}</span>)}
+        {NAV.map(([icon, label, group], i) => (
+          <span className={i === 0 ? 'active' : ''} key={label}>
+            <Icon name={icon} size={14} />{label}
+            {group && <Icon name="chevron" size={12} className="crm-side-chev" />}
+          </span>
+        ))}
         <div className="crm-screen-sidebar-bottom"><span><Icon name="settings" size={14} />Settings</span><span><Icon name="help" size={14} />Help &amp; Support</span></div>
       </aside>
       <div className="crm-screen-main">
-        <div className="crm-screen-top"><div className="crm-screen-search"><Icon name="search" size={14} />Search clients, packages, invoices...<kbd>⌘K</kbd></div><span>Growth <b>GT</b></span></div>
+        <div className="crm-screen-top"><div className="crm-screen-search"><Icon name="search" size={14} />Search clients, packages, invoices...<kbd>⌘K</kbd></div><span>Growth Travels <b>GT</b></span></div>
         <div className="crm-screen-body">
-          <div className="crm-screen-heading"><div><small>Dashboard</small><h3>Good morning, team</h3></div><span>Today</span></div>
-          <div className="crm-kpis"><Kpi label="Total package value" value="₹12,80,000" note="This month" /><Kpi label="Active trips" value="28" note="+12%" /><Kpi label="Pending payments" value="₹2.4L" note="8 invoices" /></div>
+          <div className="crm-kpis">
+            {KPIS.map((k) => (
+              <div className="crm-kpi" key={k.label}>
+                <span className="crm-kpi-l">{k.label}</span>
+                <b className="crm-kpi-v">{k.value}</b>
+                <div className="crm-kpi-foot">
+                  <span className="crm-kpi-delta">↑ {k.up}%</span>
+                  <Sparkline data={k.spark} color="#111113" w={92} h={28} />
+                </div>
+              </div>
+            ))}
+          </div>
           <div className="crm-panels">
-            <div className="crm-panel"><div className="crm-panel-title"><b>Package value</b><span>Last 30 days</span></div><div className="crm-chart"><i /><i /><i /><i /><b /></div></div>
-            <div className="crm-panel"><div className="crm-panel-title"><b>Upcoming trips</b><span>View all</span></div>{trips.map(([name, person, status], index) => <div className="crm-trip" key={name}><Icon name={index === 1 ? 'plane' : 'packages'} size={14} /><div><b>{name}</b><small>{person}</small></div><em>{status}</em></div>)}</div>
+            <div className="crm-panel">
+              <div className="crm-panel-head">
+                <div>
+                  <div className="crm-panel-kicker">Revenue trend · last 12 months</div>
+                  <div className="crm-panel-num">₹31.4L</div>
+                  <div className="crm-panel-sub">gross package value · ₹24.8L collected</div>
+                </div>
+                <div className="crm-legend"><span><i style={{ background: '#111113' }} />Gross</span><span><i style={{ background: '#71717a' }} />Collected</span></div>
+              </div>
+              <AreaChart labels={MONTHS} formatY={(v) => `${v}k`} formatV={(v) => `₹${v}k`}
+                series={[{ name: 'Gross', data: GROSS, color: '#111113', fill: false }, { name: 'Collected', data: COLLECTED, color: '#71717a' }]} h={172} />
+            </div>
+            <div className="crm-panel">
+              <div className="crm-panel-title"><b>Lead Sources</b></div>
+              <div className="crm-donut-row">
+                <DonutChart segments={LEAD_SOURCES} size={112} thickness={18} centerLabel="leads" />
+                <div className="crm-donut-legend">
+                  {LEAD_SOURCES.map((s) => (
+                    <div key={s.label}><i style={{ background: s.color }} /><span>{s.label}</span><em>{s.value}</em></div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   )
 }
-
-function Kpi({ label, value, note }) { return <div className="crm-kpi"><span>{label}</span><b>{value}</b><small>{note}</small></div> }
 
 function ItineraryMock() {
   return <div className="mini-screen itinerary-mini"><div className="mini-screen-head"><span><Icon name="packages" size={13} /> PKG-2026-0042</span><em>Draft</em></div><div className="mini-itinerary-body"><div className="mini-days"><b>Day 1</b><span>Day 2</span><span>Day 3</span></div><div className="mini-itinerary-content"><small>DAY 1 · ARRIVAL</small><h3>Welcome to Srinagar</h3>{[['Hotel options', 'Room type and selling price', 'hotels'], ['Airport transfer', 'Private cab · driver details', 'cabs'], ['Sightseeing', 'Dal Lake · Mughal Gardens', 'gallery']].map(([title, text, icon]) => <div className="mini-row" key={title}><Icon name={icon} size={13} /><div><b>{title}</b><span>{text}</span></div><Icon name="chevron" size={13} /></div>)}</div></div></div>

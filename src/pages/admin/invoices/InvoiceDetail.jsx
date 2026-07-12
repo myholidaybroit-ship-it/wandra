@@ -35,7 +35,6 @@ export default function InvoiceDetail() {
         actions={<>
           <Link to="/app/invoices"><Button variant="secondary" size="sm">← Back</Button></Link>
           <Button variant="secondary" size="sm" onClick={download} disabled={busy}>{busy ? 'Preparing…' : 'Download PDF'}</Button>
-          <Link to={`/inv/${inv.code}`} target="_blank"><Button variant="secondary" size="sm">Share Link ↗</Button></Link>
           <Button size="sm" onClick={() => setOpen(true)}>+ Record Payment</Button>
         </>} />
 
