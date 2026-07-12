@@ -229,6 +229,12 @@
 .public-foot-inner { max-width: var(--container-max); margin: 0 auto; }
 .public-foot-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: var(--space-section-sm); }
 .foot-tagline { font-size: 14px; color: var(--color-muted); margin-top: 10px; max-width: 300px; line-height: 1.5; }
+
+/* minimal footer — logo, one line, copyright */
+.foot-min { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
+.foot-min .logo-foot { height: 64px; }
+.foot-min .foot-tagline { margin-top: 0; max-width: 460px; }
+.foot-copy { font-size: 12.5px; color: var(--color-muted); }
 .foot-social { display: flex; gap: 10px; }
 .foot-social-dot {
   width: 36px; height: 36px; border-radius: var(--radius-full);
