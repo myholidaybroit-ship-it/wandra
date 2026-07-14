@@ -133,7 +133,7 @@ export default function QuoteBuilder() {
   /* ---------- copy-to-option modal ---------- */
   const [copyModal, setCopyModal] = useState(false)
   const [copyState, setCopyState] = useState(null)
-  const openCopyModal = () => { setCopyState({ target: '__new__', mode: 'hotels', mealPlan: 'MAP', replacements: {} }); setCopyModal(true) }
+  const openCopyModal = () => { setCopyState({ target: '__new__', mode: 'hotels', mealPlan: 'CP', replacements: {} }); setCopyModal(true) }
   const applyCopy = () => {
     const src = opt
     const copyStays = src.stays.map((st) => {
@@ -1157,7 +1157,7 @@ function blankOption(name) {
   return { id: uid(), name, sameCab: false, sameCabId: '', sameCabName: '', stays: [], services: [], flights: [], extras: [], sellingOverride: '' }
 }
 function blankStay(q, opt) {
-  return { id: uid(), nights: [], hotelId: '', hotelName: '', hotelCity: '', hotelStar: '', hotelImage: '', hotelDescription: '', mealPlan: 'MAP', roomType: 'Deluxe', paxPerRoom: 2, rooms: q.rooms || 1, aweb: 0, cweb: 0, cnb: 0, awebRate: 0, cwebRate: 0, cnbRate: 0, compChild: COMP_CHILD[1], rate: '', given: '' }
+  return { id: uid(), nights: [], hotelId: '', hotelName: '', hotelCity: '', hotelStar: '', hotelImage: '', hotelDescription: '', mealPlan: 'CP', roomType: 'Deluxe', paxPerRoom: 2, rooms: q.rooms || 1, aweb: 0, cweb: 0, cnb: 0, awebRate: 0, cwebRate: 0, cnbRate: 0, compChild: COMP_CHILD[1], rate: '', given: '' }
 }
 function blankService(kind, opt, q) {
   return { id: uid(), kind, days: [], location: '', serviceType: kind === 'transport' ? 'Arrival Transfer' : '', description: '', durationMins: '', qty: kind === 'activity' ? (num(q.adults) || 1) : 1, cabId: opt.sameCabId || '', cabName: opt.sameCabName || '', rate: '', given: '' }
@@ -1248,7 +1248,7 @@ function fromLegacy(pkg, presets) {
   ;(pkg.hotelsAlloc || []).forEach((h) => {
     const last = stays[stays.length - 1]
     if (last && last.hotelName === h.name && last.roomType === h.roomType) last.nights.push(h.night)
-    else stays.push({ id: uid(), nights: [h.night], hotelId: h.hotelId || '', hotelName: h.name, hotelCity: h.city || '', hotelStar: h.star || '', hotelImage: h.image || '', hotelDescription: h.description || '', mealPlan: h.mealPlan || 'MAP', roomType: h.roomType || 'Deluxe', paxPerRoom: 2, rooms: 1, aweb: 0, cweb: 0, cnb: 0, compChild: COMP_CHILD[1], rate: String(h.net || 0), given: String(h.price || 0) })
+    else stays.push({ id: uid(), nights: [h.night], hotelId: h.hotelId || '', hotelName: h.name, hotelCity: h.city || '', hotelStar: h.star || '', hotelImage: h.image || '', hotelDescription: h.description || '', mealPlan: h.mealPlan || 'CP', roomType: h.roomType || 'Deluxe', paxPerRoom: 2, rooms: 1, aweb: 0, cweb: 0, cnb: 0, compChild: COMP_CHILD[1], rate: String(h.net || 0), given: String(h.price || 0) })
   })
   const services = (pkg.cabs || []).map((c) => ({ id: uid(), kind: 'transport', days: c.days || [1], location: c.name || 'Transfer', serviceType: c.serviceType || 'Sightseeing', durationMins: '', qty: 1, cabId: c.cabId || '', cabName: c.type || '', rate: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))), given: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))) }))
   const extras = (pkg.categories || []).map((cat) => ({ id: uid(), name: cat.name, note: cat.description || '', cost: '', sell: String(cat.amount || 0) }))
