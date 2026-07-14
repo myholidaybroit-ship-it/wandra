@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useApp } from '../../store/AppContext'
 
 /* ============================================================
@@ -20,9 +21,28 @@ function prettyDate(iso) {
 export default function RenewalBanner() {
   const { agency, plans, respondRenewal } = useApp()
   const [done, setDone] = useState(null) // 'accepted' | 'declined'
+  const [trialHidden, setTrialHidden] = useState(false)
 
   const renewal = agency?.renewal
   const requested = renewal?.status === 'requested'
+
+  // ── free-trial countdown (Free plan only) — nudges them to upgrade before it ends ──
+  const trial = agency?.trial
+  if (trial?.onTrial && !trial.expired && !requested && !done && !trialHidden) {
+    const soon = trial.daysLeft <= 2
+    return (
+      <div style={S.wrap}>
+        <div style={{ ...S.bar, ...(soon ? S.barWarn : {}) }}>
+          <span style={{ ...S.dot, background: soon ? '#fff' : '#f8b84f' }} />
+          <span style={S.msg}>
+            <strong>{trial.daysLeft} day{trial.daysLeft === 1 ? '' : 's'} left</strong> in your free trial{trial.endsAt ? <> — ends {prettyDate(String(trial.endsAt).slice(0, 10))}</> : null}. Upgrade to Pro to keep your account active.
+          </span>
+          <Link to="/app/upgrade" style={{ ...S.btn, ...S.yes, textDecoration: 'none' }}>Upgrade to Pro</Link>
+          <button style={S.dismiss} onClick={() => setTrialHidden(true)}>Dismiss</button>
+        </div>
+      </div>
+    )
+  }
   const pro = plans?.find((p) => p.id === 'pro') || {}
   const proPrice = Number(pro.price) || 999
   const billedYearly = (pro.billingCycle || 'yearly') === 'yearly'
@@ -74,6 +94,7 @@ const S = {
   },
   barOk: { background: 'var(--color-success, #16a34a)' },
   barNo: { background: 'var(--color-charcoal, #2e2e33)' },
+  barWarn: { background: 'var(--color-danger, #c2410c)' },
   dot: { width: 8, height: 8, borderRadius: 9999, background: '#f8b84f', flex: '0 0 auto' },
   msg: { flex: 1, minWidth: 220, fontSize: 14, fontWeight: 500 },
   btn: { border: 'none', cursor: 'pointer', borderRadius: 9999, padding: '9px 18px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' },
