@@ -31,8 +31,14 @@ function fmtD(iso, opts = { day: '2-digit', month: 'short', year: 'numeric' }) {
 function addDays(iso, n) {
   if (!iso) return ''
   const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
+  // format in LOCAL time — toISOString() shifts to UTC and lands a day early for IST
+  const p = (x) => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
+/* The day summary (d.desc) is built from the day's service names + descriptions,
+   so printing each service's description again in its card repeats the same text.
+   Only show a card description the day summary doesn't already contain. */
+const dedupeDesc = (dayDesc, text) => (text && dayDesc && dayDesc.includes(text) ? '' : text)
 /* per-destination inclusion / exclusion groups (falls back to the flat lists) */
 function ieGroupsOf(pkg) {
   const raw = (pkg.inclusionGroups && pkg.inclusionGroups.length)
@@ -355,7 +361,9 @@ function FlightTable({ m }) {
         <div className="pdf-tickets">
           {tickets.map((f, i) => (
             <figure className="pdf-ticket" key={i}>
-              <img className="pdf-ticket-img" src={f.ticketImg} alt="Flight ticket" />
+              {/* div + background-image (contain) — html2canvas ignores <img object-fit>
+                  and stretches the ticket screenshot; a background keeps the true aspect. */}
+              <Img src={f.ticketImg} className="pdf-ticket-img" />
               <figcaption>{(f.fromCode || f.fromCity || 'Flight')} → {(f.toCode || f.toCity || '')} · fare / ticket</figcaption>
             </figure>
           ))}
@@ -372,7 +380,7 @@ function DaySvc({ d }) {
         <span className="pdf-svc-k">Transfer</span>
         {t.image && <Img src={t.image} className="pdf-svc-img" />}
         <div><strong>{t.location || '—'}</strong>{t.serviceType ? ` · ${t.serviceType}` : ''}{t.cabName ? ` · ${t.cabName}` : ''}
-          {t.description && <div className="pdf-svc-desc">{t.description}</div>}</div>
+          {dedupeDesc(d.desc, t.description) && <div className="pdf-svc-desc">{dedupeDesc(d.desc, t.description)}</div>}</div>
       </div>
     ))}
     {d.activities.map((a, i) => (
@@ -380,7 +388,7 @@ function DaySvc({ d }) {
         <span className="pdf-svc-k">Activity</span>
         {a.image && <Img src={a.image} className="pdf-svc-img" />}
         <div><strong>{a.location || '—'}</strong>{a.serviceType ? ` · ${a.serviceType}` : ''}
-          {a.description && <div className="pdf-svc-desc">{a.description}</div>}</div>
+          {dedupeDesc(d.desc, a.description) && <div className="pdf-svc-desc">{dedupeDesc(d.desc, a.description)}</div>}</div>
       </div>
     ))}
   </>
@@ -777,7 +785,7 @@ function Holiday({ m, cfg }) {
             {d.transfers.map((t, i) => (
               <div className={`hd-tr ${t.image && cfg.showDayImages ? 'has-img' : ''}`} key={`t${i}`}>
                 {t.image && cfg.showDayImages ? <Img src={t.image} className="hd-tr-img" /> : <span className="hd-tr-ic"></span>}
-                <span><strong>{t.location || 'Transfer'}</strong>{t.serviceType ? ` · ${t.serviceType}` : ''}{t.description && <div className="hd-tr-d">{t.description}</div>}</span>
+                <span><strong>{t.location || 'Transfer'}</strong>{t.serviceType ? ` · ${t.serviceType}` : ''}{dedupeDesc(d.desc, t.description) && <div className="hd-tr-d">{dedupeDesc(d.desc, t.description)}</div>}</span>
               </div>
             ))}
             {d.activities.map((a, i) => (
@@ -785,7 +793,7 @@ function Holiday({ m, cfg }) {
                 {cfg.showDayImages && <Img src={a.image} className="hd-act-img">{!a.image && <span>{(a.location || '').slice(0, 1)}</span>}</Img>}
                 <div className="hd-act-b">
                   <div className="hd-act-t">{a.location || 'Activity'}</div>
-                  {a.description && <p className="hd-act-p">{a.description}</p>}
+                  {dedupeDesc(d.desc, a.description) && <p className="hd-act-p">{dedupeDesc(d.desc, a.description)}</p>}
                   <div className="hd-act-note">✓ {a.serviceType || 'Included as per itinerary'}</div>
                 </div>
               </div>
@@ -937,15 +945,15 @@ function Coastal({ m, cfg }) {
                 {d.transfers.map((t, i) => (t.image && cfg.showDayImages ? (
                   <div className="cs-item" key={`t${i}`}>
                     <Img src={t.image} className="cs-item-img" />
-                    <div className="cs-item-b"><strong>Transfer · {t.location || '—'}</strong>{t.description && <p>{t.description}</p>}</div>
+                    <div className="cs-item-b"><strong>Transfer · {t.location || '—'}</strong>{dedupeDesc(d.desc, t.description) && <p>{dedupeDesc(d.desc, t.description)}</p>}</div>
                   </div>
-                ) : <p className="cs-line" key={`t${i}`}><strong>Transfer:</strong> {t.location || '—'}{t.description ? ` — ${t.description}` : ''}</p>))}
+                ) : <p className="cs-line" key={`t${i}`}><strong>Transfer:</strong> {t.location || '—'}{dedupeDesc(d.desc, t.description) ? ` — ${dedupeDesc(d.desc, t.description)}` : ''}</p>))}
                 {d.activities.map((a, i) => (a.image && cfg.showDayImages ? (
                   <div className="cs-item" key={`a${i}`}>
                     <Img src={a.image} className="cs-item-img" />
-                    <div className="cs-item-b"><strong>{a.location || 'Activity'}</strong>{(a.description || a.serviceType) && <p>{a.description || a.serviceType}</p>}</div>
+                    <div className="cs-item-b"><strong>{a.location || 'Activity'}</strong>{(dedupeDesc(d.desc, a.description) || a.serviceType) && <p>{dedupeDesc(d.desc, a.description) || a.serviceType}</p>}</div>
                   </div>
-                ) : <p className="cs-line" key={`a${i}`}><strong>{a.location || 'Activity'}:</strong> {a.description || a.serviceType || 'Included as per itinerary'}</p>))}
+                ) : <p className="cs-line" key={`a${i}`}><strong>{a.location || 'Activity'}:</strong> {dedupeDesc(d.desc, a.description) || a.serviceType || 'Included as per itinerary'}</p>))}
                 {d.meal && <p className="cs-line"><strong>Meals:</strong> {d.meal}</p>}
               </>
             })()}

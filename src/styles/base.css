@@ -81,6 +81,7 @@ code, pre, .mono { font-family: var(--font-mono); }
 .flex-1 { flex: 1; }
 .grow { flex-grow: 1; }
 .center { align-items: center; justify-content: center; }
+.end { justify-content: flex-end; }
 .mt-xs { margin-top: var(--space-xs); }
 .mt-sm { margin-top: var(--space-sm); }
 .mt-base { margin-top: var(--space-md); }

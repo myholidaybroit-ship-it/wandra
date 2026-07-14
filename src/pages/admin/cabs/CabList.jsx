@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, PillSelect, DataTable, Badge, ListSearch } from '../../../components/ui/UI'
+import { PageHeader, Button, PillSelect, DataTable, Badge, ListSearch, ConfirmDelete } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 
 export default function CabList() {
-  const { cabs } = useApp()
+  const { cabs, removeCab, toast } = useApp()
   const [q, setQ] = useState('')
   const [type, setType] = useState('All Types')
   const rows = cabs.filter((c) => (type === 'All Types' || c.type === type) && (c.name + c.contact).toLowerCase().includes(q.toLowerCase()))
@@ -27,7 +27,12 @@ export default function CabList() {
     { key: 'ratePerDay', head: 'Rate / Day', align: 'right', render: (r) => <span className="cell-strong">{inr(r.ratePerDay || 0)}</span> },
     { key: 'contact', head: 'Contact', render: (r) => <span className="cell-sub">{r.contact}</span> },
     { key: 'status', head: 'Status', render: (r) => <Badge tone={r.status}>{r.status}</Badge> },
-    { key: 'actions', head: '', align: 'right', render: (r) => <Link to={`/app/cabs/${r.id}`}><Button variant="secondary" size="sm">View</Button></Link> },
+    { key: 'actions', head: '', align: 'right', render: (r) => (
+      <div className="row gap-xs end">
+        <Link to={`/app/cabs/${r.id}`}><Button variant="secondary" size="sm">View</Button></Link>
+        <ConfirmDelete what={r.name} onConfirm={async () => { await removeCab(r.id); toast('Cab type deleted') }} />
+      </div>
+    ) },
   ]
   return (
     <div>

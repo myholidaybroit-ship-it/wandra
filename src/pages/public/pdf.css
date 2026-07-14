@@ -30,7 +30,7 @@
 /* flight ticket / fare screenshots — shown full (contain) in a proper 16:9 frame */
 .pdf-tickets { display: flex; flex-wrap: wrap; gap: 8mm; margin: 6px 0 14px; }
 .pdf-ticket { margin: 0; }
-.pdf-ticket-img { display: block; width: 150mm; height: 84mm; object-fit: contain; background: #f4f4f6; border: 1px solid #d8d8de; border-radius: 6px; }
+.pdf-ticket-img { display: block; width: 150mm; height: 84mm; background-size: contain !important; background-color: #f4f4f6 !important; background-position: center !important; background-repeat: no-repeat !important; border: 1px solid #d8d8de; border-radius: 6px; }
 .pdf-ticket figcaption { font-size: 9.5px; color: #5a5a66; margin-top: 4px; }
 .pdf-table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin: 8px 0 14px; }
 .pdf-table th, .pdf-table td { border: 1px solid #cfcfd6; padding: 5px 8px; text-align: left; vertical-align: top; }
@@ -44,7 +44,7 @@
 .pdf-sign { margin-top: 22px; font-size: 11px; line-height: 1.5; }
 .pdf-sign-t { font-weight: 700; }
 .pdf-sign-n { font-weight: 700; font-size: 12.5px; margin-top: 2px; }
-.pdf-sign-logo { display: block; width: 92px; height: 52px; object-fit: contain; object-position: left center; margin: 5px 0 4px; }
+.pdf-sign-logo { display: block; width: auto; height: auto; max-width: 92px; max-height: 52px; object-fit: contain; object-position: left center; margin: 5px 0 4px; }
 .pdf-sign.light .pdf-sign-logo { filter: brightness(0) invert(1); }
 .pdf-hotel-block { margin-bottom: 6px; }
 .pdf-opt-name { font-size: 11.5px; font-weight: 700; margin: 8px 0 2px; }
@@ -88,7 +88,7 @@
 
 /* ================= V1 Classic ================= */
 .pdf-classic .cl-head { display: flex; gap: 16px; align-items: center; }
-.pdf-classic .cl-logo { width: 54px; height: 44px; object-fit: contain; flex-shrink: 0; }
+.pdf-classic .cl-logo { width: auto; height: auto; max-width: 54px; max-height: 44px; object-fit: contain; flex-shrink: 0; }
 .pdf-classic .cl-head-mid { flex: 1; text-align: center; }
 .pdf-classic .cl-title { color: #c00000; font-size: 22px; font-weight: 800; letter-spacing: .3px; }
 .pdf-classic .cl-meta { font-size: 10.5px; margin-top: 2px; }
@@ -156,7 +156,7 @@
 /* ================= V3 Mono ================= */
 .pdf-mono { color: #111113; }
 .pdf-mono .mn-cover { display: flex; flex-direction: column; justify-content: center; }
-.pdf-mono .mn-logo { width: 49px; height: 40px; object-fit: contain; align-self: flex-start; margin-bottom: 26mm; flex-shrink: 0; }
+.pdf-mono .mn-logo { width: auto; height: auto; max-width: 49px; max-height: 40px; object-fit: contain; align-self: flex-start; margin-bottom: 26mm; flex-shrink: 0; }
 .pdf-mono .mn-kicker { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #6a6a74; }
 .pdf-mono .mn-title { font-size: 46px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.05; margin: 8px 0 10px; }
 .pdf-mono .mn-sub { font-size: 14px; color: #4a4a52; }
@@ -183,7 +183,7 @@
 .pdf-luxe .lx-cover { position: relative; }
 .pdf-luxe .lx-cover-bg { position: absolute; inset: 0; opacity: .55; }
 .pdf-luxe .lx-frame { position: relative; background: rgba(14, 14, 18, .5); border: 1px solid #b99b5f; height: 100%; min-height: 260mm; padding: 22mm 16mm; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; }
-.pdf-luxe .lx-logo { width: 49px; height: 40px; object-fit: contain; filter: brightness(0) invert(1); opacity: .9; margin-bottom: 18mm; flex-shrink: 0; }
+.pdf-luxe .lx-logo { width: auto; height: auto; max-width: 49px; max-height: 40px; object-fit: contain; filter: brightness(0) invert(1); opacity: .9; margin-bottom: 18mm; flex-shrink: 0; }
 .pdf-luxe .lx-kicker { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #b99b5f; }
 .pdf-luxe .lx-client { font-size: 16px; margin: 8px 0 16px; }
 .pdf-luxe .lx-title { font-family: Georgia, 'Times New Roman', serif; font-size: 40px; font-weight: 500; letter-spacing: .5px; line-height: 1.15; }
@@ -261,7 +261,7 @@
 .pdf-holiday.cover-framed .hd-hero-img { min-height: 88mm; border-radius: var(--pdf-radius); border: 4px solid var(--pdf-paper); box-shadow: 0 0 0 1px var(--pdf-line); }
 .pdf-holiday.cover-postcard .hd-hero-img { min-height: 80mm; border-radius: var(--pdf-radius) var(--pdf-radius) 0 0; }
 .pdf-holiday .hd-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.pdf-holiday .hd-logo { width: 78px; height: 58px; object-fit: contain; object-position: left center; filter: brightness(0) invert(1); }
+.pdf-holiday .hd-logo { width: auto; height: auto; max-width: 78px; max-height: 58px; object-fit: contain; object-position: left center; filter: brightness(0) invert(1); }
 .pdf-holiday .hd-hero-kicker { font-size: 9.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 6px 12px; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; backdrop-filter: blur(2px); }
 .pdf-holiday .hd-hero-btm { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
 .pdf-holiday .hd-hero-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .5px; opacity: .95; text-shadow: 0 1px 8px rgba(0,0,0,.5); }
@@ -360,7 +360,7 @@
 
 /* ================= COASTAL ================= */
 .pdf-coastal .cs-brandbar { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--pdf-accent); padding-bottom: 12px; margin-bottom: 16px; }
-.pdf-coastal .cs-logo { width: 58px; height: 46px; object-fit: contain; }
+.pdf-coastal .cs-logo { width: auto; height: auto; max-width: 58px; max-height: 46px; object-fit: contain; }
 .pdf-coastal .cs-brand-r { text-align: right; font-size: 10px; color: var(--pdf-ink-faint); line-height: 1.5; }
 .pdf-coastal .cs-letter { margin-bottom: 4px; }
 .pdf-coastal .cs-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--pdf-accent); }

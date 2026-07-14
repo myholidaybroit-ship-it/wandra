@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useApp, inr, DEFAULT_INVOICE_SETTINGS } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select } from '../../../components/ui/UI'
 import { AgencyLogo } from '../../../components/ui/AgencyBrand'
+import { PayTo } from '../../../components/ui/PayTo'
 import { preloadAndDownload } from '../../../utils/pdf'
 import './invoice.css'
 
@@ -67,6 +68,7 @@ export default function InvoiceDetail() {
             <div className="fin-line"><span className="c-success">Paid</span><span className="c-success">{inr(paid)}</span></div>
             <div className="fin-line"><span className="c-error">Balance</span><span className="c-error">{inr(total - paid)}</span></div>
           </div>
+          <PayTo agency={agency} />
           {(invSettings.terms || invSettings.footer) && (
             <div className="inv-terms">
               {invSettings.terms && <div><strong>Payment Terms</strong><p>{invSettings.terms}</p></div>}

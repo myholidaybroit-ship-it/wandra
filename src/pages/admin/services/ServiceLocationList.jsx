@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, PillSelect, ListSearch, Textarea } from '../../../components/ui/UI'
-import { Icon } from '../../../components/ui/icons'
+import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, PillSelect, ListSearch, Textarea, ConfirmDelete, DestGroup, groupByDestination } from '../../../components/ui/UI'
 import { downloadCsv } from '../../../utils/csv'
 import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
@@ -11,10 +10,11 @@ const optionalMins = (v) => Number(v) > 0 ? `${Number(v)} mins` : '—'
 const optionalNumber = (v) => String(v ?? '').trim() === '' ? null : Number(v) || 0
 
 export default function ServiceLocationList() {
-  const { serviceLocations, destinations, updateServiceLocation, toast } = useApp()
+  const { serviceLocations, destinations, updateServiceLocation, removeServiceLocation, toast } = useApp()
   const [q, setQ] = useState('')
   const [edit, setEdit] = useState(null)
   const rows = serviceLocations.filter((s) => (s.name + (s.city || '') + s.serviceType + (s.destination || '')).toLowerCase().includes(q.toLowerCase()))
+  const groups = groupByDestination(rows, destinations)
 
   const exportCsv = () => downloadCsv('service-locations',
     ['Route', 'Destination', 'Service type', 'Duration (mins)', 'City', 'Cost', 'Selling'],
@@ -32,13 +32,17 @@ export default function ServiceLocationList() {
         <span className="cell-strong">{r.name}</span>
       </div>
     ) },
-    { key: 'destination', head: 'Destination', render: (r) => <span className="cell-sub">{r.destination || '—'}</span> },
     { key: 'serviceType', head: 'Service type', render: (r) => <Badge tone="info">{r.serviceType}</Badge> },
     { key: 'duration', head: 'Duration', render: (r) => optionalMins(r.durationMins) },
     { key: 'city', head: 'City', render: (r) => <span className="cell-sub">{r.city || '—'}</span> },
     { key: 'cost', head: 'Cost', align: 'right', render: (r) => <span className="cell-sub">{inr(r.cost || 0)}</span> },
     { key: 'sell', head: 'Selling', align: 'right', render: (r) => <span className="cell-strong">{inr(r.sell || 0)}</span> },
-    { key: 'actions', head: '', align: 'right', render: (r) => <Button variant="secondary" size="sm" onClick={() => setEdit({ ...r })}>Edit</Button> },
+    { key: 'actions', head: '', align: 'right', render: (r) => (
+      <div className="row gap-xs end">
+        <Button variant="secondary" size="sm" onClick={() => setEdit({ ...r })}>Edit</Button>
+        <ConfirmDelete what={r.name} onConfirm={async () => { await removeServiceLocation(r.id); toast('Transport route deleted') }} />
+      </div>
+    ) },
   ]
   return (
     <div>
@@ -47,7 +51,13 @@ export default function ServiceLocationList() {
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search by route, type, city…" count={rows.length} />
       </div>
-      <DataTable columns={columns} rows={rows} empty="No transport routes yet." />
+      {groups.map((g) => (
+        <DestGroup key={g.key} name={g.name} location={g.location} image={g.image} count={g.records.length}
+          actions={<Link to={`/app/services/new${g.key !== '__none__' ? `?destination=${encodeURIComponent(g.name)}` : ''}`}><Button variant="secondary" size="sm">+ Add here</Button></Link>}>
+          <DataTable columns={columns} rows={g.records} />
+        </DestGroup>
+      ))}
+      {groups.length === 0 && <DataTable columns={columns} rows={[]} empty="No transport routes yet." />}
 
       <Modal open={!!edit} onClose={() => setEdit(null)} title="Edit Transport" width={560}
         footer={<><Button variant="tertiary" onClick={() => setEdit(null)}>Cancel</Button><Button onClick={save}>Save</Button></>}>

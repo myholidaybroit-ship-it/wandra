@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, Textarea, ListSearch, PillSelect } from '../../../components/ui/UI'
-import { Icon } from '../../../components/ui/icons'
+import { PageHeader, Button, Field, Input, DataTable, Badge, Modal, Textarea, ListSearch, PillSelect, ConfirmDelete, DestGroup, groupByDestination } from '../../../components/ui/UI'
 import { downloadCsv } from '../../../utils/csv'
 import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
@@ -10,10 +9,11 @@ const optionalMins = (v) => Number(v) > 0 ? `${Number(v)} mins` : '—'
 const optionalNumber = (v) => String(v ?? '').trim() === '' ? null : Number(v) || 0
 
 export default function ActivityList() {
-  const { activities, destinations, updateActivity, toast } = useApp()
+  const { activities, destinations, updateActivity, removeActivity, toast } = useApp()
   const [q, setQ] = useState('')
   const [edit, setEdit] = useState(null)
   const rows = activities.filter((a) => (a.name + a.category + (a.city || '') + (a.destination || '')).toLowerCase().includes(q.toLowerCase()))
+  const groups = groupByDestination(rows, destinations)
 
   const exportCsv = () => downloadCsv('activities',
     ['Activity', 'Destination', 'Category', 'City', 'Duration (mins)', 'Cost', 'Selling', 'Description'],
@@ -31,11 +31,15 @@ export default function ActivityList() {
         <div><span className="cell-strong">{r.name}</span><div className="cell-sub">{r.city || '—'} · {optionalMins(r.durationMins)}</div></div>
       </div>
     ) },
-    { key: 'destination', head: 'Destination', render: (r) => <span className="cell-sub">{r.destination || '—'}</span> },
     { key: 'category', head: 'Category', render: (r) => <Badge tone="neutral">{r.category}</Badge> },
     { key: 'cost', head: 'Cost', align: 'right', render: (r) => <span className="cell-sub">{inr(r.cost)}</span> },
     { key: 'sell', head: 'Selling', align: 'right', render: (r) => <span className="cell-strong">{inr(r.sell)}</span> },
-    { key: 'actions', head: '', align: 'right', render: (r) => <Button variant="secondary" size="sm" onClick={() => setEdit({ ...r })}>Edit</Button> },
+    { key: 'actions', head: '', align: 'right', render: (r) => (
+      <div className="row gap-xs end">
+        <Button variant="secondary" size="sm" onClick={() => setEdit({ ...r })}>Edit</Button>
+        <ConfirmDelete what={r.name} onConfirm={async () => { await removeActivity(r.id); toast('Activity deleted') }} />
+      </div>
+    ) },
   ]
   return (
     <div>
@@ -44,7 +48,13 @@ export default function ActivityList() {
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search by name, category, city…" count={rows.length} />
       </div>
-      <DataTable columns={columns} rows={rows} empty="No activities yet." />
+      {groups.map((g) => (
+        <DestGroup key={g.key} name={g.name} location={g.location} image={g.image} count={g.records.length}
+          actions={<Link to={`/app/activities/new${g.key !== '__none__' ? `?destination=${encodeURIComponent(g.name)}` : ''}`}><Button variant="secondary" size="sm">+ Add here</Button></Link>}>
+          <DataTable columns={columns} rows={g.records} />
+        </DestGroup>
+      ))}
+      {groups.length === 0 && <DataTable columns={columns} rows={[]} empty="No activities yet." />}
 
       <Modal open={!!edit} onClose={() => setEdit(null)} title="Edit Activity" width={620}
         footer={<><Button variant="tertiary" onClick={() => setEdit(null)}>Cancel</Button><Button onClick={save}>Save</Button></>}>

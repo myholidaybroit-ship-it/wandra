@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
 import { PageHeader, Card, Button, Field, Input, Textarea, PillSelect } from '../../../components/ui/UI'
 import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
@@ -9,7 +9,8 @@ const optionalNumber = (v) => String(v ?? '').trim() === '' ? null : Number(v) |
 export default function ActivityCreate() {
   const { addActivity, destinations, toast } = useApp()
   const nav = useNavigate()
-  const [f, setF] = useState({ name: '', destination: '', category: '', city: '', durationMins: '', cost: '', sell: '', description: '', image: '', gallery: [] })
+  const [params] = useSearchParams()
+  const [f, setF] = useState({ name: '', destination: params.get('destination') || '', category: '', city: '', durationMins: '', cost: '', sell: '', description: '', image: '', gallery: [] })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
     if (!f.name) return toast('Activity name is required')

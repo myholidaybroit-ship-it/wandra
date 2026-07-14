@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
-import { PageHeader, Button, DataTable, Badge, PillSelect, ListSearch } from '../../../components/ui/UI'
+import { PageHeader, Button, DataTable, Badge, PillSelect, ListSearch, ConfirmDelete } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 
 export default function DestinationList() {
-  const { destinations } = useApp()
+  const { destinations, removeDestination, toast } = useApp()
   const [q, setQ] = useState('')
   const [type, setType] = useState('All')
   const rows = destinations.filter((d) =>
@@ -26,7 +26,12 @@ export default function DestinationList() {
     ) },
     { key: 'type', head: 'Type', render: (r) => <Badge tone={r.type === 'International' ? 'info' : 'neutral'}>{r.type || 'Domestic'}</Badge> },
     { key: 'features', head: 'Features & Specialties', render: (r) => <span className="cell-sub">{r.features}</span> },
-    { key: 'actions', head: '', align: 'right', render: (r) => <Link to={`/app/destinations/${r.id}`}><Button variant="secondary" size="sm">View</Button></Link> },
+    { key: 'actions', head: '', align: 'right', render: (r) => (
+      <div className="row gap-xs end">
+        <Link to={`/app/destinations/${r.id}`}><Button variant="secondary" size="sm">View</Button></Link>
+        <ConfirmDelete what={r.name} onConfirm={async () => { await removeDestination(r.id); toast('Destination deleted') }} />
+      </div>
+    ) },
   ]
   return (
     <div>

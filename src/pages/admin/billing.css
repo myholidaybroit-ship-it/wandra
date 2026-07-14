@@ -19,6 +19,20 @@
 .bl-cur-bar { display: block; height: 100%; border-radius: var(--radius-full); background: var(--color-ink); }
 .bl-offer { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: var(--color-success-text); background: var(--color-success-bg); border: 1px solid var(--color-success); border-radius: var(--radius-full); padding: 6px 14px; white-space: nowrap; }
 
+/* live plan usage panel */
+.bl-usage { padding: 18px 22px; margin-bottom: 24px; background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-xl); }
+.bl-usage-title { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: var(--color-stone); margin-bottom: 14px; }
+.bl-usage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; }
+.bl-usage-item { display: flex; flex-direction: column; gap: 7px; }
+.bl-usage-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.bl-usage-label { font-size: 13px; font-weight: 700; }
+.bl-usage-count { font-size: 12.5px; font-weight: 800; color: var(--color-ink); white-space: nowrap; }
+.bl-usage-count.over { color: var(--color-danger, #d64545); }
+.bl-usage-track { display: block; height: 6px; border-radius: var(--radius-full); background: var(--color-surface-soft); overflow: hidden; }
+.bl-usage-bar { display: block; height: 100%; border-radius: var(--radius-full); background: var(--color-ink); }
+.bl-usage-note { margin-top: 14px; font-size: 12px; color: var(--color-stone); }
+@media (max-width: 620px) { .bl-usage-grid { grid-template-columns: 1fr; } }
+
 /* plan cards */
 .bl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 @media (max-width: 860px) { .bl-grid { grid-template-columns: 1fr; } }
@@ -104,6 +118,27 @@
 .up-card { background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-xl); padding: 18px 20px; }
 .up-card-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: var(--color-stone); margin-bottom: 12px; }
 .up-cycle { margin-bottom: 14px; }
+
+/* team seat picker */
+.up-seat-what { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; margin-bottom: 14px; background: var(--color-surface-soft); border-radius: var(--radius-lg); font-size: 12px; line-height: 1.5; color: var(--color-stone); }
+.up-seat-what svg { flex: 0 0 auto; margin-top: 1px; color: var(--color-ink); }
+.up-seat-what strong { color: var(--color-ink); font-weight: 800; }
+.up-seats { display: flex; flex-direction: column; }
+.up-seat-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--color-hairline-soft); }
+.up-seat-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.up-seat-label { font-size: 13.5px; font-weight: 800; }
+.up-seat-desc { font-size: 11.5px; color: var(--color-stone); }
+.up-seat-step { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.up-seat-btn { width: 30px; height: 30px; border: 1px solid var(--color-hairline); border-radius: 8px; background: var(--color-canvas); font-size: 17px; font-weight: 700; line-height: 1; color: var(--color-ink); cursor: pointer; transition: all var(--ease-ui); }
+.up-seat-btn:hover:not(:disabled) { border-color: var(--color-ink); }
+.up-seat-btn:disabled { opacity: .4; cursor: not-allowed; }
+.up-seat-n { min-width: 26px; text-align: center; font-size: 14px; font-weight: 800; }
+.up-seat-total { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-top: 14px; margin-top: 4px; font-size: 13.5px; font-weight: 700; }
+.up-seat-total-n { font-size: 16px; font-weight: 800; }
+.up-seat-total-amt { font-size: 17px; font-weight: 800; }
+.up-seat-total-amt span { font-size: 12px; font-weight: 600; color: var(--color-stone); }
+.up-seat-actions { margin-top: 14px; }
+.up-seat-actions .up-contact-btn { cursor: pointer; font-family: inherit; }
 .up-line { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 13.5px; font-weight: 600; }
 .up-line.dim { color: var(--color-stone); font-weight: 500; }
 .up-line.total { border-top: 1px solid var(--color-hairline-soft); margin-top: 6px; padding-top: 13px; font-size: 15px; font-weight: 800; }

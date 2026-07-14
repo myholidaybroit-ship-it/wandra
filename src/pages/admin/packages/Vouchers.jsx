@@ -48,17 +48,40 @@ export default function Vouchers() {
         ].filter((x) => x.v),
       })
     })
-    ;(pkg.cabs || []).forEach((c) => {
+    // ---- transport & activities ----
+    // Transport lives in pkg.cabs; activities in pkg.categories (kind: 'activity').
+    // Fall back to the itinerary day-services so nothing the agent added is dropped.
+    const transports = (pkg.cabs || []).map((c) => ({ title: c.name || 'Transfer', vehicle: c.type || '', service: c.serviceType || '', day: c.days?.[0], desc: c.description || '' }))
+    const acts = (pkg.categories || []).filter((c) => c.kind === 'activity').map((a) => ({ title: a.name || 'Activity', service: a.serviceType || '', qty: a.qty, day: a.days?.[0], desc: a.description || '' }))
+    const needT = transports.length === 0, needA = acts.length === 0
+    if (needT || needA) {
+      ;(pkg.itinerary || []).forEach((d) => (d.services || []).forEach((s) => {
+        if (needT && s.kind === 'transport' && s.name) transports.push({ title: s.name, vehicle: s.cabName || '', service: s.serviceType || '', day: d.day, desc: s.description || '' })
+        if (needA && s.kind === 'activity' && s.name) acts.push({ title: s.name, service: s.serviceType || '', qty: s.qty, day: d.day, desc: s.description || '' })
+      }))
+    }
+    transports.forEach((tr) => {
       sections.push({
-        tag: 'Transport', title: c.name || 'Transfer',
+        tag: 'Transport', title: tr.title,
         fields: [
-          { k: 'Vehicle', v: c.type || '—' }, { k: 'Service', v: c.serviceType || 'Private Transfer' },
-          { k: 'Date', v: c.days?.length ? fmtD(addDays(pkg.startDate, c.days[0] - 1)) : fmtD(pkg.startDate) },
-          { k: 'Driver', v: 'Local Vendor' },
+          { k: 'Vehicle', v: tr.vehicle }, { k: 'Service', v: tr.service || 'Private Transfer' },
+          { k: 'Date', v: tr.day ? fmtD(addDays(pkg.startDate, tr.day - 1)) : fmtD(pkg.startDate) },
+          { k: 'Details', v: tr.desc },
         ].filter((x) => x.v),
       })
     })
-    if (!sections.length) return toast('Add hotels or transport to the package first')
+    acts.forEach((a) => {
+      sections.push({
+        tag: 'Activity', title: a.title,
+        fields: [
+          { k: 'Type', v: a.service },
+          { k: 'Date', v: a.day ? fmtD(addDays(pkg.startDate, a.day - 1)) : '' },
+          { k: 'Guests', v: a.qty ? String(a.qty) : '' },
+          { k: 'Details', v: a.desc },
+        ].filter((x) => x.v),
+      })
+    })
+    if (!sections.length) return toast('Add hotels, transport or activities to the package first')
 
     const existing = pkgVouchers.find((v) => v.type === 'Pass')
     if (existing) await removeVoucher(existing.id)

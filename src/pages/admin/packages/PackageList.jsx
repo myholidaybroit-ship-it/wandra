@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../../store/AppContext'
-import { PageHeader, Button, FilterBar, Field, Input, Select, DataTable, Badge } from '../../../components/ui/UI'
+import { PageHeader, Button, FilterBar, Field, Input, Select, DataTable, Badge, ConfirmDelete } from '../../../components/ui/UI'
 import { downloadCsv } from '../../../utils/csv'
 
 export default function PackageList() {
-  const { packages, canSeePricing } = useApp()
+  const { packages, canSeePricing, removePackage, toast } = useApp()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('All')
   const rows = packages.filter((p) => (status === 'All' || p.status === status) && (p.code + p.clientName + p.destination).toLowerCase().includes(q.toLowerCase()))
@@ -25,7 +25,12 @@ export default function PackageList() {
     { key: 'days', head: 'Duration', render: (r) => `${r.days}D / ${r.nights}N` },
     { key: 'status', head: 'Status', render: (r) => <Badge tone={r.status}>{r.status}</Badge> },
     ...(canSeePricing ? [{ key: 'total', head: 'Total', align: 'right', render: (r) => <span className="cell-strong">{inr(computePricing(r).grandTotal)}</span> }] : []),
-    { key: 'actions', head: '', align: 'right', render: (r) => <Link to={`/app/packages/${r.id}`}><Button variant="secondary" size="sm">View</Button></Link> },
+    { key: 'actions', head: '', align: 'right', render: (r) => (
+      <div className="row gap-xs end">
+        <Link to={`/app/packages/${r.id}`}><Button variant="secondary" size="sm">View</Button></Link>
+        <ConfirmDelete what={`${r.code} — ${r.destination || r.clientName || 'package'}`} onConfirm={async () => { await removePackage(r.id); toast('Package deleted') }} />
+      </div>
+    ) },
   ]
   return (
     <div>

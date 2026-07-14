@@ -1,10 +1,10 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, DataTable, Badge, Button } from '../../../components/ui/UI'
+import { PageHeader, DataTable, Badge, Button, ConfirmDelete } from '../../../components/ui/UI'
 import { downloadCsv } from '../../../utils/csv'
 
 export default function QuotationList() {
-  const { quotations, packages, setQuotationStatus, createBookingFromPackage, toast, canSeePricing } = useApp()
+  const { quotations, packages, setQuotationStatus, removeQuotation, createBookingFromPackage, toast, canSeePricing } = useApp()
   const nav = useNavigate()
 
   const exportCsv = () => {
@@ -46,6 +46,7 @@ export default function QuotationList() {
       <div className="row-actions">
         <Link to={`/i/${r.packageCode}`} target="_blank"><Button variant="secondary" size="sm">Preview</Button></Link>
         {r.status !== 'Confirmed' && <Button size="sm" onClick={() => convert(r)}>Convert → Booking</Button>}
+        <ConfirmDelete what={`quotation ${r.packageCode || ''}`.trim()} onConfirm={async () => { await removeQuotation(r.id); toast('Quotation deleted') }} />
       </div>
     ) },
   ]

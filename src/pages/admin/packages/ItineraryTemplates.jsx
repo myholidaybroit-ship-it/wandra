@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Badge, Modal, Field, Input, Textarea, PillSelect } from '../../../components/ui/UI'
+import { PageHeader, Card, Button, Badge, Modal, Field, Input, Textarea, PillSelect, DestGroup, groupByDestination } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 
 const MEAL_PLANS = ['EP', 'CP', 'HB', 'MAP', 'AP']
@@ -45,6 +45,7 @@ export default function ItineraryTemplates() {
     setEdit(null)
   }
   const remove = async (id) => { await removeItineraryTemplate(id); toast('Day itinerary deleted') }
+  const groups = groupByDestination(templates, destinations)
 
   return (
     <div>
@@ -55,26 +56,30 @@ export default function ItineraryTemplates() {
         <Card><p className="t-body-sm c-muted">No day itineraries yet. Build one (e.g. “Pattaya City Tour”) with its transfers & activities, and you’ll be able to drop it onto any package day in one click.</p></Card>
       )}
 
-      <div className="grid grid-3">
-        {templates.map((t) => (
-          <Card key={t.id}>
-            <div className="row-between">
-              <span className="t-title-sm">{t.name}</span>
-              {t.mealPlan && <Badge tone="info">{t.mealPlan}</Badge>}
-            </div>
-            {t.destination && <div className="t-caption c-muted mt-xs"><Icon name="destinations" size={12} /> {t.destination}</div>}
-            {t.description && <p className="t-body-sm c-body mt-xs">{t.description}</p>}
-            <div className="t-caption c-muted mt-sm">{(t.services || []).length ? `${t.services.length} service${t.services.length > 1 ? 's' : ''}` : (t.activity || 'No services')}</div>
-            {(t.services || []).slice(0, 4).map((s, i) => (
-              <div key={i} className="t-body-sm">• {s.location || s.serviceType} <span className="c-muted">({s.kind})</span></div>
+      {groups.map((g) => (
+        <DestGroup key={g.key} name={g.name} location={g.location} image={g.image} count={g.records.length}
+          actions={<Button size="sm" variant="secondary" onClick={() => setEdit({ ...blank, destination: g.key !== '__none__' ? g.name : '', services: [] })}>+ Add here</Button>}>
+          <div className="dg-cards">
+            {g.records.map((t) => (
+              <Card key={t.id}>
+                <div className="row-between">
+                  <span className="t-title-sm">{t.name}</span>
+                  {t.mealPlan && <Badge tone="info">{t.mealPlan}</Badge>}
+                </div>
+                {t.description && <p className="t-body-sm c-body mt-xs">{t.description}</p>}
+                <div className="t-caption c-muted mt-sm">{(t.services || []).length ? `${t.services.length} service${t.services.length > 1 ? 's' : ''}` : (t.activity || 'No services')}</div>
+                {(t.services || []).slice(0, 4).map((s, i) => (
+                  <div key={i} className="t-body-sm">• {s.location || s.serviceType} <span className="c-muted">({s.kind})</span></div>
+                ))}
+                <div className="row gap-sm mt-base">
+                  <Button size="sm" variant="secondary" onClick={() => setEdit({ ...t, services: (t.services || []).map((s) => ({ ...s, id: rowId() })) })}>Edit</Button>
+                  <Button size="sm" variant="tertiary" onClick={() => remove(t.id)}>Delete</Button>
+                </div>
+              </Card>
             ))}
-            <div className="row gap-sm mt-base">
-              <Button size="sm" variant="secondary" onClick={() => setEdit({ ...t, services: (t.services || []).map((s) => ({ ...s, id: rowId() })) })}>Edit</Button>
-              <Button size="sm" variant="tertiary" onClick={() => remove(t.id)}>Delete</Button>
-            </div>
-          </Card>
-        ))}
-      </div>
+          </div>
+        </DestGroup>
+      ))}
 
       <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? 'Edit Day Itinerary' : 'New Day Itinerary'} width={720}
         footer={<><Button variant="tertiary" onClick={() => setEdit(null)}>Cancel</Button><Button onClick={save}>Save</Button></>}>

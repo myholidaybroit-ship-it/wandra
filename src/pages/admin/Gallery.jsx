@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useApp } from '../../store/AppContext'
-import { PageHeader, Card, Button, Badge, Modal, Field, Input, PillSelect } from '../../components/ui/UI'
+import { PageHeader, Card, Button, Badge, Modal, Field, Input, PillSelect, ConfirmDelete } from '../../components/ui/UI'
 import '../public/stories.css'
 
 const slugify = (v) => String(v || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 
 export default function Gallery() {
-  const { gallery, approveStory, clients, bookings, agency, landing, toast } = useApp()
+  const { gallery, approveStory, removeStory, clients, bookings, agency, landing, toast } = useApp()
   const [tab, setTab] = useState('queue')
   const [open, setOpen] = useState(false)
   const [selClient, setSelClient] = useState(clients[0]?.name || '')
@@ -45,7 +45,10 @@ export default function Gallery() {
               <span className="st-avatar">{g.client[0]}</span>
               <span className="st-who"><strong>{g.client}</strong><em>{g.date}</em></span>
             </footer>
-            {g.status === 'Pending' && <Button size="sm" className="mt-base" onClick={() => { approveStory(g.id); toast('Story published') }}>Approve & Publish</Button>}
+            <div className="row gap-xs mt-base">
+              {g.status === 'Pending' && <Button size="sm" onClick={() => { approveStory(g.id); toast('Story published') }}>Approve & Publish</Button>}
+              <ConfirmDelete label="Delete" what={`${g.client}'s review`} onConfirm={async () => { await removeStory(g.id); toast('Review deleted') }} />
+            </div>
           </article>
         ))}
         {(tab === 'queue' ? pending : published).length === 0 && <div className="st-empty">Nothing here yet.</div>}

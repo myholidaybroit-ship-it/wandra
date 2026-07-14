@@ -6,7 +6,17 @@
 .inv-totals { max-width: 320px; margin-left: auto; margin-top: 20px; }
 
 /* agency logo on invoices (fixed box — safe for PDF capture) */
-.inv-agency-logo { width: 150px; height: 44px; object-fit: contain; object-position: left center; display: block; margin-bottom: 10px; }
+.inv-agency-logo { width: auto; height: auto; max-width: 150px; max-height: 44px; object-fit: contain; object-position: left center; display: block; margin-bottom: 10px; }
+/* agency bank details + UPI QR (client pays the AGENCY, not Wandra) */
+.inv-pay { display: flex; gap: 24px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; margin-top: 20px; padding: 16px 18px; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); background: var(--color-surface-soft); }
+.inv-pay-details { flex: 1 1 240px; min-width: 220px; }
+.inv-pay-h { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: var(--color-stone); margin-bottom: 8px; }
+.inv-pay-row { display: flex; justify-content: space-between; gap: 16px; font-size: 12.5px; padding: 3px 0; color: var(--color-body); }
+.inv-pay-row strong { color: var(--color-ink); font-weight: 700; text-align: right; }
+.inv-pay-qr { flex: 0 0 auto; text-align: center; }
+.inv-pay-qr img { width: auto; height: auto; max-width: 108px; max-height: 108px; display: block; border-radius: 8px; background: #fff; padding: 5px; border: 1px solid var(--color-hairline); }
+.inv-pay-qr span { display: block; font-size: 10px; color: var(--color-stone); margin-top: 5px; }
+
 .inv-terms { margin-top: 24px; padding: 14px 16px; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); color: var(--color-body); font-size: 13px; line-height: 1.55; }
 .inv-terms strong { display: block; color: var(--color-ink); margin-bottom: 4px; }
 .inv-terms p { margin: 0 0 8px; white-space: pre-line; }

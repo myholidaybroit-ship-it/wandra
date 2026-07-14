@@ -4,6 +4,7 @@ import { inr, DEFAULT_INVOICE_SETTINGS } from '../../store/AppContext'
 import { usePublic } from '../../hooks/usePublic'
 import { Card, Button, Badge } from '../../components/ui/UI'
 import { AgencyLogo } from '../../components/ui/AgencyBrand'
+import { PayTo } from '../../components/ui/PayTo'
 import { preloadAndDownload } from '../../utils/pdf'
 import '../admin/invoices/invoice.css'
 
@@ -42,6 +43,7 @@ export default function PublicInvoice() {
             <div className="fin-line"><span className="c-success">Paid</span><span className="c-success">{inr(paid)}</span></div>
             <div className="fin-line"><span className="c-error">Balance</span><span className="c-error">{inr(total - paid)}</span></div>
           </div>
+          <PayTo agency={agency} />
           {(invSettings.terms || invSettings.footer) && (
             <div className="inv-terms">
               {invSettings.terms && <div><strong>Payment Terms</strong><p>{invSettings.terms}</p></div>}

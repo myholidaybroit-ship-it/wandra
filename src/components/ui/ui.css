@@ -439,3 +439,27 @@ textarea.control:focus { padding: 9px 13px; }
 /* Master-data create/edit pages — centered, comfortable measure */
 .master-page { max-width: 880px; margin: 0 auto; }
 .master-page .card { padding: 28px 30px; }
+
+/* ConfirmDelete icon button — subtle until hover, then danger */
+.icon-del {
+  display: inline-grid; place-items: center; width: 32px; height: 32px;
+  border: 1px solid var(--color-hairline); border-radius: var(--radius-md);
+  background: var(--color-canvas); color: var(--color-muted-soft);
+  cursor: pointer; transition: all var(--ease-ui);
+}
+.icon-del:hover { border-color: var(--color-error); color: var(--color-error); background: var(--color-error-bg); }
+
+/* Destination-grouped master data (Hotels / Transport / Activities / Day-wise Plans) */
+.dg { border: 1px solid var(--color-hairline); border-radius: var(--radius-xl); background: var(--color-canvas); margin-bottom: 12px; overflow: hidden; }
+.dg-head { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; }
+.dg-toggle { flex: 1; display: flex; align-items: center; gap: 12px; padding: 8px; border: none; background: none; cursor: pointer; font-family: inherit; text-align: left; border-radius: var(--radius-lg); transition: background var(--ease-ui); }
+.dg-toggle:hover { background: var(--color-surface-soft); }
+.dg-name { font-size: 15px; font-weight: 800; display: flex; align-items: baseline; gap: 8px; }
+.dg-loc { font-size: 12px; font-weight: 500; color: var(--color-stone); }
+.dg-count { display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 8px; border-radius: var(--radius-full); background: var(--color-surface); color: var(--color-ink); font-size: 12px; font-weight: 800; }
+.dg-chev { margin-left: 4px; color: var(--color-stone); display: inline-grid; place-items: center; transform: rotate(-90deg); transition: transform var(--ease-ui); }
+.dg-chev.open { transform: rotate(0deg); }
+.dg-acts { flex: 0 0 auto; display: flex; gap: 8px; align-items: center; }
+.dg-body { padding: 0 8px 8px; }
+.dg-body .data-table-wrap, .dg-body table { margin: 0; }
+.dg-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding: 4px; }

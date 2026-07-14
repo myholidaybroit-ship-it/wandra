@@ -19,8 +19,21 @@ const FALLBACK_PRO = {
 }
 
 export default function Billing() {
-  const { plans, agency, clients, toast } = useApp()
+  const { plans, agency, clients, packages, users, limitFor, toast } = useApp()
   const nav = useNavigate()
+
+  // ── live plan usage (reflects the admin-set caps) ──
+  const now = new Date()
+  const pkgsThisMonth = (packages || []).filter((p) => {
+    const d = p.createdAt ? new Date(p.createdAt) : null
+    return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  }).length
+  const USAGE = [
+    { key: 'clients', label: 'Clients / leads', used: clients.length, suffix: '' },
+    { key: 'packages', label: 'Packages / quotes', used: pkgsThisMonth, suffix: ' this month' },
+    { key: 'team', label: 'Team members', used: (users || []).length, suffix: ' seats' },
+    { key: 'storage', label: 'Cloud storage', used: null, suffix: ' MB', unitLabel: 'MB' },
+  ]
   const [talk, setTalk] = useState(false)
   const [msg, setMsg] = useState({ name: '', email: '', message: '' })
   const openTalk = () => { setMsg({ name: agency.name, email: agency.email, message: '' }); setTalk(true) }
@@ -56,6 +69,35 @@ export default function Billing() {
         {isPro
           ? <span className="bl-offer" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>Active subscription</span>
           : null}
+      </div>
+
+      {/* ---------- live plan usage — mirrors the caps set for this agency ---------- */}
+      <div className="bl-usage">
+        <div className="bl-usage-title">Plan usage</div>
+        <div className="bl-usage-grid">
+          {USAGE.map((u) => {
+            const cap = limitFor(u.key)
+            const unlimited = cap === -1 || cap == null
+            const pct = unlimited || !cap ? 0 : Math.min(100, ((u.used ?? 0) / cap) * 100)
+            const over = !unlimited && u.used != null && u.used > cap
+            return (
+              <div className="bl-usage-item" key={u.key}>
+                <div className="bl-usage-row">
+                  <span className="bl-usage-label">{u.label}</span>
+                  <span className={`bl-usage-count ${over ? 'over' : ''}`}>
+                    {u.used == null
+                      ? (unlimited ? 'Unlimited' : `${cap}${u.suffix}`)
+                      : <>{u.used}{unlimited ? '' : ` / ${cap}`}{u.suffix}</>}
+                  </span>
+                </div>
+                {u.used != null && (
+                  <span className="bl-usage-track"><span className="bl-usage-bar" style={{ width: `${unlimited ? 6 : pct}%` }} /></span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <p className="bl-usage-note">Destinations, hotels &amp; cab types are unlimited on every plan. Team seats are ₹999 / user / month.</p>
       </div>
 
       {/* Pro members don't get an upgrade push — just their status + support */}

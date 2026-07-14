@@ -33,4 +33,4 @@
 @media print { .itin-actions, .wa-float, .public-nav, .public-footer { display: none !important; } }
 
 /* agency logo in the hero (fixed box — safe for PDF capture) */
-.itin-logo { width: 170px; height: 48px; object-fit: contain; object-position: center; display: block; margin: 0 auto 8px; }
+.itin-logo { width: auto; height: auto; max-width: 170px; max-height: 48px; object-fit: contain; object-position: center; display: block; margin: 0 auto 8px; }

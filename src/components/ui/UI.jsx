@@ -698,3 +698,65 @@ export function StackBar({ segments = [] }) {
     </div>
   )
 }
+
+/* ---------- ConfirmDelete — trash button + confirm dialog (drop-in for any list/detail) ---------- */
+export function ConfirmDelete({ onConfirm, what = 'this record', title = 'Delete', label, size = 'sm' }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const ask = (e) => { e?.stopPropagation?.(); setOpen(true) }
+  const go = async () => {
+    setBusy(true)
+    try { await onConfirm() } finally { setBusy(false); setOpen(false) }
+  }
+  return (
+    <>
+      {label
+        ? <Button variant="danger" size={size} onClick={ask}>{label}</Button>
+        : <button type="button" className="icon-del" title="Delete" onClick={ask}><Icon name="trash" size={15} /></button>}
+      <Modal open={open} onClose={() => setOpen(false)} title={title} width={420}
+        footer={<><Button variant="tertiary" onClick={() => setOpen(false)}>Cancel</Button><Button variant="danger" onClick={go} disabled={busy}>{busy ? 'Deleting…' : 'Delete'}</Button></>}>
+        <p className="t-body-sm">Delete <strong>{what}</strong>? This can’t be undone.</p>
+      </Modal>
+    </>
+  )
+}
+
+/* ---------- Destination grouping — organise master data destination-wise ---------- */
+/* Buckets records by their `destination` field, ordered to match the agency's
+   destinations list, with any un-tagged / unknown-destination records last. */
+export function groupByDestination(records, destinations, destOf = (r) => r.destination) {
+  const map = new Map()
+  records.forEach((r) => {
+    const d = (destOf(r) || '').trim() || '__none__'
+    if (!map.has(d)) map.set(d, [])
+    map.get(d).push(r)
+  })
+  const knownNames = new Set(destinations.map((d) => d.name))
+  const known = destinations
+    .filter((d) => map.has(d.name))
+    .map((d) => ({ key: d.name, name: d.name, location: d.location, image: d.image, records: map.get(d.name) }))
+  const extras = [...map.entries()]
+    .filter(([k]) => k !== '__none__' && !knownNames.has(k))
+    .map(([k, recs]) => ({ key: k, name: k, location: '', image: '', records: recs }))
+  const none = map.get('__none__')
+  const tail = none ? [{ key: '__none__', name: 'No destination', location: '', image: '', records: none }] : []
+  return [...known, ...extras, ...tail]
+}
+
+export function DestGroup({ name, location, image, count, actions, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className={`dg ${open ? 'open' : ''}`}>
+      <div className="dg-head">
+        <button type="button" className="dg-toggle" onClick={() => setOpen((o) => !o)}>
+          <span className="master-thumb" style={image ? { backgroundImage: `url("${image}")` } : undefined} />
+          <span className="dg-name">{name}{location && <span className="dg-loc">{location}</span>}</span>
+          <span className="dg-count">{count}</span>
+          <span className={`dg-chev ${open ? 'open' : ''}`}><Icon name="chevron" size={15} /></span>
+        </button>
+        {actions && <div className="dg-acts">{actions}</div>}
+      </div>
+      {open && <div className="dg-body">{children}</div>}
+    </div>
+  )
+}

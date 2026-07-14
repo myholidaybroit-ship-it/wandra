@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, DataTable, Badge, Button } from '../../../components/ui/UI'
+import { PageHeader, DataTable, Badge, Button, ConfirmDelete } from '../../../components/ui/UI'
 
 export default function BookingList() {
-  const { bookings, canSeePricing } = useApp()
+  const { bookings, canSeePricing, removeBooking, toast } = useApp()
   const columns = [
     { key: 'code', head: 'Booking ID', render: (r) => <Link to={`/app/bookings/${r.id}`} className="cell-strong c-link mono">{r.code}</Link> },
     { key: 'clientName', head: 'Client' },
@@ -14,7 +14,12 @@ export default function BookingList() {
       { key: 'balance', head: 'Balance', align: 'right', render: (r) => <span className="c-error">{inr(r.value - r.paid)}</span> },
     ] : []),
     { key: 'status', head: 'Status', render: (r) => <Badge tone={r.status}>{r.status}</Badge> },
-    { key: 'actions', head: '', align: 'right', render: (r) => <Link to={`/app/bookings/${r.id}`}><Button variant="secondary" size="sm">Manage</Button></Link> },
+    { key: 'actions', head: '', align: 'right', render: (r) => (
+      <div className="row gap-xs end">
+        <Link to={`/app/bookings/${r.id}`}><Button variant="secondary" size="sm">Manage</Button></Link>
+        <ConfirmDelete what={`${r.code} — ${r.clientName || 'booking'}`} onConfirm={async () => { await removeBooking(r.id); toast('Booking deleted') }} />
+      </div>
+    ) },
   ]
   return (
     <div>

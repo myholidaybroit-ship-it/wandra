@@ -209,15 +209,19 @@ export function AppProvider({ children }) {
   /* ---------- master data ---------- */
   const addDestination = async (d) => { const rec = await api.post('/destinations', d); prepend(setDestinations)(rec); return rec }
   const updateDestination = async (id, patch) => replace(setDestinations)(await api.patch(`/destinations/${id}`, patch))
+  const removeDestination = async (id) => { await api.del(`/destinations/${id}`); setDestinations((l) => l.filter((d) => d.id !== id)) }
   const addHotel = async (h) => { const rec = await api.post('/hotels', h); prepend(setHotels)(rec); return rec }
   const updateHotel = async (id, patch) => replace(setHotels)(await api.patch(`/hotels/${id}`, patch))
+  const removeHotel = async (id) => { await api.del(`/hotels/${id}`); setHotels((l) => l.filter((h) => h.id !== id)) }
   const addCab = async (c) => { const rec = await api.post('/cabs', c); prepend(setCabs)(rec); return rec }
   const updateCab = async (id, patch) => replace(setCabs)(await api.patch(`/cabs/${id}`, patch))
   const removeCab = async (id) => { await api.del(`/cabs/${id}`); setCabs((l) => l.filter((c) => c.id !== id)) }
   const addServiceLocation = async (s) => { const rec = await api.post('/services', s); prepend(setServiceLocations)(rec); return rec }
   const updateServiceLocation = async (id, patch) => replace(setServiceLocations)(await api.patch(`/services/${id}`, patch))
+  const removeServiceLocation = async (id) => { await api.del(`/services/${id}`); setServiceLocations((l) => l.filter((s) => s.id !== id)) }
   const addActivity = async (a) => { const rec = await api.post('/activities', a); prepend(setActivities)(rec); return rec }
   const updateActivity = async (id, patch) => replace(setActivities)(await api.patch(`/activities/${id}`, patch))
+  const removeActivity = async (id) => { await api.del(`/activities/${id}`); setActivities((l) => l.filter((a) => a.id !== id)) }
 
   /* ---------- inclusion / exclusion presets ---------- */
   const presetsForDest = (dest) => (dest && inclusionPresets.byDest?.[dest]) || { inclusions: [], exclusions: [] }
@@ -229,12 +233,14 @@ export function AppProvider({ children }) {
   /* ---------- clients / leads ---------- */
   const addClient = async (c) => { const rec = await api.post('/clients', c); prepend(setClients)(rec); return rec }
   const updateClient = async (id, patch) => replace(setClients)(await api.patch(`/clients/${id}`, patch))
+  const removeClient = async (id) => { await api.del(`/clients/${id}`); setClients((l) => l.filter((c) => c.id !== id)) }
   const addClientDoc = async (clientId, doc) => replace(setClients)(await api.post(`/clients/${clientId}/docs`, doc))
   const removeClientDoc = async (clientId, docId) => replace(setClients)(await api.del(`/clients/${clientId}/docs/${docId}`))
 
   /* ---------- packages ---------- */
   const addPackage = async (p) => { const rec = await api.post('/packages', p); prepend(setPackages)(rec); reload('quotations'); return rec }
   const updatePackage = async (id, patch) => { const rec = await api.patch(`/packages/${id}`, patch); replace(setPackages)(rec); return rec }
+  const removePackage = async (id) => { await api.del(`/packages/${id}`); setPackages((l) => l.filter((p) => p.id !== id)); reload('quotations', 'bookings', 'invoices') }
   const setPackageStatus = async (id, status) => { const rec = await api.patch(`/packages/${id}/status`, { status }); replace(setPackages)(rec); reload('quotations') }
   const addPackageLog = async (id, text) => replace(setPackages)(await api.post(`/packages/${id}/logs`, { text }))
   const createPackageFromTemplate = async (tpl, client) => {
@@ -252,15 +258,18 @@ export function AppProvider({ children }) {
     return booking
   }
   const cancelBooking = async (id) => { await api.post(`/bookings/${id}/cancel`); await reload('bookings', 'invoices', 'quotations', 'packages') }
+  const removeBooking = async (id) => { await api.del(`/bookings/${id}`); setBookings((l) => l.filter((b) => b.id !== id)); await reload('invoices', 'quotations', 'packages') }
   const addBookingPayment = async (id, pay) => replace(setBookings)(await api.post(`/bookings/${id}/payments`, pay))
   const setBookingStatus = async (id, status) => replace(setBookings)(await api.patch(`/bookings/${id}/status`, { status }))
 
   /* ---------- invoices ---------- */
   const addInvoice = async (inv) => { const rec = await api.post('/invoices', inv); prepend(setInvoices)(rec); return rec }
   const addPayment = async (invId, pay) => replace(setInvoices)(await api.post(`/invoices/${invId}/payments`, pay))
+  const removeInvoice = async (id) => { await api.del(`/invoices/${id}`); setInvoices((l) => l.filter((i) => i.id !== id)) }
 
   /* ---------- quotations ---------- */
   const setQuotationStatus = async (id, status) => replace(setQuotations)(await api.patch(`/quotations/${id}/status`, { status }))
+  const removeQuotation = async (id) => { await api.del(`/quotations/${id}`); setQuotations((l) => l.filter((q) => q.id !== id)) }
 
   /* ---------- vouchers ---------- */
   const addVoucher = async (v) => { const rec = await api.post('/vouchers', v); prepend(setVouchers)(rec); return rec }
@@ -269,6 +278,7 @@ export function AppProvider({ children }) {
   /* ---------- gallery / stories ---------- */
   const approveStory = async (id) => replace(setGallery)(await api.patch(`/stories/${id}/approve`))
   const addStory = async (s) => { const rec = await api.post('/stories', s); prepend(setGallery)(rec); return rec }
+  const removeStory = async (id) => { await api.del(`/stories/${id}`); setGallery((l) => l.filter((g) => g.id !== id)) }
 
   /* ---------- landing ---------- */
   const updateLanding = async (patch) => {
@@ -306,18 +316,18 @@ export function AppProvider({ children }) {
     ready, authed, session, login, logout, sessionExpiresAt,
     features, limitsMap, hasFeature, limitFor,
     agency, setAgency, respondRenewal,
-    destinations, addDestination, updateDestination,
-    hotels, addHotel, updateHotel,
+    destinations, addDestination, updateDestination, removeDestination,
+    hotels, addHotel, updateHotel, removeHotel,
     cabs, addCab, updateCab, removeCab,
-    serviceLocations, addServiceLocation, updateServiceLocation,
-    activities, addActivity, updateActivity,
-    clients, addClient, updateClient, addClientDoc, removeClientDoc,
-    packages, addPackage, updatePackage, setPackageStatus, addPackageLog,
+    serviceLocations, addServiceLocation, updateServiceLocation, removeServiceLocation,
+    activities, addActivity, updateActivity, removeActivity,
+    clients, addClient, updateClient, removeClient, addClientDoc, removeClientDoc,
+    packages, addPackage, updatePackage, removePackage, setPackageStatus, addPackageLog,
     packageTemplates, createPackageFromTemplate,
-    bookings, createBookingFromPackage, cancelBooking, addBookingPayment, setBookingStatus,
-    invoices, addInvoice, addPayment,
-    quotations, setQuotationStatus,
-    gallery, approveStory, addStory,
+    bookings, createBookingFromPackage, cancelBooking, removeBooking, addBookingPayment, setBookingStatus,
+    invoices, addInvoice, addPayment, removeInvoice,
+    quotations, setQuotationStatus, removeQuotation,
+    gallery, approveStory, addStory, removeStory,
     users, // read-only — the Wandra team manages users (paid seats) from the admin panel
     currentUser, currentUserId, setCurrentUser, canSeePricing, isAdmin,
     templates, addItineraryTemplate, updateItineraryTemplate, removeItineraryTemplate, themes, toggleTheme,

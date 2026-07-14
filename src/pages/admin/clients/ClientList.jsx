@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, DataTable, Badge, formatDate, ListSearch, Modal, PillMultiSelect, DatePicker, Field, Input } from '../../../components/ui/UI'
+import { PageHeader, Button, DataTable, Badge, formatDate, ListSearch, Modal, PillMultiSelect, DatePicker, Field, Input, ConfirmDelete } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 import { useLeadSources } from '../../../utils/sources'
@@ -28,7 +28,7 @@ const uniq = (arr) => [...new Set(arr.filter(Boolean))].sort()
 const day = (iso) => (iso || '').slice(0, 10)
 
 export default function ClientList() {
-  const { clients } = useApp()
+  const { clients, removeClient, toast } = useApp()
   const configuredSources = useLeadSources()
   const nav = useNavigate()
   const [q, setQ] = useState('')
@@ -133,7 +133,12 @@ export default function ClientList() {
         <div className="cell-sub">{day(r.createdAt)}</div>
       </div>
     ) },
-    { key: 'chev', head: '', align: 'right', render: () => <span className="row-chev"><Icon name="chevron" size={15} /></span> },
+    { key: 'chev', head: '', align: 'right', render: (r) => (
+      <div className="row gap-xs end">
+        <ConfirmDelete what={r.name} onConfirm={async () => { await removeClient(r.id); toast('Client deleted') }} />
+        <span className="row-chev"><Icon name="chevron" size={15} /></span>
+      </div>
+    ) },
   ]
 
   return (

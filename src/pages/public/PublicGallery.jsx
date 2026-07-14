@@ -35,7 +35,12 @@ export default function PublicGallery() {
             <p className="st-text">{g.text}</p>
             <footer className="st-byline">
               <span className="st-avatar">{g.client[0]}</span>
-              <span className="st-who"><strong>{g.client}</strong><em>Travelled · {g.date}</em></span>
+              <span className="st-who">
+                <strong>{g.client}<span className="st-verified" title="Verified traveller">
+                  <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M12 2 9.6 3.9 6.6 3.7 5.4 6.5 2.8 8l.5 3-1.8 2.4 1.8 2.4-.5 3 2.6 1.5 1.2 2.8 3-.2L12 22l2.4-1.9 3 .2 1.2-2.8 2.6-1.5-.5-3 1.8-2.4L20.2 8l.5-3-2.6-1.5-1.2-2.8-3 .2z"/><path fill="#fff" d="m10.6 14.6-2-2-1.2 1.2 3.2 3.2 5.2-5.2-1.2-1.2z"/></svg>
+                  Verified</span></strong>
+                <em>Travelled · {g.date}</em>
+              </span>
             </footer>
           </article>
         ))}

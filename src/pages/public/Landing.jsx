@@ -160,33 +160,45 @@ export default function Landing() {
           <h2 className="wl-h2">Run everything from one place.</h2>
         </div>
         <div className="wl-bento">
-          <div className="wl-card wide" data-reveal>
+          <div className="wl-card wide acc-blue" data-reveal>
             <div>
               <span className="wl-card-ic"><Icon name="clients" size={17} /></span>
               <div className="wl-card-t">Leads &amp; clients</div>
               <p>Enquiries from your website, ads and WhatsApp land in one pipeline — with follow-ups, documents and history per traveller.</p>
             </div>
-            <div className="wl-pipeline">
-              <span className="on">New query</span><i /><span>Quoted</span><i /><span>Booked</span><i /><span className="paid">On trip</span>
+            <div className="wl-pipe">
+              <span className="on">New query</span>
+              <span>Quoted</span>
+              <span>Booked</span>
+              <span className="paid">On trip</span>
             </div>
           </div>
-          <div className="wl-card" data-reveal>
+
+          <div className="wl-card acc-amber" data-reveal>
             <span className="wl-card-ic"><Icon name="packages" size={17} /></span>
             <div className="wl-card-t">Quote builder</div>
             <p>Hotels, cabs, activities and flights — margins set per line, totals computed for you.</p>
-            <div className="wl-margin">
-              <div><span>Cost</span><strong>₹26,900</strong></div>
-              <div><span>Markup</span><strong>+20%</strong></div>
-              <div className="sell"><span>Selling</span><strong>₹33,894</strong></div>
+            <div className="wl-quote-mini">
+              <div className="wl-qrow"><span>Cost price</span><b>₹26,900</b></div>
+              <div className="wl-qrow"><span>Markup 20%</span><b>+₹5,380</b></div>
+              <div className="wl-qrow"><span>GST 5%</span><b>+₹1,614</b></div>
+              <div className="wl-qrow sell"><span>Selling</span><b>₹33,894</b></div>
+              <div className="wl-qprofit">Profit <strong>₹5,380</strong></div>
             </div>
           </div>
-          <div className="wl-card" data-reveal>
+
+          <div className="wl-card acc-mint" data-reveal>
             <span className="wl-card-ic"><Icon name="file" size={17} /></span>
             <div className="wl-card-t">Designer PDFs</div>
             <p>Six quote layouts with your branding — customise, download under 1&nbsp;MB, send.</p>
-            <div className="wl-fan"><i /><i /><i /></div>
+            <div className="wl-covers">
+              <span className="wl-cover c1" />
+              <span className="wl-cover c3" />
+              <span className="wl-cover c2" />
+            </div>
           </div>
-          <div className="wl-card" data-reveal>
+
+          <div className="wl-card acc-ink" data-reveal>
             <span className="wl-card-ic"><Icon name="plane" size={17} /></span>
             <div className="wl-card-t">Travel Pass</div>
             <p>Hotels, transfers and activities on a single pass your traveller carries all trip.</p>
@@ -196,22 +208,29 @@ export default function Landing() {
                 <strong>Srinagar — 5N / 6D</strong>
                 <span>Hotel · Transfers · Activities</span>
               </div>
-              <div className="wl-pass-stub" />
+              <div className="wl-pass-stub"><span className="wl-qr" /><span className="wl-pass-code">VCH-0148</span></div>
             </div>
           </div>
-          <div className="wl-card" data-reveal>
+
+          <div className="wl-card acc-green" data-reveal>
             <span className="wl-card-ic"><Icon name="invoices" size={17} /></span>
             <div className="wl-card-t">Invoices &amp; payments</div>
             <p>GST or non-GST invoices, partial payments, balance tracked to the rupee.</p>
-            <div className="wl-paybar"><span style={{ width: '68%' }} /><em>68% collected</em></div>
+            <div className="wl-pay">
+              <div className="wl-pay-top"><span>Collected</span><b>₹63,600</b><em>of ₹93,450</em></div>
+              <div className="wl-pay-bar"><span style={{ width: '68%' }} /></div>
+              <div className="wl-pay-foot"><span className="paid">68% paid</span><span>Balance ₹29,850</span></div>
+            </div>
           </div>
-          <div className="wl-card wide" data-reveal>
+
+          <div className="wl-card wide acc-ink" data-reveal>
             <div>
               <span className="wl-card-ic"><Icon name="reports" size={17} /></span>
               <div className="wl-card-t">Reports &amp; profit</div>
               <p>Every booking carries its cost and selling price — so profit per trip, client and month is a glance, not a spreadsheet weekend.</p>
+              <span className="wl-trend"><Icon name="check" size={12} /> ↑ 18% profit vs last month</span>
             </div>
-            <div className="wl-bars">{[42, 66, 51, 88, 74, 96].map((h, i) => <i key={i} style={{ height: `${h}%` }} className={i === 5 ? 'hot' : ''} />)}</div>
+            <div className="wl-bars">{[40, 58, 47, 70, 63, 86, 100].map((h, i) => <i key={i} style={{ height: `${h}%` }} className={i >= 5 ? 'hot' : ''} />)}</div>
           </div>
         </div>
       </section>
