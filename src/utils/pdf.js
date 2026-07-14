@@ -135,8 +135,9 @@ export async function downloadElementPdf(el, filename = 'document.pdf') {
         image: { type: 'jpeg', quality: step.quality },
         html2canvas: { scale: step.scale, useCORS: true, backgroundColor: '#ffffff', logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        // 'avoid-all' keeps cards/days/tables from being sliced across a page edge
-        pagebreak: flow ? { mode: ['css', 'legacy'], avoid: ['.pdf-avoid', 'tr', 'img'] } : { mode: ['css', 'legacy'] },
+        // keep table rows, images and marked blocks from being sliced across a
+        // page edge — applies to every doc (invoices/vouchers included, not just flow)
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['.pdf-avoid', 'tr', 'img'] },
       }).from(el).outputPdf('blob')
       if (blob && blob.size <= MAX_PDF_BYTES) break
     }
