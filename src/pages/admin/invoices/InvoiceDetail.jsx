@@ -47,7 +47,7 @@ export default function InvoiceDetail() {
         </div>
         <div className="inv-body">
           <div className="grid grid-2">
-            <div><AgencyLogo agency={agency} className="inv-agency-logo" fallback="name" /><div className="t-caption-upper c-muted">From</div><div className="t-title-sm mt-xs">{agency.name}</div><div className="t-body-sm c-body">{agency.address}</div><div className="t-body-sm c-body">{agency.gstin && `GSTIN: ${agency.gstin}`}</div></div>
+            <div><AgencyLogo agency={agency} className="inv-agency-logo" fallback="name" /><div className="t-caption-upper c-muted">From</div><div className="t-title-sm mt-xs">{agency.legalName || agency.name}</div>{agency.legalName && agency.legalName !== agency.name && <div className="t-body-sm c-body">T/A {agency.name}</div>}<div className="t-body-sm c-body">{agency.address}</div><div className="t-body-sm c-body">{agency.gstin && `GSTIN: ${agency.gstin}`}</div></div>
             <div><div className="t-caption-upper c-muted">Bill To</div><div className="t-title-sm mt-xs">{inv.clientName}</div><div className="t-body-sm c-body">{client?.email}</div><div className="t-body-sm c-body">{client?.phone}</div></div>
           </div>
           <div className="row gap-xl mt-base t-body-sm c-body"><span>Issue Date: <strong className="c-ink">{inv.issueDate}</strong></span><span>Due Date: <strong className="c-ink">{inv.dueDate || '—'}</strong></span></div>

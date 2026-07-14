@@ -11,7 +11,7 @@ export default function Settings() {
   const [f, setF] = useState({ ...agency, ...agency.bank })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
-    setAgency({ ...agency, name: f.name, logo: f.logo || '', paymentQr: f.paymentQr || '', email: f.email, phone: f.phone, website: f.website, address: f.address, gstin: f.gstin,
+    setAgency({ ...agency, name: f.name, legalName: f.legalName || '', logo: f.logo || '', paymentQr: f.paymentQr || '', email: f.email, phone: f.phone, website: f.website, address: f.address, gstin: f.gstin,
       bank: { accountName: f.accountName, bankName: f.bankName, accountNumber: f.accountNumber, ifsc: f.ifsc } })
     toast('Settings saved — these details now appear on all itineraries, vouchers & invoices')
   }
@@ -26,7 +26,8 @@ export default function Settings() {
             <ImageInput label="Agency logo" value={f.logo || ''} maxW={400}
               onChange={(v) => setF({ ...f, logo: v })}
               hint="PNG with transparency looks best — shows on every itinerary, PDF, voucher & invoice" />
-            <Field label="Brand / Company Name"><Input value={f.name} onChange={set('name')} /></Field>
+            <Field label="Brand name" hint="Your displayed name — shown on itineraries, vouchers, PDFs & every client-facing page"><Input value={f.name} onChange={set('name')} placeholder="e.g. My Holiday Bro" /></Field>
+            <Field label="Company registered name" hint="Your legal entity name — shown on invoices & tax documents. Leave blank to use the brand name."><Input value={f.legalName || ''} onChange={set('legalName')} placeholder="e.g. PUA Holiday Planner Pvt Ltd" /></Field>
             <Field label="Email"><Input value={f.email} onChange={set('email')} /></Field>
             <Field label="Phone"><Input value={f.phone} onChange={set('phone')} /></Field>
             <Field label="Website"><Input value={f.website} onChange={set('website')} /></Field>
