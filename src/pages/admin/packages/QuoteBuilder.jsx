@@ -865,7 +865,7 @@ function HotelPicker({ value, hotels, destFilter = [], onPick, placeholder = 'Se
   const [query, setQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
   const hasFilter = destFilter.length > 0
-  const scoped = hasFilter ? hotels.filter((h) => !h.destination || destFilter.includes(h.destination)) : hotels
+  const scoped = hasFilter ? hotels.filter((h) => destFilter.includes(h.destination)) : hotels
   const base = hasFilter && !showAll ? scoped : hotels
   const shown = query.trim() ? base.filter((h) => `${h.name} ${h.city}`.toLowerCase().includes(query.trim().toLowerCase())) : base
   const sub = value?.city ? `${value.city}${value.star ? ` · ${value.star} Star` : ''}` : ''
@@ -910,7 +910,7 @@ function MasterPicker({ value, items = [], destFilter = [], onPick, placeholder 
   const [query, setQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
   const hasFilter = destFilter.length > 0
-  const scoped = hasFilter ? items.filter((it) => !it.destination || destFilter.includes(it.destination)) : items
+  const scoped = hasFilter ? items.filter((it) => destFilter.includes(it.destination)) : items
   const base = hasFilter && !showAll ? scoped : items
   const q = query.trim().toLowerCase()
   const shown = q ? base.filter((it) => it.name.toLowerCase().includes(q)) : base
