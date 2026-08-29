@@ -1,7 +1,7 @@
 .inv-banner { background: var(--color-primary); color: var(--color-on-dark); padding: 24px 28px; display: flex; align-items: center; justify-content: space-between; border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background-image: radial-gradient(120% 90% at 85% -10%, rgba(255,255,255,.12), transparent 60%); }
-.inv-title { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
-.inv-no { color: var(--color-on-dark-soft); font-size: 13px; margin-top: 2px; }
+.inv-title { font-size: 23.5px; font-weight: 700; letter-spacing: 1px; }
+.inv-no { color: var(--color-on-dark-soft); font-size: 11.5px; margin-top: 2px; }
 .inv-body { padding: 28px; }
 .inv-totals { max-width: 320px; margin-left: auto; margin-top: 20px; }
 
@@ -10,8 +10,8 @@
 /* agency bank details + UPI QR (client pays the AGENCY, not Wandra) */
 .inv-pay { display: flex; gap: 24px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; margin-top: 20px; padding: 16px 18px; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); background: var(--color-surface-soft); }
 .inv-pay-details { flex: 1 1 240px; min-width: 220px; }
-.inv-pay-h { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: var(--color-stone); margin-bottom: 8px; }
-.inv-pay-row { display: flex; justify-content: space-between; gap: 16px; font-size: 12.5px; padding: 3px 0; color: var(--color-body); }
+.inv-pay-h { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: var(--color-stone); margin-bottom: 8px; }
+.inv-pay-row { display: flex; justify-content: space-between; gap: 16px; font-size: 11px; padding: 3px 0; color: var(--color-body); }
 .inv-pay-row strong { color: var(--color-ink); font-weight: 700; text-align: right; }
 .inv-pay-qr { flex: 0 0 auto; text-align: center; }
 .inv-pay-qr img { width: auto; height: auto; max-width: 108px; max-height: 108px; display: block; border-radius: 8px; background: #fff; padding: 5px; border: 1px solid var(--color-hairline); }
@@ -21,7 +21,7 @@
 .inv-body table tr, .inv-pay, .inv-terms, .inv-totals { break-inside: avoid; page-break-inside: avoid; }
 .inv-body table thead { display: table-header-group; }   /* repeat header if a table spans pages */
 
-.inv-terms { margin-top: 24px; padding: 14px 16px; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); color: var(--color-body); font-size: 13px; line-height: 1.55; }
+.inv-terms { margin-top: 24px; padding: 14px 16px; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); color: var(--color-body); font-size: 11.5px; line-height: 1.55; }
 .inv-terms strong { display: block; color: var(--color-ink); margin-bottom: 4px; }
 .inv-terms p { margin: 0 0 8px; white-space: pre-line; }
 .inv-terms p:last-child { margin-bottom: 0; }
@@ -35,16 +35,16 @@
 .ic-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
 .ic-card { background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-xl); padding: 22px 24px; }
-.ic-card-title { font-size: 15px; font-weight: 800; margin-bottom: 18px; }
+.ic-card-title { font-size: 13.5px; font-weight: 800; margin-bottom: 18px; }
 .ic-gst { align-self: flex-start; }
 
 /* items table */
 .ic-items { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
 .ic-items-head, .ic-item { display: grid; grid-template-columns: minmax(0, 1fr) 60px 108px 66px 96px 32px; gap: 10px; align-items: center; }
-.ic-items-head span { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; color: var(--color-stone); }
+.ic-items-head span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; color: var(--color-stone); }
 .ic-items-head .r { text-align: right; }
 .ic-item .control { height: 42px; }
-.ic-amount { text-align: right; font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ic-amount { text-align: right; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ic-x {
   display: inline-grid; place-items: center; width: 30px; height: 30px;
   border: none; background: none; border-radius: var(--radius-full);
@@ -59,9 +59,9 @@
 /* summary */
 .ic-side { position: sticky; top: 84px; }
 .ic-client { display: flex; align-items: center; gap: 11px; padding: 10px 12px; margin-bottom: 12px; background: var(--color-surface-soft); border-radius: var(--radius-lg); }
-.ic-client-av { flex: 0 0 auto; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: var(--radius-full); background: var(--color-ink); color: #fff; font-size: 12px; font-weight: 800; }
-.ic-client-n { font-size: 13.5px; font-weight: 800; }
-.ic-client-s { font-size: 11.5px; color: var(--color-stone); }
-.ic-line { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 13.5px; font-weight: 600; color: var(--color-charcoal); font-variant-numeric: tabular-nums; }
-.ic-line.total { border-top: 1px solid var(--color-hairline-soft); margin-top: 6px; padding-top: 13px; font-size: 17px; font-weight: 800; color: var(--color-ink); }
-.ic-gst-note { margin-top: 10px; font-size: 11.5px; font-weight: 600; color: var(--color-stone); }
+.ic-client-av { flex: 0 0 auto; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: var(--radius-full); background: var(--color-ink); color: #fff; font-size: 11px; font-weight: 800; }
+.ic-client-n { font-size: 12px; font-weight: 800; }
+.ic-client-s { font-size: 10.5px; color: var(--color-stone); }
+.ic-line { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 12px; font-weight: 600; color: var(--color-charcoal); font-variant-numeric: tabular-nums; }
+.ic-line.total { border-top: 1px solid var(--color-hairline-soft); margin-top: 6px; padding-top: 13px; font-size: 15.5px; font-weight: 800; color: var(--color-ink); }
+.ic-gst-note { margin-top: 10px; font-size: 10.5px; font-weight: 600; color: var(--color-stone); }

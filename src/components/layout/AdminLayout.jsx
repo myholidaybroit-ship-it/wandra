@@ -1,37 +1,43 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
-import { pathFeature } from '../../featureGate'
+import { pathAccess } from '../../featureGate'
 import { useApp } from '../../store/AppContext'
 import { Button } from '../ui/UI'
 import { Icon } from '../ui/icons'
 import { AgencyLogo } from '../ui/AgencyBrand'
 import RenewalBanner from './RenewalBanner'
+import { bucketOf, dueLabel, LINK_KINDS } from '../../utils/followups'
+import '../../pages/admin/tasks/followups.css'
 import './layout.css'
 
+// `feature` = the agency's plan entitlement · `perm` = the user's role.
+// Both are checked here and again on the server.
 const NAV_TOP = [
-  { to: '/app', label: 'Dashboard', icon: 'dashboard', end: true, feature: 'dashboard.view' },
-  { to: '/app/clients', label: 'Trips & Clients', icon: 'clients', feature: 'crm.view' },
+  { to: '/app', label: 'Dashboard', icon: 'dashboard', end: true, feature: 'dashboard.view', perm: 'dashboard' },
+  { to: '/app/clients', label: 'Trips & Clients', icon: 'clients', feature: 'crm.view', perm: 'clients' },
+  { to: '/app/followups', label: 'Follow-ups', icon: 'clock', feature: 'tasks.view', perm: 'tasks', badge: 'tasks' },
 ]
 const MASTER_DATA = [
-  { to: '/app/destinations', label: 'Destinations', icon: 'destinations', feature: 'master.destinations' },
-  { to: '/app/hotels', label: 'Hotels', icon: 'hotels', feature: 'master.hotels' },
-  { to: '/app/cabs', label: 'Cab Types', icon: 'cabs', feature: 'master.cabs' },
-  { to: '/app/services', label: 'Transport', icon: 'destinations', feature: 'master.service_locations' },
-  { to: '/app/activities', label: 'Activities', icon: 'gallery', feature: 'master.activities' },
-  { to: '/app/packages/templates', label: 'Day-wise Plans', icon: 'file', feature: 'builder.templates' },
-  { to: '/app/packages/inclusions', label: 'Incl. & Excl.', icon: 'check', feature: 'master.inclusions' },
-  { to: '/app/policies', label: 'Policies & Notes', icon: 'file', feature: 'branding.agency_profile' },
+  { to: '/app/destinations', label: 'Destinations', icon: 'destinations', feature: 'master.destinations', perm: 'master' },
+  { to: '/app/cities', label: 'Cities', icon: 'destinations', feature: 'master.cities', perm: 'master' },
+  { to: '/app/hotels', label: 'Hotels', icon: 'hotels', feature: 'master.hotels', perm: 'master' },
+  { to: '/app/cabs', label: 'Cab Types', icon: 'cabs', feature: 'master.cabs', perm: 'master' },
+  { to: '/app/services', label: 'Transport', icon: 'destinations', feature: 'master.service_locations', perm: 'master' },
+  { to: '/app/activities', label: 'Activities', icon: 'gallery', feature: 'master.activities', perm: 'master' },
+  { to: '/app/packages/templates', label: 'Day-wise Plans', icon: 'file', feature: 'builder.templates', perm: 'builder' },
+  { to: '/app/packages/inclusions', label: 'Incl. & Excl.', icon: 'check', feature: 'master.inclusions', perm: 'master' },
+  { to: '/app/policies', label: 'Policies & Notes', icon: 'file', feature: 'branding.agency_profile', perm: 'settings' },
 ]
 const NAV_END = [
-  { to: '/app/landing', label: 'Landing Page', icon: 'wand', feature: 'landing.builder' },
-  { to: '/app/reports', label: 'Reports', icon: 'reports', feature: 'reports.view' },
+  { to: '/app/landing', label: 'Landing Page', icon: 'wand', feature: 'landing.builder', perm: 'landing' },
+  { to: '/app/reports', label: 'Reports', icon: 'reports', feature: 'reports.view', perm: 'reports' },
   { to: '/app/gallery', label: 'Reviews', icon: 'star', feature: 'reviews.view' },
 ]
 const NAV_BOTTOM = [
-  { to: '/app/settings', label: 'Settings', icon: 'settings', feature: 'branding.agency_profile' },
-  { to: '/app/users', label: 'User Management', icon: 'users', feature: 'team.users' },
-  { to: '/app/roles', label: 'Roles & Permissions', icon: 'check', feature: 'team.roles' },
-  { to: '/app/assignment', label: 'Lead Assignment', icon: 'refresh', feature: 'team.lead_assignment' },
+  { to: '/app/settings', label: 'Settings', icon: 'settings', feature: 'branding.agency_profile', perm: 'settings' },
+  { to: '/app/users', label: 'User Management', icon: 'users', feature: 'team.users', perm: 'settings' },
+  { to: '/app/roles', label: 'Roles & Permissions', icon: 'check', feature: 'team.roles', perm: 'settings' },
+  { to: '/app/assignment', label: 'Lead Assignment', icon: 'refresh', feature: 'team.lead_assignment', perm: 'settings' },
   { to: '/app/billing', label: 'Billing & Subscription', icon: 'billing' },
   { to: '/app/support', label: 'Help & Support', icon: 'help' },
 ]
@@ -57,7 +63,7 @@ function Logo({ collapsed, agency, isPro }) {
 /* ---------- Global search modal (⌘K) ---------- */
 function SearchModal({ open, onClose }) {
   const nav = useNavigate()
-  const { clients, packages, bookings, invoices, hotels, destinations, cabs } = useApp()
+  const { clients, packages, bookings, invoices, hotels, destinations, cities, cabs } = useApp()
   const [q, setQ] = useState('')
 
   useEffect(() => { if (!open) setQ('') }, [open])
@@ -80,6 +86,7 @@ function SearchModal({ open, onClose }) {
         { label: 'Invoices', items: invoices.filter((i) => match(i.code, i.clientName)).slice(0, 5).map((i) => ({ icon: 'invoices', title: i.clientName, sub: i.code, to: `/app/invoices/${i.id}` })) },
         { label: 'Hotels', items: hotels.filter((h) => match(h.name, h.city)).slice(0, 5).map((h) => ({ icon: 'hotels', title: h.name, sub: h.city, to: `/app/hotels/${h.id}` })) },
         { label: 'Destinations', items: destinations.filter((d) => match(d.name, d.location)).slice(0, 5).map((d) => ({ icon: 'destinations', title: d.name, sub: d.location, to: `/app/destinations/${d.id}` })) },
+        { label: 'Cities', items: (cities || []).filter((c) => match(c.name, c.destination)).slice(0, 5).map((c) => ({ icon: 'destinations', title: c.name, sub: c.destination || 'City', to: '/app/cities' })) },
         { label: 'Cab Types', items: cabs.filter((c) => match(c.name, c.type)).slice(0, 5).map((c) => ({ icon: 'cabs', title: c.name, sub: c.type, to: `/app/cabs/${c.id}` })) },
       ].filter((g) => g.items.length)
     : []
@@ -127,16 +134,91 @@ function SearchModal({ open, onClose }) {
   )
 }
 
+/* ---------- Follow-up bell (overdue + due today) ---------- */
+function FollowUpBell() {
+  const { taskSummary, hasFeature, can, completeTask, toast } = useApp()
+  const nav = useNavigate()
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [open])
+
+  if (!hasFeature('tasks.view') || !hasFeature('tasks.bell') || !can('tasks')) return null
+
+  const due = taskSummary.due || 0
+  const next = taskSummary.next || []
+  const go = (to) => { setOpen(false); nav(to) }
+  const clear = async (id) => {
+    try { await completeTask(id); toast('Done — nice work') } catch (e) { toast(e.message || 'Could not update') }
+  }
+
+  return (
+    <div className="bell-wrap">
+      <button className="bell-btn" onClick={() => setOpen((o) => !o)} title={due ? `${due} follow-up${due === 1 ? '' : 's'} need you` : 'Follow-ups'}>
+        <Icon name="clock" size={17} />
+        {(due > 0 || taskSummary.total > 0) && (
+          <span className={`bell-dot ${due ? '' : 'calm'}`}>{due || taskSummary.total}</span>
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="bell-scrim" onClick={() => setOpen(false)} />
+          <div className="bell-menu">
+            <div className="bell-head">
+              <div>
+                <div className="bell-head-title">Follow-ups</div>
+                <div className="bell-head-sub">
+                  {taskSummary.overdue} overdue · {taskSummary.today} due today
+                  {taskSummary.doneToday ? ` · ${taskSummary.doneToday} cleared` : ''}
+                </div>
+              </div>
+            </div>
+            {next.length === 0 ? (
+              <div className="bell-empty">Nothing outstanding. Your queue is clear.</div>
+            ) : next.map((t) => {
+              const bucket = bucketOf(t)
+              const link = t.link?.kind ? LINK_KINDS[t.link.kind] : null
+              return (
+                <button
+                  key={t.id}
+                  className="bell-item"
+                  onClick={() => go(link && t.link.id ? link.to(t.link.id) : '/app/followups')}
+                >
+                  <span className="fu-check" onClick={(e) => { e.stopPropagation(); clear(t.id) }} title="Mark done">
+                    <span className="fu-check-box" />
+                  </span>
+                  <span className="bell-item-body">
+                    <span className="bell-item-title">{t.title}</span>
+                    <span className={`bell-item-sub ${bucket === 'overdue' ? 'overdue' : ''}`}>
+                      {dueLabel(t)}{t.link?.code ? ` · ${t.link.code}` : ''}
+                    </span>
+                  </span>
+                </button>
+              )
+            })}
+            <div className="bell-foot"><Link to="/app/followups" onClick={() => setOpen(false)}>Open the full queue →</Link></div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function AdminLayout() {
-  const { agency, clients, currentUser, ready, authed, logout, hasFeature, sessionExpiresAt } = useApp()
+  const { agency, clients, currentUser, ready, authed, logout, hasFeature, can, taskSummary, sessionExpiresAt } = useApp()
   const nav = useNavigate()
   const [open, setOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [acctOpen, setAcctOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('wandra-sidebar') === 'collapsed')
   const { pathname } = useLocation()
-  // filter every nav group by the agency's enabled features (admin-controlled)
-  const navFilter = (arr) => arr.filter((n) => !n.feature || hasFeature(n.feature))
+  // filter every nav group by BOTH gates — the agency's plan features
+  // (admin-controlled) and this user's role permissions
+  const navFilter = (arr) => arr.filter((n) => (!n.feature || hasFeature(n.feature)) && (!n.perm || can(n.perm)))
   const navTop = navFilter(NAV_TOP)
   const masterData = navFilter(MASTER_DATA)
   const navEnd = navFilter(NAV_END)
@@ -191,6 +273,7 @@ export default function AdminLayout() {
             <NavLink key={n.to} to={n.to} end={n.end} className="side-link" title={collapsed ? n.label : undefined} onClick={() => setOpen(false)}>
               <span className="side-ic"><Icon name={n.icon} /></span>
               <span className="side-txt">{n.label}</span>
+              {n.badge === 'tasks' && taskSummary.due > 0 && <span className="side-badge">{taskSummary.due}</span>}
             </NavLink>
           ))}
 
@@ -234,9 +317,9 @@ export default function AdminLayout() {
           <div className="side-plan-card">
             <div className="row-between">
               <span className="side-plan-name">{planName}</span>
-              <span className="side-plan-usage">{clients.length}/{planLimit}</span>
+              {can('clients') && <span className="side-plan-usage">{clients.length}/{planLimit}</span>}
             </div>
-            <div className="side-plan-bar"><span style={{ width: `${usedPct}%` }} /></div>
+            {can('clients') && <div className="side-plan-bar"><span style={{ width: `${usedPct}%` }} /></div>}
             <Button as="a" href="/app/billing" size="sm" className="w-full mt-sm">{isPro ? 'Manage plan' : 'Upgrade plan'}</Button>
           </div>
         </div>
@@ -271,10 +354,11 @@ export default function AdminLayout() {
           </button>
           <button className="btn-icon search-btn-sm" onClick={() => setSearchOpen(true)} title="Search"><Icon name="search" size={16} /></button>
           <div className="topbar-right">
+            <FollowUpBell />
             <div className="plan-pill">
               <div className="plan-pill-meta">
                 <span className="plan-pill-name">{agency.plan.name}</span>
-                <span className="plan-pill-usage">{clients.length}/{planLimit} clients used</span>
+                {can('clients') && <span className="plan-pill-usage">{clients.length}/{planLimit} clients used</span>}
               </div>
               <Button as="a" href="/app/billing" size="sm" className="plan-pill-cta">{isPro ? 'Manage' : 'Upgrade'}</Button>
             </div>
@@ -319,17 +403,41 @@ export default function AdminLayout() {
         <main className="content">
           <div className="content-inner">
             {(() => {
-              const gate = pathFeature(pathname)
-              if (gate && !hasFeature(gate)) {
+              // The same two gates the API applies, in the same order, so the
+              // message tells the user WHICH one stopped them — a plan block is the
+              // agency owner's to fix; a permission block is an agency admin's.
+              const { feature, perm } = pathAccess(pathname)
+              if (feature && !hasFeature(feature)) {
                 return (
-                  <div style={{ maxWidth: 520, margin: '10vh auto', textAlign: 'center' }}>
-                    <div style={{ fontSize: 40, marginBottom: 10 }}></div>
-                    <h2 className="t-display-sm">Feature not available</h2>
+                  <div className="gate-wall">
+                    <div className="gate-wall-ic"><Icon name="billing" size={26} /></div>
+                    <h2 className="t-display-sm">Not on your plan</h2>
                     <p className="t-body-md c-body" style={{ marginTop: 8 }}>
-                      This module isn’t enabled on your current plan. Contact Wandra to enable it, or view your plan.
+                      This module isn’t enabled for {agency?.name || 'your agency'}. Contact Wandra to switch it on, or review your plan.
                     </p>
                     <div style={{ marginTop: 18 }}>
                       <Button as="a" href="/app/billing">View plan &amp; billing</Button>
+                    </div>
+                  </div>
+                )
+              }
+              if (perm && !can(perm)) {
+                return (
+                  <div className="gate-wall">
+                    <div className="gate-wall-ic"><Icon name="users" size={26} /></div>
+                    <h2 className="t-display-sm">Your role doesn’t cover this</h2>
+                    <p className="t-body-md c-body" style={{ marginTop: 8 }}>
+                      The <strong>{currentUser?.role || 'current'}</strong> role doesn’t have access to this area.
+                      An agency admin can request the change from Roles &amp; Permissions.
+                    </p>
+                    <div style={{ marginTop: 18 }} className="row gap-xs center">
+                      {/* only offer the roles page if this same role can actually open it */}
+                      {can('settings') && hasFeature('team.roles') && (
+                        <Button as="a" href="/app/roles" variant="secondary">See role access</Button>
+                      )}
+                      <Button as="a" href={can('dashboard') ? '/app' : '/app/support'}>
+                        {can('dashboard') ? 'Back to dashboard' : 'Contact support'}
+                      </Button>
                     </div>
                   </div>
                 )

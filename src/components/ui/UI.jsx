@@ -117,6 +117,22 @@ export function PillSelect({ value, options = [], onChange, format = (v) => v })
   )
 }
 
+/* ---------- CityPicker ----------
+   A city dropdown fed by the City master, narrowed to the parent destination
+   when one is set (and falling back to every city when that destination has
+   none yet, so a half-filled master never blocks the form). Any city already
+   typed on the record stays selectable even if it isn't in the master. */
+export function CityPicker({ value, onChange, cities = [], destination, placeholder = 'Select city', allLabel }) {
+  const scoped = destination ? cities.filter((c) => c.destination === destination) : cities
+  const pool = scoped.length ? scoped : cities
+  const names = [...new Set([...pool.map((c) => c.name), ...(value ? [value] : [])])].sort((a, b) => a.localeCompare(b))
+  const head = allLabel || placeholder
+  return (
+    <PillSelect value={value || head} options={[head, ...names]}
+      onChange={(v) => onChange(v === head ? '' : v)} />
+  )
+}
+
 /* ---------- PillMultiSelect (multi-choice dropdown, optionally searchable) ---------- */
 export function PillMultiSelect({ value = [], options = [], onChange, placeholder = 'Select…', searchable = false, searchPlaceholder = 'Search…', tabs }) {
   const [open, setOpen] = useState(false)

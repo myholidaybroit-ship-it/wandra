@@ -1,14 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Button, DataTable, Badge, formatDate, ListSearch, Modal, PillMultiSelect, DatePicker, Field, Input, ConfirmDelete } from '../../../components/ui/UI'
+import { PageHeader, Button, DataTable, Badge, formatDate, ListSearch, Modal, PillMultiSelect, PillSelect, DatePicker, Field, Input, ConfirmDelete } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 import { useLeadSources } from '../../../utils/sources'
 import './query.css'
 
 const STATUSES = ['New Query', 'In Progress', 'Converted', 'On Trip', 'Past Trips', 'Canceled', 'Dropped']
-const PER_PAGE = 10
+// how many leads to show at once — agents working a big list want to scan
+// 50 or 100 rows without paging through ten pages of ten
+const PAGE_SIZES = [10, 25, 50, 100]
+const PAGE_SIZE_KEY = 'wandra.clients.perPage'
+const storedPageSize = () => {
+  try { const v = Number(localStorage.getItem(PAGE_SIZE_KEY)); return PAGE_SIZES.includes(v) ? v : 10 } catch { return 10 }
+}
 
 const EMPTY_FILTERS = {
   statuses: [], sources: [], assignees: [], interests: [], tags: [],
@@ -35,6 +41,11 @@ export default function ClientList() {
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(1)
+  const [perPage, setPerPageState] = useState(storedPageSize)
+  const setPerPage = (n) => {
+    setPerPageState(n); setPage(1)
+    try { localStorage.setItem(PAGE_SIZE_KEY, String(n)) } catch { /* private mode — the choice just won't stick */ }
+  }
 
   // options derived from configured sources + whatever the data actually contains
   const opts = useMemo(() => ({
@@ -63,9 +74,9 @@ export default function ClientList() {
   }), [clients, q, filters])
 
   useEffect(() => { setPage(1) }, [q, filters])
-  const totalPages = Math.max(1, Math.ceil(rows.length / PER_PAGE))
+  const totalPages = Math.max(1, Math.ceil(rows.length / perPage))
   const safePage = Math.min(page, totalPages)
-  const pageRows = rows.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE)
+  const pageRows = rows.slice((safePage - 1) * perPage, safePage * perPage)
 
   // active filter chips (individually removable)
   const chips = useMemo(() => {
@@ -170,11 +181,15 @@ export default function ClientList() {
 
       <DataTable columns={columns} rows={pageRows} onRowClick={(r) => nav(`/app/clients/${r.id}`)} empty="No clients match your filters." />
 
-      {rows.length > PER_PAGE && (
+      {rows.length > PAGE_SIZES[0] && (
         <div className="list-pager">
           <span className="list-pager-info">
-            Showing {(safePage - 1) * PER_PAGE + 1}–{Math.min(safePage * PER_PAGE, rows.length)} of {rows.length}
+            Showing {(safePage - 1) * perPage + 1}–{Math.min(safePage * perPage, rows.length)} of {rows.length}
           </span>
+          <div className="list-pager-size">
+            <span>Rows</span>
+            <PillSelect value={String(perPage)} options={PAGE_SIZES.map(String)} onChange={(v) => setPerPage(Number(v))} />
+          </div>
           <div className="list-pager-nav">
             <button className="pager-btn" disabled={safePage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Prev</button>
             {pageWindow(safePage, totalPages).map((p, i) => (

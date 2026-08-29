@@ -207,9 +207,16 @@ function addDays(iso, n) {
 function optionGrandTotal(opt, s = {}) {
   if (!opt) return 0
   const nn = (v) => Number(v) || 0
-  const bed = (st) => nn(st.aweb) * nn(st.awebRate) + nn(st.cweb) * nn(st.cwebRate) + nn(st.cnb) * nn(st.cnbRate)
-  const hotelCost = (opt.stays || []).reduce((a, st) => a + (nn(st.rate) * nn(st.rooms) + bed(st)) * ((st.nights || []).length), 0)
-  const svcCost = (kind) => (opt.services || []).filter((x) => x.kind === kind).reduce((a, x) => a + nn(x.rate) * (nn(x.qty) || 1) * Math.max(1, (x.days || []).length), 0)
+  // a supplier (B2B) net price replaces the master rate — same rule as the builder
+  const costOf = (x) => (String(x?.supplierRate ?? '').trim() !== '' ? nn(x.supplierRate) : nn(x.rate))
+  const bed = (st) => nn(st.aweb) * nn(st.awebRate) + nn(st.cweb) * nn(st.cwebRate) + nn(st.cnb) * nn(st.cnbRate) + nn(st.infants) * nn(st.infantRate)
+  const hotelCost = (opt.stays || []).reduce((a, st) => a + (costOf(st) * nn(st.rooms) + bed(st)) * ((st.nights || []).length), 0)
+  // activities price adults, children and infants separately
+  const perDay = (x) => (x.kind === 'activity'
+    ? costOf(x) * (nn(x.qty) || 1) + nn(x.rateChild) * nn(x.childQty) + nn(x.rateInfant) * nn(x.infantQty)
+    : costOf(x) * (nn(x.qty) || 1))
+  const svcCost = (kind) => (opt.services || []).filter((x) => x.kind === kind)
+    .reduce((a, x) => a + perDay(x) * Math.max(1, (x.days || []).length), 0)
   const flightCost = (opt.flights || []).reduce((a, f) => a + nn(f.cost), 0)
   const extraCost = (opt.extras || []).reduce((a, e) => a + nn(e.cost), 0)
   const costPrice = hotelCost + svcCost('transport') + svcCost('activity') + flightCost + extraCost
@@ -233,6 +240,14 @@ function optionPrices(pkg) {
       : (optionGrandTotal(o, pkg.builderV2) || N(pkg.pricing?.grandTotal)),
   }))
 }
+
+/* Extra beds & infants on a stay, as a short phrase for the message. */
+const bedNote = (st) => [
+  N(st.aweb) && `${N(st.aweb)} adult extra bed${N(st.aweb) > 1 ? 's' : ''}`,
+  N(st.cweb) && `${N(st.cweb)} child extra bed${N(st.cweb) > 1 ? 's' : ''}`,
+  N(st.cnb) && `${N(st.cnb)} child without bed`,
+  N(st.infants) && `${N(st.infants)} infant${N(st.infants) > 1 ? 's' : ''}`,
+].filter(Boolean).join(', ')
 
 /* mode 'hotels' → hotel options + prices, no day-wise schedule.
    mode 'full'   → hotels AND the day-wise plan (transfers & activities) together. */
@@ -280,7 +295,8 @@ export function buildWaMessage(pkg, client, agency, mode = 'full') {
         L.push(`${B('Location')}: ${st.hotelCity || '—'}`)
         L.push(`${B('Check-in')}: ${fmtD(addDays(start, Math.min(...ns) - 1))}`)
         L.push(`${B('Check-out')}: ${fmtD(addDays(start, Math.max(...ns)))}`)
-        if (st.roomType) L.push(`${B('Room type')}: ${st.roomType}`)
+        if (st.roomType) L.push(`${B('Room type')}: ${N(st.rooms) || 1} × ${st.roomType}${N(st.paxPerRoom) ? ` (${N(st.paxPerRoom)} pax/room)` : ''}`)
+        if (bedNote(st)) L.push(`${B('Extra beds')}: ${bedNote(st)}`)
         L.push(`${B('Meal')}: ${st.mealPlan || '—'}`)
         if (st.hotelStar) L.push(`${B('Hotel type')}: ${st.hotelStar} Star`)
       })
@@ -386,7 +402,7 @@ export function buildEmail(pkg, client, agency) {
       o.stays.forEach((st) => {
         const ns = st.nights && st.nights.length ? st.nights : [1]
         L.push(`  - ${st.hotelName || '—'}${st.hotelCity ? ` — ${st.hotelCity}` : ''}${st.hotelStar ? ` (${st.hotelStar} Star)` : ''}`)
-        L.push(`    ${fmtD(addDays(start, Math.min(...ns) - 1))} to ${fmtD(addDays(start, Math.max(...ns)))}${st.roomType ? ` · ${st.roomType}` : ''}${st.mealPlan ? ` · ${st.mealPlan}` : ''}`)
+        L.push(`    ${fmtD(addDays(start, Math.min(...ns) - 1))} to ${fmtD(addDays(start, Math.max(...ns)))}${st.roomType ? ` · ${N(st.rooms) || 1} × ${st.roomType}` : ''}${st.mealPlan ? ` · ${st.mealPlan}` : ''}${bedNote(st) ? ` · ${bedNote(st)}` : ''}`)
       })
     })
   }

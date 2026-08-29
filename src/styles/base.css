@@ -141,3 +141,25 @@ code, pre, .mono { font-family: var(--font-mono); }
 }
 .toast .dot { width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-success); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* ============================================================
+   CRM density
+   The app chrome runs one step tighter than the client-facing pages —
+   more rows and more of a long itinerary on screen at once. Scoped to
+   `.admin-shell` on purpose: the shared itinerary, the quote PDF and
+   the landing site keep the full type scale, because those are
+   documents a guest reads, not a workspace an agent scans all day.
+   ============================================================ */
+.admin-shell { font-size: 14.5px; }
+.admin-shell .t-heading-md,  .admin-shell .t-display-md   { font-size: 28px; }
+.admin-shell .t-heading-sm,  .admin-shell .t-display-sm   { font-size: 21px; }
+.admin-shell .t-card-title,  .admin-shell .t-title-md     { font-size: 17.5px; }
+.admin-shell .t-subtitle                                  { font-size: 16px; }
+.admin-shell .t-body-md,     .admin-shell .t-body-md-bold { font-size: 14.5px; }
+.admin-shell .t-title-sm                                  { font-size: 14.5px; }
+.admin-shell .t-body-sm,     .admin-shell .t-body-sm-medium { font-size: 13px; }
+.admin-shell .t-caption,     .admin-shell .t-caption-bold { font-size: 12px; }
+.admin-shell .t-micro                                     { font-size: 11px; }
+.admin-shell .t-button                                    { font-size: 13px; }
+.admin-shell .t-caption-upper                             { font-size: 11px; }
+.admin-shell .t-code                                      { font-size: 12px; }

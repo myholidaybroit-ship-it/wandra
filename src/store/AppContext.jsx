@@ -94,6 +94,7 @@ export function AppProvider({ children }) {
   const [agency, setAgencyState] = useState(null)
   const [destinations, setDestinations] = useState([])
   const [hotels, setHotels] = useState([])
+  const [cities, setCities] = useState([])
   const [cabs, setCabs] = useState([])
   const [serviceLocations, setServiceLocations] = useState([])
   const [activities, setActivities] = useState([])
@@ -111,12 +112,20 @@ export function AppProvider({ children }) {
   const [assignment, setAssignment] = useState({ enabled: true, rules: [], fallback: { mode: 'all', members: [], next: 0 } })
   const [landing, setLanding] = useState(null)
   const [dashboard, setDashboard] = useState(EMPTY_DASH)
+  // ── follow-ups (the work queue) ──
+  const [tasks, setTasks] = useState([])
+  const [taskScope, setTaskScope] = useState('mine')      // 'mine' | 'team'
+  const [taskSummary, setTaskSummary] = useState({ overdue: 0, today: 0, week: 0, total: 0, doneToday: 0, due: 0, next: [] })
+  const [followupRules, setFollowupRules] = useState(null)
 
   // platform config (served from the backend via /config)
   const [categoryGroups, setCategoryGroups] = useState([])
   const [themes, setThemes] = useState([])
   const [templates, setTemplates] = useState([])
   const [plans, setPlans] = useState([])
+  const [cabTypes, setCabTypes] = useState([])
+  const [scheduleTemplate, setScheduleTemplate] = useState([])
+  const [roleModules, setRoleModules] = useState([])
 
   // "view as" — local switch over the loaded users for permission preview
   const [currentUserId, setCurrentUserId] = useState(null)
@@ -133,13 +142,15 @@ export function AppProvider({ children }) {
   const LOADERS = {
     destinations: () => api.get('/destinations').then((r) => setDestinations(r.items)),
     hotels: () => api.get('/hotels').then((r) => setHotels(r.items)),
+    cities: () => api.get('/cities').then((r) => setCities(r.items)),
     cabs: () => api.get('/cabs').then((r) => setCabs(r.items)),
     serviceLocations: () => api.get('/services').then((r) => setServiceLocations(r.items)),
     activities: () => api.get('/activities').then((r) => setActivities(r.items)),
     packageTemplates: () => api.get('/templates').then((r) => setPackageTemplates(r.items)),
     templates: () => api.get('/itinerary-templates').then((r) => setTemplates(r.items)),
     inclusions: () => api.get('/inclusions').then((r) => setInclusionPresets({ byDest: r.byDest || {} })),
-    clients: () => api.get('/clients').then((r) => setClients(r.items)),
+    // a busy agency scans leads 100 at a time — pull a full working set, not the default page
+    clients: () => api.get('/clients?limit=2000').then((r) => setClients(r.items)),
     packages: () => api.get('/packages').then((r) => setPackages(r.items)),
     bookings: () => api.get('/bookings').then((r) => setBookings(r.items)),
     invoices: () => api.get('/invoices').then((r) => setInvoices(r.items)),
@@ -150,9 +161,38 @@ export function AppProvider({ children }) {
     roles: () => api.get('/roles').then((r) => setRoles(r.items)),
     assignment: () => api.get('/assignment').then((r) => setAssignment(r)),
     landing: () => api.get('/landing').then((r) => setLanding(r)),
+    tasks: () => api.get('/tasks').then((r) => { setTasks(r.items); setTaskScope(r.scope) }),
+    taskSummary: () => api.get('/tasks/summary').then((r) => setTaskSummary(r)),
     dashboard: () => api.get('/dashboard').then((r) => setDashboard({ series: r.series, recentActivity: r.recentActivity, analytics: r.analytics, kpis: r.kpis })),
   }
   const reload = (...names) => Promise.all(names.map((n) => LOADERS[n]?.()))
+
+  /* Which gate guards each loader — [featureKey, rolePermKey]. Bootstrap skips
+     the ones the caller can't reach, so a restricted role doesn't fire a dozen
+     requests the API is only going to refuse. */
+  const LOADER_GATES = {
+    destinations: ['master.destinations', 'master'],
+    hotels: ['master.hotels', 'master'],
+    cities: ['master.cities', 'master'],
+    cabs: ['master.cabs', 'master'],
+    serviceLocations: ['master.service_locations', 'master'],
+    activities: ['master.activities', 'master'],
+    packageTemplates: [null, 'builder'],
+    templates: [null, 'builder'],
+    inclusions: ['master.inclusions', 'master'],
+    clients: ['crm.view', 'clients'],
+    packages: ['builder.access', 'builder'],
+    bookings: ['bookings.view', 'bookings'],
+    invoices: ['invoices.view', 'invoices'],
+    quotations: ['quotations.view', 'builder'],
+    vouchers: ['vouchers.view', 'vouchers'],
+    gallery: ['reviews.view', null],
+    assignment: ['team.lead_assignment', 'settings'],
+    landing: ['landing.builder', 'landing'],
+    dashboard: ['dashboard.view', 'dashboard'],
+    tasks: ['tasks.view', 'tasks'],
+    taskSummary: ['tasks.view', 'tasks'],
+  }
 
   /* ---------- bootstrap ---------- */
   const bootstrap = useCallback(async () => {
@@ -167,7 +207,18 @@ export function AppProvider({ children }) {
     setCategoryGroups(cfg.categoryGroups || [])
     setThemes(cfg.previewThemes || [])
     setPlans(cfg.plans || [])
-    await Promise.all(Object.values(LOADERS).map((fn) => fn().catch(() => {})))
+    setCabTypes(cfg.cabTypes || [])
+    setScheduleTemplate(cfg.paymentScheduleTemplate || [])
+    setRoleModules(cfg.roleModules || [])
+
+    // only fetch what this plan and this role actually allow
+    const featureMap = ent.features || {}
+    const permsMap = me.perms || {}
+    const allowed = ([feature, perm]) =>
+      (!feature || featureMap[feature] !== false) && (!perm || permsMap[perm] !== false)
+    await Promise.all(Object.entries(LOADERS)
+      .filter(([name]) => !LOADER_GATES[name] || allowed(LOADER_GATES[name]))
+      .map(([, fn]) => fn().catch(() => {})))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -190,8 +241,10 @@ export function AppProvider({ children }) {
   function logout() {
     api.logout(); setAuthed(false); setSession(null)
     setAgencyState(null); setFeatures({}); setLimitsMap({})
+    setCities([])
     setClients([]); setPackages([]); setBookings([]); setInvoices([]); setQuotations([])
     setVouchers([]); setGallery([]); setUsers([]); setRoles([])
+    setTasks([]); setTaskSummary({ overdue: 0, today: 0, week: 0, total: 0, doneToday: 0, due: 0, next: [] })
   }
 
   /* ---------- helpers ---------- */
@@ -210,6 +263,9 @@ export function AppProvider({ children }) {
   const addDestination = async (d) => { const rec = await api.post('/destinations', d); prepend(setDestinations)(rec); return rec }
   const updateDestination = async (id, patch) => replace(setDestinations)(await api.patch(`/destinations/${id}`, patch))
   const removeDestination = async (id) => { await api.del(`/destinations/${id}`); setDestinations((l) => l.filter((d) => d.id !== id)) }
+  const addCity = async (c) => { const rec = await api.post('/cities', c); setCities((l) => [...l, rec].sort((a, b) => a.name.localeCompare(b.name))); return rec }
+  const updateCity = async (id, patch) => replace(setCities)(await api.patch(`/cities/${id}`, patch))
+  const removeCity = async (id) => { await api.del(`/cities/${id}`); setCities((l) => l.filter((c) => c.id !== id)) }
   const addHotel = async (h) => { const rec = await api.post('/hotels', h); prepend(setHotels)(rec); return rec }
   const updateHotel = async (id, patch) => replace(setHotels)(await api.patch(`/hotels/${id}`, patch))
   const removeHotel = async (id) => { await api.del(`/hotels/${id}`); setHotels((l) => l.filter((h) => h.id !== id)) }
@@ -261,6 +317,8 @@ export function AppProvider({ children }) {
   const removeBooking = async (id) => { await api.del(`/bookings/${id}`); setBookings((l) => l.filter((b) => b.id !== id)); await reload('invoices', 'quotations', 'packages') }
   const addBookingPayment = async (id, pay) => replace(setBookings)(await api.post(`/bookings/${id}/payments`, pay))
   const setBookingStatus = async (id, status) => replace(setBookings)(await api.patch(`/bookings/${id}/status`, { status }))
+  const setBookingSchedule = async (id, schedule) => replace(setBookings)(await api.patch(`/bookings/${id}/schedule`, { schedule }))
+  const generateBookingSchedule = async (id) => replace(setBookings)(await api.post(`/bookings/${id}/schedule/generate`, {}))
 
   /* ---------- invoices ---------- */
   const addInvoice = async (inv) => { const rec = await api.post('/invoices', inv); prepend(setInvoices)(rec); return rec }
@@ -274,6 +332,26 @@ export function AppProvider({ children }) {
   /* ---------- vouchers ---------- */
   const addVoucher = async (v) => { const rec = await api.post('/vouchers', v); prepend(setVouchers)(rec); return rec }
   const removeVoucher = async (id) => { await api.del(`/vouchers/${id}`); setVouchers((l) => l.filter((v) => v.id !== id)) }
+
+  /* ---------- follow-ups ---------- */
+  // Every mutation refreshes the summary too — the bell, the nav badge and the
+  // dashboard card all read it, so they can never drift from the queue.
+  const refreshTaskSummary = async () => { try { setTaskSummary(await api.get('/tasks/summary')) } catch { /* gated */ } }
+  const reloadTasks = async () => { await reload('tasks'); await refreshTaskSummary() }
+  const addTask = async (t) => { const rec = await api.post('/tasks', t); prepend(setTasks)(rec); refreshTaskSummary(); return rec }
+  const updateTask = async (id, patch) => { const rec = await api.patch(`/tasks/${id}`, patch); replace(setTasks)(rec); refreshTaskSummary(); return rec }
+  const completeTask = async (id, outcome) => { const rec = await api.post(`/tasks/${id}/complete`, { outcome }); replace(setTasks)(rec); refreshTaskSummary(); return rec }
+  const reopenTask = async (id) => { const rec = await api.post(`/tasks/${id}/reopen`); replace(setTasks)(rec); refreshTaskSummary(); return rec }
+  const snoozeTask = async (id, opts) => { const rec = await api.post(`/tasks/${id}/snooze`, opts); replace(setTasks)(rec); refreshTaskSummary(); return rec }
+  const removeTask = async (id) => { await api.del(`/tasks/${id}`); setTasks((l) => l.filter((t) => t.id !== id)); refreshTaskSummary() }
+  const loadFollowupRules = async () => { const r = await api.get('/tasks/rules'); setFollowupRules(r); return r }
+  const setFollowupRule = async (key, patch) => {
+    const r = await api.patch('/tasks/rules', { key, ...patch })
+    setFollowupRules((f) => (f ? { ...f, ...r } : f))
+    return r
+  }
+  /** The open follow-ups attached to one record — powers the per-record panel. */
+  const tasksFor = (kind, id) => tasks.filter((t) => t.link?.kind === kind && String(t.link?.id) === String(id))
 
   /* ---------- gallery / stories ---------- */
   const approveStory = async (id) => replace(setGallery)(await api.patch(`/stories/${id}/approve`))
@@ -306,6 +384,22 @@ export function AppProvider({ children }) {
     : (session?.canSeePricing ?? true)
   const setCurrentUser = (id) => setCurrentUserId(id)
 
+  /* ---------- role permissions (the second gate) ----------
+     `can(moduleKey)` answers "is this TEAMMATE allowed?", while `hasFeature`
+     answers "is the AGENCY's plan entitled?". Both have to be true, and both
+     are enforced again server-side — this only keeps the UI honest.
+     The map is resolved by the backend and travels on the session, so the CRM
+     never re-implements the rule. */
+  const sessionPerms = session?.perms || null
+  const viewingSelf = currentUserId === session?.user?.id
+  const can = useCallback((moduleKey) => {
+    if (!moduleKey) return true
+    // "view as" preview: read the previewed role's own resolved map
+    if (!viewingSelf) return currentRole?.access ? currentRole.access[moduleKey] !== false : !!currentRole?.system
+    if (!sessionPerms) return true          // pre-bootstrap: don't flash a false denial
+    return sessionPerms[moduleKey] !== false
+  }, [sessionPerms, viewingSelf, currentRole])
+
   /* ---------- plan feature flags (admin-controlled) ----------
      hasFeature(key) → is this feature enabled for the agency? Unknown keys
      default to enabled so we never hide something the catalog doesn't cover. */
@@ -314,10 +408,12 @@ export function AppProvider({ children }) {
 
   const value = {
     ready, authed, session, login, logout, sessionExpiresAt,
-    features, limitsMap, hasFeature, limitFor,
+    features, limitsMap, hasFeature, limitFor, can, roleModules,
     agency, setAgency, respondRenewal,
     destinations, addDestination, updateDestination, removeDestination,
     hotels, addHotel, updateHotel, removeHotel,
+    cities, addCity, updateCity, removeCity,
+    cabTypes, scheduleTemplate,
     cabs, addCab, updateCab, removeCab,
     serviceLocations, addServiceLocation, updateServiceLocation, removeServiceLocation,
     activities, addActivity, updateActivity, removeActivity,
@@ -325,8 +421,12 @@ export function AppProvider({ children }) {
     packages, addPackage, updatePackage, removePackage, setPackageStatus, addPackageLog,
     packageTemplates, createPackageFromTemplate,
     bookings, createBookingFromPackage, cancelBooking, removeBooking, addBookingPayment, setBookingStatus,
+    setBookingSchedule, generateBookingSchedule,
     invoices, addInvoice, addPayment, removeInvoice,
     quotations, setQuotationStatus, removeQuotation,
+    tasks, taskScope, taskSummary, tasksFor, reloadTasks, addTask, updateTask,
+    completeTask, reopenTask, snoozeTask, removeTask,
+    followupRules, loadFollowupRules, setFollowupRule,
     gallery, approveStory, addStory, removeStory,
     users, // read-only — the Wandra team manages users (paid seats) from the admin panel
     currentUser, currentUserId, setCurrentUser, canSeePricing, isAdmin,

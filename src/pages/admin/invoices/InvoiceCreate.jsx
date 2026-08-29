@@ -1,17 +1,53 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useApp, inr } from '../../../store/AppContext'
+import { useApp, inr, computePricing } from '../../../store/AppContext'
 import { PageHeader, Button, Field, Input, PillSelect, DatePicker } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import './invoice.css'
 
 const TYPES = ['Booking', 'Package', 'Service']
 const blankItem = () => ({ description: '', qty: 1, rate: '', tax: 0 })
+const today = () => new Date().toISOString().slice(0, 10)
+
+/* How a package lands on the invoice.
+
+   'single'   one line for the whole trip — what an agency actually bills, and
+              the default. The guest sees "Travel package — Kashmir 5N/6D",
+              not a hotel line, a cab line and a ticket line they can argue
+              with piece by piece.
+   'detailed' the old itemised breakdown, for the agencies that want it. */
+const BILL_MODES = ['single', 'detailed']
+const BILL_LABEL = { single: 'One consolidated amount', detailed: 'Itemised breakdown' }
+
+/** The trip's own components, only used by the 'detailed' mode. */
+function packageLines(p) {
+  const pr = computePricing(p)
+  return [
+    { description: 'Hotels & accommodation', qty: 1, rate: Math.round(pr.hotelTotal || 0), tax: 0 },
+    { description: 'Transport', qty: 1, rate: Math.round(pr.cabTotal || 0), tax: 0 },
+    { description: 'Activities, tickets & other services', qty: 1, rate: Math.round(pr.otherTotal || 0), tax: 0 },
+  ].filter((it) => it.rate > 0)
+}
+
+/** The whole trip on one line — description built from what the trip actually is. */
+function packageSingleLine(p) {
+  const pr = computePricing(p)
+  const dest = (p.destination || '').split(' - ')[0]
+  const pax = p.pax || {}
+  const who = [
+    Number(pax.adults) ? `${Number(pax.adults)} adult${Number(pax.adults) > 1 ? 's' : ''}` : '',
+    Number(pax.children) ? `${Number(pax.children)} child${Number(pax.children) > 1 ? 'ren' : ''}` : '',
+    Number(pax.infants) ? `${Number(pax.infants)} infant${Number(pax.infants) > 1 ? 's' : ''}` : '',
+  ].filter(Boolean).join(', ')
+  const desc = `Travel package ${p.code} — ${dest} (${p.nights}N / ${p.days}D)${who ? ` · ${who}` : ''}`
+  return [{ description: desc, qty: 1, rate: Math.round(Number(p.pricing?.grandTotal) || pr.grandTotal || 0), tax: 0 }]
+}
 
 export default function InvoiceCreate() {
   const { clients, packages, bookings, agency, addInvoice, toast } = useApp()
   const nav = useNavigate()
-  const [f, setF] = useState({ clientId: '', type: 'Booking', bookingId: '', packageId: '', issueDate: '2026-06-26', dueDate: '', gst: false })
+  const [f, setF] = useState({ clientId: '', type: 'Booking', bookingId: '', packageId: '', issueDate: today(), dueDate: '', gst: false })
+  const [billMode, setBillMode] = useState('single')
   const [items, setItems] = useState([blankItem()])
   const setItem = (i, k, v) => setItems(items.map((it, idx) => (idx === i ? { ...it, [k]: v } : it)))
   const addItem = () => setItems([...items, blankItem()])
@@ -24,18 +60,23 @@ export default function InvoiceCreate() {
   const pkgLabel = (id) => { const p = packages.find((x) => x.id === id); return p ? `${p.code} · ${(p.destination || '').split(' - ')[0]}` : 'None' }
   const bkLabel = (id) => { const b = bookings.find((x) => x.id === id); return b ? `${b.code} · ${b.clientName}` : 'None' }
 
-  /* picking a package explodes it into line items */
+  /* Picking a package fills the items. By default that's ONE line for the whole
+     trip — the quote's own grand total — instead of a hotel/transport/activity
+     breakdown that never adds up to the price the client was quoted. */
+  const fillFromPackage = (p, mode) => setItems(mode === 'detailed' ? packageLines(p) : packageSingleLine(p))
   const loadFromPackage = (pid) => {
     const p = packages.find((x) => x.id === pid)
     if (!p) { setF((s) => ({ ...s, packageId: '' })); return }
     setF((s) => ({ ...s, packageId: pid, clientId: p.clientId || s.clientId }))
-    setItems([
-      { description: `Package Cost — ${p.clientName}`, qty: 1, rate: Number(p.pricing?.packageCost) || 0, tax: 0 },
-      { description: 'Hotel & Accommodation Charges', qty: 1, rate: p.hotelsAlloc?.reduce((s, h) => s + Number(h.price || 0), 0) || 0, tax: 0 },
-      { description: 'Transportation Charges', qty: 1, rate: p.cabs?.reduce((s, c) => s + (Number(c.km) || 0) * (Number(c.rate) || 0), 0) || 0, tax: 0 },
-      ...(p.categories || []).map((c) => ({ description: c.name, qty: 1, rate: Number(c.amount) || 0, tax: 0 })),
-    ].filter((it) => it.rate > 0))
-    toast(`Items loaded from ${p.code}`)
+    fillFromPackage(p, billMode)
+    toast(`Loaded ${p.code} — ${BILL_LABEL[billMode].toLowerCase()}`)
+  }
+  /** Switching the billing mode re-fills from the linked package, if there is one. */
+  const switchBillMode = (label) => {
+    const mode = BILL_MODES.find((m) => BILL_LABEL[m] === label) || 'single'
+    setBillMode(mode)
+    const p = packages.find((x) => x.id === f.packageId)
+    if (p) fillFromPackage(p, mode)
   }
 
   /* picking a booking pulls its client + confirmed value */
@@ -81,8 +122,11 @@ export default function InvoiceCreate() {
               <Field label="Invoice Type">
                 <PillSelect value={f.type} options={TYPES} onChange={(v) => setF({ ...f, type: v })} />
               </Field>
-              <Field label="Related Package" hint="Optional — loads its costs as line items">
+              <Field label="Related Package" hint="Optional — fills the items from the quote">
                 <PillSelect value={f.packageId} options={['', ...pkgOptions.map((p) => p.id)]} format={pkgLabel} onChange={loadFromPackage} />
+              </Field>
+              <Field label="Bill as" hint="One amount for the whole trip, or a component-wise breakdown">
+                <PillSelect value={BILL_LABEL[billMode]} options={BILL_MODES.map((m) => BILL_LABEL[m])} onChange={switchBillMode} />
               </Field>
               <Field label="Related Booking" hint="Optional — pulls the confirmed booking value">
                 <PillSelect value={f.bookingId} options={['', ...bkOptions.map((b) => b.id)]} format={bkLabel} onChange={loadFromBooking} />

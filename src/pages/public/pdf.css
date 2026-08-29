@@ -521,3 +521,14 @@
   .pdf-studio, .pdf-frame, .pdf-tb-actions { display: none !important; }
   .pdf-root.has-studio { padding-right: 0; }
 }
+
+/* The night's room allocation, printed under every day in every layout —
+   guests kept asking "how many rooms, what type?" and the itinerary never said. */
+.pdf-stayline {
+  margin-top: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #444;
+  opacity: .85;
+  line-height: 1.5;
+}

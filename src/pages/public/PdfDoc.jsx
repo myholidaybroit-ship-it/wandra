@@ -39,6 +39,27 @@ function addDays(iso, n) {
    so printing each service's description again in its card repeats the same text.
    Only show a card description the day summary doesn't already contain. */
 const dedupeDesc = (dayDesc, text) => (text && dayDesc && dayDesc.includes(text) ? '' : text)
+/* Extra beds & infants on a stay, as a short printable phrase. Agents kept
+   asking why an AWEB they'd typed never appeared on the quote — it does now. */
+const bedsLine = (st) => [
+  N(st.aweb) && `${N(st.aweb)} adult extra bed${N(st.aweb) > 1 ? 's' : ''}`,
+  N(st.cweb) && `${N(st.cweb)} child extra bed${N(st.cweb) > 1 ? 's' : ''}`,
+  N(st.cnb) && `${N(st.cnb)} child without bed`,
+  N(st.infants) && `${N(st.infants)} infant${N(st.infants) > 1 ? 's' : ''}`,
+].filter(Boolean).join(' · ')
+
+/* The rooms line under a day — "2 × Deluxe · CP · 1 adult extra bed". */
+const roomLine = (stay) => {
+  if (!stay) return ''
+  return [
+    stay.name,
+    `${N(stay.rooms) || 1} × ${stay.roomType || 'room'}`,
+    N(stay.paxPerRoom) ? `${N(stay.paxPerRoom)} pax/room` : '',
+    stay.mealPlan || '',
+    bedsLine(stay),
+  ].filter(Boolean).join('  ·  ')
+}
+
 /* per-destination inclusion / exclusion groups (falls back to the flat lists) */
 function ieGroupsOf(pkg) {
   const raw = (pkg.inclusionGroups && pkg.inclusionGroups.length)
@@ -52,9 +73,16 @@ function ieGroupsOf(pkg) {
 function optionGrandTotal(opt, s = {}) {
   if (!opt) return 0
   const nn = (v) => Number(v) || 0
-  const bed = (st) => nn(st.aweb) * nn(st.awebRate) + nn(st.cweb) * nn(st.cwebRate) + nn(st.cnb) * nn(st.cnbRate)
-  const hotelCost = (opt.stays || []).reduce((a, st) => a + (nn(st.rate) * nn(st.rooms) + bed(st)) * ((st.nights || []).length), 0)
-  const svcCost = (kind) => (opt.services || []).filter((x) => x.kind === kind).reduce((a, x) => a + nn(x.rate) * (nn(x.qty) || 1) * Math.max(1, (x.days || []).length), 0)
+  // a supplier (B2B) net price replaces the master rate — same rule as the builder
+  const costOf = (x) => (String(x?.supplierRate ?? '').trim() !== '' ? nn(x.supplierRate) : nn(x.rate))
+  const bed = (st) => nn(st.aweb) * nn(st.awebRate) + nn(st.cweb) * nn(st.cwebRate) + nn(st.cnb) * nn(st.cnbRate) + nn(st.infants) * nn(st.infantRate)
+  const hotelCost = (opt.stays || []).reduce((a, st) => a + (costOf(st) * nn(st.rooms) + bed(st)) * ((st.nights || []).length), 0)
+  // activities price adults, children and infants separately
+  const perDay = (x) => (x.kind === 'activity'
+    ? costOf(x) * (nn(x.qty) || 1) + nn(x.rateChild) * nn(x.childQty) + nn(x.rateInfant) * nn(x.infantQty)
+    : costOf(x) * (nn(x.qty) || 1))
+  const svcCost = (kind) => (opt.services || []).filter((x) => x.kind === kind)
+    .reduce((a, x) => a + perDay(x) * Math.max(1, (x.days || []).length), 0)
   const flightCost = (opt.flights || []).reduce((a, f) => a + nn(f.cost), 0)
   const extraCost = (opt.extras || []).reduce((a, e) => a + nn(e.cost), 0)
   const costPrice = hotelCost + svcCost('transport') + svcCost('activity') + flightCost + extraCost
@@ -115,6 +143,7 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     return {
       city: st.hotelCity || h?.city || '', name: st.hotelName || '—', star: N(st.hotelStar || h?.rating),
       room: st.roomType || '', meal: st.mealPlan || '', rooms: N(st.rooms) || 1,
+      paxPerRoom: N(st.paxPerRoom) || 0, beds: bedsLine(st),
       nightsCount: ns.length, checkIn: addDays(start, Math.min(...ns) - 1), checkOut: addDays(start, Math.max(...ns)),
       desc: st.hotelDescription || h?.description || '', image: st.hotelImage || h?.image || destImg(st.hotelCity),
       // the hotel's own uploaded photos drive the accommodation collage; city gallery fills any gaps
@@ -151,7 +180,20 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     const images = [...new Set([...actImgs, ...svcImgs, ...rotated])].slice(0, 3)
     // each activity carries its own resolved photo (fallbacks handled at render)
     const acts = dayActs.map((a, ai) => ({ ...a, image: a.image || actImg(a.location || a.serviceType) || images[ai % Math.max(1, images.length)] || '' }))
-    return { n: d.day, title: d.title || `Day ${d.day}`, city, desc: d.description || '', meal: d.mealPlan || '', transfers, activities: acts, image: images[0] || '', images }
+    // the night's room allocation — from the saved day, else resolved from the
+    // active option's stays, so rooms show on older quotes too
+    const stay = d.stay || (() => {
+      const st = (active?.stays || []).find((x) => (x.nights || []).includes(d.day))
+      return st ? { name: st.hotelName, roomType: st.roomType, mealPlan: st.mealPlan, rooms: N(st.rooms), paxPerRoom: N(st.paxPerRoom), aweb: N(st.aweb), cweb: N(st.cweb), cnb: N(st.cnb), infants: N(st.infants) } : null
+    })()
+    // a hand-written day (title / story / photo) always wins over the auto text
+    const custom = d.custom || !!d.image
+    return {
+      n: d.day, title: d.title || `Day ${d.day}`, city, desc: d.description || '', meal: d.mealPlan || '',
+      stay, rooms: roomLine(stay), custom,
+      transfers, activities: acts,
+      image: d.image || images[0] || '', images: [...new Set([d.image, ...images].filter(Boolean))].slice(0, 3),
+    }
   })
 
   return {
@@ -324,13 +366,14 @@ function HotelTable({ m, className = '' }) {
     <div key={oi} className={`pdf-hotel-block ${className}`}>
       {m.options.length > 1 && <div className="pdf-opt-name">Option {oi + 1}: {o.name}</div>}
       <table className="pdf-table">
-        <thead><tr><th>City</th><th>Hotel</th><th>Room</th><th>Meal</th><th>Check-in</th><th>Check-out</th></tr></thead>
+        <thead><tr><th>City</th><th>Hotel</th><th>Rooms</th><th>Meal</th><th>Check-in</th><th>Check-out</th></tr></thead>
         <tbody>
           {o.stays.map((s, i) => (
             <tr key={i}>
               <td>{s.city} {s.nightsCount}N</td>
-              <td><strong>{s.name}</strong>{s.star ? ` — ${s.star}★` : ''}</td>
-              <td>{s.room}</td><td>{s.meal}</td><td>{fmtD(s.checkIn)}</td><td>{fmtD(s.checkOut)}</td>
+              <td><strong>{s.name}</strong>{s.star ? ` — ${s.star}★` : ''}{s.beds && <div className="pdf-svc-desc">{s.beds}</div>}</td>
+              <td>{s.rooms} × {s.room}{s.paxPerRoom ? ` (${s.paxPerRoom} pax)` : ''}</td>
+              <td>{s.meal}</td><td>{fmtD(s.checkIn)}</td><td>{fmtD(s.checkOut)}</td>
             </tr>
           ))}
         </tbody>
@@ -486,6 +529,7 @@ function Classic({ m }) {
           <div className="cl-day-b">
             <h2 className="cl-day-h">Day #{d.n} {d.city ? `| ${d.city} ` : ''}| {d.title}</h2>
             {d.desc && <p className="cl-day-p">{d.desc}</p>}
+            {d.rooms && <p className="pdf-stayline">Stay: {d.rooms}</p>}
             <DaySvc d={d} />
             {d.meal && <div className="cl-day-meal">Meals: {d.meal}</div>}
           </div>
@@ -531,7 +575,7 @@ function Vivid({ m }) {
           {o.stays.map((s, i) => (
             <div className="vv-hotel" key={i}>
               <div className="vv-hotel-l">
-                <div className="vv-chips"><span className="vv-chip">{s.city}</span><span className="vv-chip">{s.nightsCount} Night{s.nightsCount > 1 ? 's' : ''}</span><span className="vv-chip">{s.room}</span>{s.meal && <span className="vv-chip">{s.meal}</span>}</div>
+                <div className="vv-chips"><span className="vv-chip">{s.city}</span><span className="vv-chip">{s.nightsCount} Night{s.nightsCount > 1 ? 's' : ''}</span><span className="vv-chip">{s.rooms} × {s.room}</span>{s.meal && <span className="vv-chip">{s.meal}</span>}{s.beds && <span className="vv-chip">{s.beds}</span>}</div>
                 <div className="vv-hotel-n">{s.name}</div>
                 <Stars n={s.star} />
                 <div className="vv-hotel-d">{fmtD(s.checkIn)} → {fmtD(s.checkOut)}</div>
@@ -561,6 +605,7 @@ function Vivid({ m }) {
           <div className="vv-day-b">
             <div className="vv-day-t">{d.title}{d.city ? ` — ${d.city}` : ''}</div>
             {d.desc && <p className="vv-day-p">{d.desc}</p>}
+            {d.rooms && <p className="pdf-stayline">Stay: {d.rooms}</p>}
             <DaySvc d={d} />
             {d.images.length > 0 && (
               <div className={`vv-day-imgs n${Math.min(d.images.length, 3)}`}>
@@ -607,6 +652,7 @@ function Mono({ m }) {
           <div>
             <div className="mn-day-t">{d.title}{d.city ? ` · ${d.city}` : ''}</div>
             {d.desc && <p className="mn-day-p">{d.desc}</p>}
+            {d.rooms && <p className="pdf-stayline">Stay: {d.rooms}</p>}
             <DaySvc d={d} />
           </div>
         </div>
@@ -655,7 +701,7 @@ function Luxe({ m }) {
           {o.stays.map((s, i) => (
             <div className="lx-hotel" key={i}>
               <div className="lx-hotel-n">{s.name} <Stars n={s.star} /></div>
-              <div className="lx-hotel-m">{[s.city, s.room, s.meal, `${s.nightsCount}N`].filter(Boolean).join(' · ')} — {fmtD(s.checkIn, { day: '2-digit', month: 'short' })} to {fmtD(s.checkOut, { day: '2-digit', month: 'short' })}</div>
+              <div className="lx-hotel-m">{[s.city, `${s.rooms} × ${s.room}`, s.meal, s.beds, `${s.nightsCount}N`].filter(Boolean).join(' · ')} — {fmtD(s.checkIn, { day: '2-digit', month: 'short' })} to {fmtD(s.checkOut, { day: '2-digit', month: 'short' })}</div>
             </div>
           ))}
         </div>
@@ -674,6 +720,7 @@ function Luxe({ m }) {
           <div className="lx-day-b">
             <div className="lx-day-t">{d.title}{d.city ? ` — ${d.city}` : ''}</div>
             {d.desc && <p className="lx-day-p">{d.desc}</p>}
+            {d.rooms && <p className="pdf-stayline">Stay: {d.rooms}</p>}
           </div>
         </div>
       ))}
@@ -782,6 +829,7 @@ function Holiday({ m, cfg }) {
               </div>
             </div>
             {d.desc && <p className="hd-day-p">{d.desc}</p>}
+            {d.rooms && <p className="pdf-stayline">Stay: {d.rooms}</p>}
             {d.transfers.map((t, i) => (
               <div className={`hd-tr ${t.image && cfg.showDayImages ? 'has-img' : ''}`} key={`t${i}`}>
                 {t.image && cfg.showDayImages ? <Img src={t.image} className="hd-tr-img" /> : <span className="hd-tr-ic"></span>}
@@ -817,7 +865,7 @@ function Holiday({ m, cfg }) {
                   <div className={`hd-gal n${Math.min(shown.length, 5)}`}>{shown.map((g, x) => <Img key={x} src={g} className="hd-gal-img" />)}</div>
                   <div className="hd-hotel-b">
                     <div className="hd-hotel-n">{s.name} <Stars n={s.star} /></div>
-                    <div className="hd-hotel-sub">{[s.city, `${s.nightsCount} night${s.nightsCount > 1 ? 's' : ''}`, `Check-in ${fmtD(s.checkIn, { day: '2-digit', month: 'short' })}`, `Check-out ${fmtD(s.checkOut, { day: '2-digit', month: 'short' })}`].filter(Boolean).join('   ·   ')}</div>
+                    <div className="hd-hotel-sub">{[s.city, `${s.rooms} × ${s.room}`, s.meal, s.beds, `${s.nightsCount} night${s.nightsCount > 1 ? 's' : ''}`, `Check-in ${fmtD(s.checkIn, { day: '2-digit', month: 'short' })}`, `Check-out ${fmtD(s.checkOut, { day: '2-digit', month: 'short' })}`].filter(Boolean).join('   ·   ')}</div>
                     <div className="hd-hotel-tags"><span className="hd-tag2">{s.room || 'Room'}</span>{s.meal && <span className="hd-tag2 green">{s.meal}</span>}</div>
                     {s.desc && <p className="hd-hotel-p">{s.desc}</p>}
                   </div>
@@ -942,6 +990,7 @@ function Coastal({ m, cfg }) {
                 {/* full-width day banner only when there are no per-item photos to show */}
                 {cfg.showDayImages && d.image && !hasItemImgs && <Img src={d.image} className="cs-day-img" />}
                 {d.desc && <p className="cs-day-p">{d.desc}</p>}
+            {d.rooms && <p className="pdf-stayline">Stay: {d.rooms}</p>}
                 {d.transfers.map((t, i) => (t.image && cfg.showDayImages ? (
                   <div className="cs-item" key={`t${i}`}>
                     <Img src={t.image} className="cs-item-img" />

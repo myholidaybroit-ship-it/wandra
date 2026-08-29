@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { Button, Field, Input, PillSelect, DatePicker, Modal } from '../../../components/ui/UI'
+import { Button, Field, Input, PillSelect, DatePicker, Modal, CityPicker } from '../../../components/ui/UI'
 import { ImageInput } from '../../../components/ui/ImageInput'
 import { Icon } from '../../../components/ui/icons'
+import { hotelRates, activityRates, serviceRates, hoursOf, fmtHours } from '../../../utils/rates'
 import './builder.css'
 
 /* ---------- reference lists ---------- */
@@ -37,7 +38,7 @@ const longDate = (startISO, off) => offDate(startISO, off, { weekday: 'long', da
    Quote Builder — Sembark-style sections, Wandra styling
    ============================================================ */
 export default function QuoteBuilder() {
-  const { clients, hotels, cabs, destinations, packages, packageTemplates, serviceLocations, activities, addPackage, updatePackage, toast, inclusionPresets, canSeePricing, templates } = useApp()
+  const { clients, hotels, cabs, cities, cabTypes, destinations, packages, packageTemplates, serviceLocations, activities, addPackage, updatePackage, toast, inclusionPresets, canSeePricing, templates } = useApp()
   const activityCats = [...new Set((activities || []).map((a) => a.category))]
   const nav = useNavigate()
   const { id: editId } = useParams()
@@ -81,7 +82,7 @@ export default function QuoteBuilder() {
       })),
     }))
   }
-  const addSector = () => setSectors([...q.sectors, { id: uid(), destination: '', nights: 1 }])
+  const addSector = () => setSectors([...q.sectors, { id: uid(), destination: '', city: '', nights: 1 }])
   const setSector = (i, patch) => setSectors(q.sectors.map((s, x) => (x === i ? { ...s, ...patch } : s)))
   const rmSector = (i) => { if (q.sectors.length <= 1) return; setSectors(q.sectors.filter((_, x) => x !== i)) }
   const multiDest = q.sectors.length > 1
@@ -92,6 +93,12 @@ export default function QuoteBuilder() {
   const dayList = Array.from({ length: q.days }, (_, i) => i + 1)
   const nightCity = (n) => cityForNight(q.sectors, n)
   const dayCity = (d) => cityForNight(q.sectors, Math.min(d, q.nights))
+  // the city level — masters are scoped city-wise the same way they're scoped
+  // by destination, and an empty city simply means "anywhere in the destination"
+  const nightTown = (n) => townForNight(q.sectors, n)
+  const dayTown = (d) => townForNight(q.sectors, Math.min(d, q.nights))
+  const tripTowns = [...new Set((q.sectors || []).map((s) => s.city).filter(Boolean))]
+  const townsFor = (list, mapFn) => (list.length ? [...new Set(list.map(mapFn).filter(Boolean))] : tripTowns)
 
   /* ---------- option ops ---------- */
   // options differ by HOTELS in most cases — a new option carries over the
@@ -140,7 +147,8 @@ export default function QuoteBuilder() {
       let ns = { ...st, id: uid(), nights: [...st.nights] }
       if (copyState.mode === 'hotels') {
         const rep = copyState.replacements[st.id]
-        if (rep) ns = { ...ns, hotelId: rep.id, hotelName: rep.name, hotelCity: rep.city, hotelStar: rep.rating, rate: rep.buyingPrice ? String(rep.buyingPrice) : ns.rate, given: rep.buyingPrice ? String(rep.buyingPrice) : ns.given, roomType: rep.roomTypes?.split(',')[0]?.trim() || ns.roomType, awebRate: rep.extraBedAdult || 0, cwebRate: rep.extraBedChild || 0, cnbRate: rep.childNoBed || 0 }
+        // the replacement hotel brings its own season-resolved rate card across
+        if (rep) ns = { ...ns, ...pickHotel(rep, ns) }
       } else if (copyState.mode === 'meal') {
         ns = { ...ns, mealPlan: copyState.mealPlan }
       }
@@ -173,12 +181,77 @@ export default function QuoteBuilder() {
   }
 
   /* ---------- hotels ---------- */
+  /* Picking a hotel pulls its rate card — resolved against the trip's start
+     date, so a December trip takes the December season — plus its extra-bed
+     rates, which is what makes AWEB / CWEB / CNB actually price. */
+  const pickHotel = (h, st) => {
+    const r = hotelRates(h, q.startDate)
+    return {
+      hotelId: h.id, hotelName: h.name, hotelCity: h.city || h.destination || '', hotelStar: h.rating,
+      hotelImage: h.image || '', hotelDescription: h.description || '',
+      roomType: h.roomTypes?.split(',')[0]?.trim() || st.roomType,
+      rate: r.buyingPrice ? String(r.buyingPrice) : st.rate,
+      given: st.given || (r.buyingPrice ? String(r.buyingPrice) : st.given),
+      awebRate: r.extraBedAdult || 0, cwebRate: r.extraBedChild || 0, cnbRate: r.childNoBed || 0,
+      infantRate: Number(h.infantCharge) || 0,
+      seasonLabel: r.seasonLabel,
+    }
+  }
   const addStay = () => setOpt({ stays: [...opt.stays, blankStay(q, opt)] })
   const dupStay = (i) => setOpt({ stays: [...opt.stays.slice(0, i + 1), { ...opt.stays[i], id: uid(), nights: [] }, ...opt.stays.slice(i + 1)] })
   const rmStay = (i) => setOpt({ stays: opt.stays.filter((_, x) => x !== i) })
   const setStay = (i, patch) => setOpt({ stays: opt.stays.map((s, x) => (x === i ? { ...s, ...patch } : s)) })
 
   /* ---------- transports & activities ---------- */
+  // every vehicle category the agency has configured, plus any already typed
+  // on a cab record, so a custom type never disappears from the filter
+  const cabTypeOptions = [...new Set([...(cabTypes || []), ...cabs.map((c) => c.type).filter(Boolean)])]
+  /** Vehicles matching a chosen category, narrowed to the day's city when the
+   *  cab master says which city it runs in. */
+  const cabPool = (type, days = []) => {
+    const towns = townsFor(days, dayTown)
+    return cabs
+      .filter((c) => !type || c.type === type)
+      .filter((c) => !towns.length || !c.city || towns.includes(c.city))
+  }
+  const pickCab = (name, s) => {
+    if (name === 'Select vehicle') return { cabName: '', cabId: '' }
+    const c = cabs.find((x) => x.name === name)
+    // picking a vehicle pulls its per-day rate from Master Data (only fills empty fields)
+    return {
+      cabName: name, cabId: c?.id || '', cabType: c?.type || s.cabType || '',
+      rate: s.rate || (c?.ratePerDay ? String(c.ratePerDay) : s.rate),
+      given: s.given || (c?.ratePerDay ? String(c.ratePerDay) : s.given),
+    }
+  }
+  /* Picking a transport route or an activity resolves its season rate against
+     the trip's start date, and an activity brings its child price across too —
+     a child on a per-head ticket must never be billed at the adult rate. */
+  const pickTransport = (it, s) => {
+    if (it.custom) return { location: it.name }
+    const r = serviceRates(it, q.startDate)
+    return {
+      location: it.name, serviceType: it.serviceType || s.serviceType,
+      description: it.description || s.description, image: it.image || '',
+      cabType: it.cabType || s.cabType || '',
+      durationHours: hoursOf(it) ? String(hoursOf(it)) : s.durationHours,
+      rate: String(r.cost), given: String(r.sell), seasonLabel: r.seasonLabel,
+    }
+  }
+  const pickActivity = (it, s) => {
+    if (it.custom) return { location: it.name }
+    const r = activityRates(it, q.startDate)
+    return {
+      location: it.name, serviceType: it.category || s.serviceType,
+      description: it.description || s.description, image: it.image || '',
+      durationHours: hoursOf(it) ? String(hoursOf(it)) : s.durationHours,
+      rate: String(r.cost), given: String(r.sell),
+      // a child price of 0 on the master means "same as an adult"
+      rateChild: String(r.costChild || r.cost), givenChild: String(r.sellChild || r.sell),
+      rateInfant: String(Number(it.infantCharge) || 0), givenInfant: String(Number(it.infantCharge) || 0),
+      seasonLabel: r.seasonLabel,
+    }
+  }
   const addService = (kind) => setOpt({ services: [...opt.services, blankService(kind, opt, q)] })
   const dupService = (i) => setOpt({ services: [...opt.services.slice(0, i + 1), { ...opt.services[i], id: uid(), days: [] }, ...opt.services.slice(i + 1)] })
   const rmService = (i) => setOpt({ services: opt.services.filter((_, x) => x !== i) })
@@ -196,15 +269,28 @@ export default function QuoteBuilder() {
     const svcs = (tpl.services || []).map((s) => ({
       id: uid(), kind: s.kind === 'activity' ? 'activity' : 'transport', days: [day],
       location: s.location || '', serviceType: s.serviceType || '', description: s.description || '',
-      durationMins: s.durationMins ? String(s.durationMins) : '', qty: num(s.qty) || (s.kind === 'activity' ? (num(q.adults) || 1) : 1),
-      cabId: s.cabId || '', cabName: s.cabName || '', image: s.image || '',
+      durationHours: hoursOf(s) ? String(hoursOf(s)) : '', qty: num(s.qty) || (s.kind === 'activity' ? (num(q.adults) || 1) : 1),
+      childQty: s.kind === 'activity' ? num(q.children) : 0, infantQty: s.kind === 'activity' ? num(q.infants) : 0,
+      rateChild: s.rateChild != null ? String(s.rateChild) : '', givenChild: s.givenChild != null ? String(s.givenChild) : '',
+      cabId: s.cabId || '', cabName: s.cabName || '', cabType: s.cabType || '', image: s.image || '',
       rate: s.rate != null ? String(s.rate) : '', given: s.given != null ? String(s.given) : '',
+      supplierName: '', supplierRate: '',
     }))
     if (!svcs.length) return toast('That day itinerary has no services yet')
     setOpt({ services: [...opt.services, ...svcs] })
     setDayTplModal(false)
     toast(`Added ${svcs.length} service${svcs.length > 1 ? 's' : ''} from “${tpl.name}”`)
   }
+
+  /* ---------- hand-written day-wise itinerary ----------
+     Every day is normally written for you from that day's transfers and
+     activities. Anything typed here wins, so an agent can describe a day in
+     their own words (and attach their own photo) without inventing a service
+     just to carry the text. */
+  const dayNote = (d) => q.dayNotes?.[d] || {}
+  const setDayNote = (d, patch) => setQ((st) => ({ ...st, dayNotes: { ...(st.dayNotes || {}), [d]: { ...(st.dayNotes?.[d] || {}), ...patch } } }))
+  const clearDayNote = (d) => setQ((st) => { const next = { ...(st.dayNotes || {}) }; delete next[d]; return { ...st, dayNotes: next } })
+  const [openDay, setOpenDay] = useState(null)
 
   /* ---------- flights ---------- */
   const addFlight = (kind) => setOpt({ flights: [...opt.flights, blankFlight(kind)] })
@@ -265,13 +351,20 @@ export default function QuoteBuilder() {
             <div className="qb-basic-title">Trip basics</div>
             <div className="qb-basic-sub">Add one or more destinations with their nights — the totals drive every chip below.</div>
           </div>
-          <div className="qb-basic-grid five">
+          <div className="qb-basic-grid six">
             <Field label="Client"><Input value={q.clientName} onChange={(e) => upd({ clientName: e.target.value })} placeholder="Guest name" /></Field>
             <Field label="Start date"><DatePicker value={q.startDate} onChange={(v) => upd({ startDate: v })} placeholder="Pick date" /></Field>
-            <Field label="Adults"><Input type="number" min="1" value={q.adults} onChange={(e) => upd({ adults: e.target.value })} /></Field>
+            <Field label="Adults" hint="12 yrs +"><Input type="number" min="1" value={q.adults} onChange={(e) => upd({ adults: e.target.value })} /></Field>
             <Field label="Children" hint="2–12 yrs"><Input type="number" min="0" value={q.children} onChange={(e) => upd({ children: e.target.value })} /></Field>
+            <Field label="Infants" hint="below 2 yrs"><Input type="number" min="0" value={q.infants ?? 0} onChange={(e) => upd({ infants: e.target.value })} /></Field>
             <Field label="Rooms"><Input type="number" min="1" value={q.rooms} onChange={(e) => upd({ rooms: e.target.value })} /></Field>
           </div>
+          {num(q.infants) > 0 && (
+            <div className="qb-pax-note">
+              <Icon name="check" size={13} />
+              <span>{num(q.infants)} infant{num(q.infants) > 1 ? 's' : ''} counted separately — never charged at the adult rate. Set a per-infant amount on a hotel or activity only if the supplier actually bills one.</span>
+            </div>
+          )}
 
           {/* Destinations & nights (multi-destination sectors) */}
           <div className="qb-sectors">
@@ -284,7 +377,11 @@ export default function QuoteBuilder() {
                 <span className="qb-sector-seq">{i + 1}</span>
                 <div className="qb-sector-dest">
                   <PillSelect value={sec.destination || 'Select destination'} options={['Select destination', ...destinations.map((d) => d.name)]}
-                    onChange={(v) => setSector(i, { destination: v === 'Select destination' ? '' : v })} />
+                    onChange={(v) => setSector(i, { destination: v === 'Select destination' ? '' : v, city: '' })} />
+                </div>
+                <div className="qb-sector-city">
+                  <CityPicker value={sec.city || ''} cities={cities || []} destination={sec.destination}
+                    onChange={(v) => setSector(i, { city: v })} allLabel="Any city" />
                 </div>
                 <div className="qb-sector-nights">
                   <button className="qb-step" onClick={() => setSector(i, { nights: Math.max(1, num(sec.nights) - 1) })} aria-label="Fewer nights">−</button>
@@ -336,31 +433,88 @@ export default function QuoteBuilder() {
                   <ChipRow items={nightList} selected={st.nights} onToggle={(n) => setStay(i, { nights: toggle(st.nights, n) })}
                     label={(n) => ({ top: `${ORD(n)} N`, sub: multiDest ? nightCity(n) : chipDate(q.startDate, n - 1), title: [nightCity(n), chipDate(q.startDate, n - 1)].filter(Boolean).join(' · ') })} />
                 </div>
-                <div className="qb-grid-3">
-                  <Field label="Hotel">
-                    <HotelPicker value={{ id: st.hotelId, name: st.hotelName, city: st.hotelCity, star: st.hotelStar }} hotels={hotels}
-                      destFilter={st.nights.length ? [...new Set(st.nights.map(nightCity).filter(Boolean))] : ieDests}
-                      onPick={(h) => setStay(i, { hotelId: h.id, hotelName: h.name, hotelCity: h.city || h.destination || '', hotelStar: h.rating, hotelImage: h.image || '', hotelDescription: h.description || '', roomType: h.roomTypes?.split(',')[0]?.trim() || st.roomType, rate: h.buyingPrice ? String(h.buyingPrice) : st.rate, given: st.given || (h.buyingPrice ? String(h.buyingPrice) : st.given), awebRate: h.extraBedAdult || 0, cwebRate: h.extraBedChild || 0, cnbRate: h.childNoBed || 0 })} />
-                  </Field>
-                  <Field label="Room type"><PillSelect value={st.roomType} options={hotelRooms(hotels, st.hotelId)} onChange={(v) => setStay(i, { roomType: v })} /></Field>
-                  <Field label="Meal plan"><PillSelect value={st.mealPlan} options={MEAL_PLANS} onChange={(v) => setStay(i, { mealPlan: v })} format={(v) => MEAL_LABEL[v] || v} /></Field>
+                <div className="qb-mode-row">
+                  <button className={`qb-mode ${!st.manual ? 'on' : ''}`} onClick={() => setStay(i, { manual: false })}>From master</button>
+                  <button className={`qb-mode ${st.manual ? 'on' : ''}`} onClick={() => setStay(i, { manual: true })}>Add manually</button>
+                  {st.seasonLabel && <span className="qb-season-chip"><Icon name="calendar" size={12} /> {st.seasonLabel}</span>}
                 </div>
+
+                {st.manual ? (
+                  <>
+                    <div className="qb-grid-3">
+                      <Field label="Hotel name"><Input value={st.hotelName} onChange={(e) => setStay(i, { hotelName: e.target.value })} placeholder="Type the hotel name" /></Field>
+                      <Field label="City">
+                        <CityPicker value={st.hotelCity || ''} cities={cities || []}
+                          destination={st.nights.length ? nightCity(st.nights[0]) : ''} onChange={(v) => setStay(i, { hotelCity: v })} />
+                      </Field>
+                      <Field label="Star rating"><PillSelect value={st.hotelStar ? `${st.hotelStar} Star` : 'Not rated'} options={['Not rated', '5 Star', '4 Star', '3 Star', '2 Star']} onChange={(v) => setStay(i, { hotelStar: v === 'Not rated' ? '' : Number(v[0]) })} /></Field>
+                    </div>
+                    <div className="qb-grid-2">
+                      <Field label="Room type"><PillSelect value={st.roomType} options={ROOM_TYPES} onChange={(v) => setStay(i, { roomType: v })} /></Field>
+                      <Field label="Meal plan"><PillSelect value={st.mealPlan} options={MEAL_PLANS} onChange={(v) => setStay(i, { mealPlan: v })} format={(v) => MEAL_LABEL[v] || v} /></Field>
+                    </div>
+                    <ImageInput label="Hotel photo" hint="Shown on the quote PDF & the shared itinerary — no master entry needed"
+                      value={st.hotelImage || ''} onChange={(v) => setStay(i, { hotelImage: v })} folder="hotels" />
+                    <Field label="Hotel description" full>
+                      <textarea className="control" rows={2} value={st.hotelDescription || ''} onChange={(e) => setStay(i, { hotelDescription: e.target.value })}
+                        placeholder="Rooms, location, amenities — prints on the quote." />
+                    </Field>
+                  </>
+                ) : (
+                  <div className="qb-grid-3">
+                    <Field label="Hotel">
+                      <HotelPicker value={{ id: st.hotelId, name: st.hotelName, city: st.hotelCity, star: st.hotelStar }} hotels={hotels}
+                        destFilter={st.nights.length ? [...new Set(st.nights.map(nightCity).filter(Boolean))] : ieDests}
+                        cityFilter={townsFor(st.nights, nightTown)}
+                        onPick={(h) => setStay(i, pickHotel(h, st))} />
+                    </Field>
+                    <Field label="Room type"><PillSelect value={st.roomType} options={hotelRooms(hotels, st.hotelId)} onChange={(v) => setStay(i, { roomType: v })} /></Field>
+                    <Field label="Meal plan"><PillSelect value={st.mealPlan} options={MEAL_PLANS} onChange={(v) => setStay(i, { mealPlan: v })} format={(v) => MEAL_LABEL[v] || v} /></Field>
+                  </div>
+                )}
+
                 <div className="qb-grid-4">
                   <Field label="Pax / room" hint="WoEB"><Input type="number" min="1" value={st.paxPerRoom} onChange={(e) => setStay(i, { paxPerRoom: e.target.value })} /></Field>
                   <Field label="No. of rooms"><Input type="number" min="1" value={st.rooms} onChange={(e) => setStay(i, { rooms: e.target.value })} /></Field>
-                  {canSeePricing && <Field label="Rate / night (₹)" hint="cost"><Input type="number" value={st.rate} onChange={(e) => setStay(i, { rate: e.target.value })} placeholder="0" /></Field>}
+                  {canSeePricing && <Field label="Rate / night (₹)" hint={hasSupplier(st) ? 'overridden by supplier' : 'cost'}><Input type="number" value={st.rate} onChange={(e) => setStay(i, { rate: e.target.value })} placeholder="0" /></Field>}
                   {canSeePricing && <Field label="Given / night (₹)" hint="selling"><Input type="number" value={st.given} onChange={(e) => setStay(i, { given: e.target.value })} placeholder="0" /></Field>}
                 </div>
+
+                {canSeePricing && (
+                  <div className="qb-grid-2 qb-supplier">
+                    <Field label="Supplier / B2B" hint="who quoted this net rate — optional"><Input value={st.supplierName || ''} onChange={(e) => setStay(i, { supplierName: e.target.value })} placeholder="e.g. TravelBoutique, Hotelbeds" /></Field>
+                    <Field label="Supplier net / night (₹)" hint="got a B2B price? enter it here — it replaces the cost rate above">
+                      <Input type="number" value={st.supplierRate || ''} onChange={(e) => setStay(i, { supplierRate: e.target.value })} placeholder="leave blank to use the rate" />
+                    </Field>
+                  </div>
+                )}
+
+                <div className="qb-beds-head">
+                  <span className="qb-label">Extra beds &amp; children</span>
+                  <button className="qb-linkbtn" onClick={() => setStay(i, suggestBeds(st, q))}>Auto-fill from travellers</button>
+                </div>
                 <div className="qb-grid-4">
-                  <Field label="AWEB" hint={num(st.awebRate) ? `+${inr(st.awebRate)}/bed` : 'adult extra bed'}><Input type="number" min="0" value={st.aweb} onChange={(e) => setStay(i, { aweb: e.target.value })} /></Field>
-                  <Field label="CWEB" hint={num(st.cwebRate) ? `+${inr(st.cwebRate)}/bed` : 'child extra bed'}><Input type="number" min="0" value={st.cweb} onChange={(e) => setStay(i, { cweb: e.target.value })} /></Field>
-                  <Field label="CNB" hint={num(st.cnbRate) ? `+${inr(st.cnbRate)}/child` : 'child no bed'}><Input type="number" min="0" value={st.cnb} onChange={(e) => setStay(i, { cnb: e.target.value })} /></Field>
+                  <Field label="AWEB" hint={num(st.awebRate) ? `+${inr(st.awebRate)}/bed/night` : 'adult extra bed — set the rate on the hotel master'}><Input type="number" min="0" value={st.aweb} onChange={(e) => setStay(i, { aweb: e.target.value })} /></Field>
+                  <Field label="CWEB" hint={num(st.cwebRate) ? `+${inr(st.cwebRate)}/bed/night` : 'child extra bed'}><Input type="number" min="0" value={st.cweb} onChange={(e) => setStay(i, { cweb: e.target.value })} /></Field>
+                  <Field label="CNB" hint={num(st.cnbRate) ? `+${inr(st.cnbRate)}/child/night` : 'child no bed'}><Input type="number" min="0" value={st.cnb} onChange={(e) => setStay(i, { cnb: e.target.value })} /></Field>
+                  <Field label="Infants" hint={num(st.infantRate) ? `+${inr(st.infantRate)}/infant/night` : 'free unless the hotel charges'}><Input type="number" min="0" value={st.infants || 0} onChange={(e) => setStay(i, { infants: e.target.value })} /></Field>
+                </div>
+                {canSeePricing && (
+                  <div className="qb-grid-4">
+                    <Field label="AWEB rate (₹)"><Input type="number" min="0" value={st.awebRate || 0} onChange={(e) => setStay(i, { awebRate: e.target.value })} /></Field>
+                    <Field label="CWEB rate (₹)"><Input type="number" min="0" value={st.cwebRate || 0} onChange={(e) => setStay(i, { cwebRate: e.target.value })} /></Field>
+                    <Field label="CNB rate (₹)"><Input type="number" min="0" value={st.cnbRate || 0} onChange={(e) => setStay(i, { cnbRate: e.target.value })} /></Field>
+                    <Field label="Infant rate (₹)"><Input type="number" min="0" value={st.infantRate || 0} onChange={(e) => setStay(i, { infantRate: e.target.value })} /></Field>
+                  </div>
+                )}
+                <div className="qb-grid-2">
                   <Field label="Comp child"><PillSelect value={st.compChild} options={COMP_CHILD} onChange={(v) => setStay(i, { compChild: v })} /></Field>
+                  <Field label=" "><div className="qb-inline-note">{bedLabel(st) || 'No extra beds on this stay'}</div></Field>
                 </div>
               </div>
               <PricePanel
                 title="Prices"
-                rows={st.nights.map((n) => ({ label: chipDate(q.startDate, n - 1) || `Night ${n}`, sub: bedPerNight(st) ? `room + extra beds` : `Night ${n}`, rate: num(st.rate) * num(st.rooms) + bedPerNight(st), val: num(st.given) * num(st.rooms) + bedPerNight(st) }))}
+                rows={stayRows(st, q)}
                 cost={stayCost(st)}
                 sell={staySell(st)}
                 emptyHint="Select nights to price this stay"
@@ -371,6 +525,7 @@ export default function QuoteBuilder() {
 
         {/* ---------------- Transports & Activities ---------------- */}
         <Section icon="cabs" title="Transports & Activities" desc="Add transportation and activity/ticket services with the selling cost price for each. Tip: use Duplicate to repeat a service."
+          wide
           total={t.transportCost + t.activityCost}
           toolbar={
             <label className="qb-toggle-line">
@@ -378,9 +533,16 @@ export default function QuoteBuilder() {
               <span className="qb-check-box"><Icon name="check" size={12} strokeWidth={2.6} /></span>
               <span>Same cab type for all</span>
               {opt.sameCab && (
-                <span className="qb-toggle-select">
-                  <PillSelect value={opt.sameCabName || 'Select cab'} options={['Select cab', ...cabs.map((c) => c.name)]} onChange={(v) => { const c = cabs.find((x) => x.name === v); setOpt({ sameCabName: v === 'Select cab' ? '' : v, sameCabId: c?.id || '' }) }} />
-                </span>
+                <>
+                  <span className="qb-toggle-select">
+                    <PillSelect value={opt.sameCabType || 'Any type'} options={['Any type', ...cabTypeOptions]}
+                      onChange={(v) => setOpt({ sameCabType: v === 'Any type' ? '' : v, sameCabName: '', sameCabId: '' })} />
+                  </span>
+                  <span className="qb-toggle-select">
+                    <PillSelect value={opt.sameCabName || 'Select cab'} options={['Select cab', ...cabPool(opt.sameCabType).map((c) => c.name)]}
+                      onChange={(v) => { const c = cabs.find((x) => x.name === v); setOpt({ sameCabName: v === 'Select cab' ? '' : v, sameCabId: c?.id || '', sameCabType: c?.type || opt.sameCabType || '' }) }} />
+                  </span>
+                </>
               )}
             </label>
           }
@@ -403,52 +565,151 @@ export default function QuoteBuilder() {
                     <Field label="Transport">
                       <MasterPicker value={s.location} items={serviceLocations} placeholder="Select or search a route…"
                         destFilter={s.days.length ? [...new Set(s.days.map(dayCity).filter(Boolean))] : ieDests}
-                        sub={(it) => `${it.serviceType}${it.durationMins ? ` · ${it.durationMins} mins` : ''}${it.sell != null ? ` · ${inr(it.sell)}` : ''}`}
-                        onPick={(it) => setService(i, { location: it.name, ...(it.custom ? {} : { serviceType: it.serviceType || s.serviceType, description: it.description || s.description, image: it.image || '', durationMins: it.durationMins ? String(it.durationMins) : s.durationMins, rate: it.cost != null ? String(it.cost) : s.rate, given: it.sell != null ? String(it.sell) : s.given }) })} />
+                        cityFilter={townsFor(s.days, dayTown)}
+                        typeFilter={s.cabType} typeOf={(it) => it.cabType}
+                        sub={(it) => `${it.serviceType}${it.city ? ` · ${it.city}` : ''}${hoursOf(it) ? ` · ${fmtHours(hoursOf(it))}` : ''}${it.sell != null ? ` · ${inr(it.sell)}` : ''}`}
+                        onPick={(it) => setService(i, pickTransport(it, s))} />
                     </Field>
                   ) : (
                     <Field label="Activity / ticket name">
                       <MasterPicker value={s.location} items={activities} placeholder="Select or search an activity…"
                         destFilter={s.days.length ? [...new Set(s.days.map(dayCity).filter(Boolean))] : ieDests}
-                        sub={(it) => `${it.category}${it.sell != null ? ` · ${inr(it.sell)}` : ''}`}
-                        onPick={(it) => setService(i, { location: it.name, ...(it.custom ? {} : { serviceType: it.category || s.serviceType, description: it.description || s.description, image: it.image || '', durationMins: it.durationMins ? String(it.durationMins) : s.durationMins, rate: it.cost != null ? String(it.cost) : s.rate, given: it.sell != null ? String(it.sell) : s.given }) })} />
+                        cityFilter={townsFor(s.days, dayTown)}
+                        sub={(it) => `${it.category}${it.city ? ` · ${it.city}` : ''}${hoursOf(it) ? ` · ${fmtHours(hoursOf(it))}` : ''}${it.sell != null ? ` · ${inr(it.sell)} adult` : ''}${it.sellChild ? ` / ${inr(it.sellChild)} child` : ''}`}
+                        onPick={(it) => setService(i, pickActivity(it, s))} />
                     </Field>
                   )}
                   {s.kind === 'transport'
                     ? <Field label="Service type"><PillSelect value={s.serviceType || 'Select'} options={['Select', ...SERVICE_TYPES]} onChange={(v) => setService(i, { serviceType: v === 'Select' ? '' : v })} /></Field>
                     : <Field label="Category"><PillSelect value={s.serviceType || 'Select'} options={['Select', ...activityCats]} onChange={(v) => setService(i, { serviceType: v === 'Select' ? '' : v })} /></Field>}
                 </div>
-                <div className="qb-grid-3">
-                  <Field label="Duration (mins)"><Input type="number" value={s.durationMins} onChange={(e) => setService(i, { durationMins: e.target.value })} placeholder="Optional" /></Field>
-                  <Field label={s.kind === 'activity' ? 'Qty (pax)' : 'Vehicles'}><Input type="number" min="1" value={s.qty} onChange={(e) => setService(i, { qty: e.target.value })} /></Field>
-                  {s.kind === 'transport' && !opt.sameCab
-                    ? <Field label="Cab type"><PillSelect value={s.cabName || 'Select'} options={['Select', ...cabs.map((c) => c.name)]} onChange={(v) => {
-                        const c = cabs.find((x) => x.name === v)
-                        // picking a cab pulls its per-day rate from Master Data (only fills empty fields)
-                        setService(i, { cabName: v === 'Select' ? '' : v, cabId: c?.id || '', rate: s.rate || (c?.ratePerDay ? String(c.ratePerDay) : s.rate), given: s.given || (c?.ratePerDay ? String(c.ratePerDay) : s.given) })
-                      }} /></Field>
-                    : <Field label={' '}><div className="qb-inline-note">{s.kind === 'transport' ? (opt.sameCabName || 'Set cab above') : 'per person / ticket'}</div></Field>}
-                </div>
-                {canSeePricing && (
-                  <div className="qb-grid-2">
-                    <Field label="Rate (₹)" hint="cost per day / unit"><Input type="number" value={s.rate} onChange={(e) => setService(i, { rate: e.target.value })} placeholder="0" /></Field>
-                    <Field label="Given (₹)" hint="selling per day / unit"><Input type="number" value={s.given} onChange={(e) => setService(i, { given: e.target.value })} placeholder="0" /></Field>
+
+                {s.kind === 'transport' ? (
+                  <div className="qb-grid-3">
+                    <Field label="Duration (hours)"><Input type="number" step="0.5" value={s.durationHours ?? ''} onChange={(e) => setService(i, { durationHours: e.target.value })} placeholder="Optional" /></Field>
+                    <Field label="Vehicles"><Input type="number" min="1" value={s.qty} onChange={(e) => setService(i, { qty: e.target.value })} /></Field>
+                    <Field label="Cab type" hint="narrows the vehicles below">
+                      <PillSelect value={s.cabType || 'Any type'} options={['Any type', ...cabTypeOptions]}
+                        onChange={(v) => setService(i, { cabType: v === 'Any type' ? '' : v })} />
+                    </Field>
+                  </div>
+                ) : (
+                  <div className="qb-grid-4">
+                    <Field label="Duration (hours)"><Input type="number" step="0.5" value={s.durationHours ?? ''} onChange={(e) => setService(i, { durationHours: e.target.value })} placeholder="Optional" /></Field>
+                    <Field label="Adults"><Input type="number" min="0" value={s.qty} onChange={(e) => setService(i, { qty: e.target.value })} /></Field>
+                    <Field label="Children"><Input type="number" min="0" value={s.childQty || 0} onChange={(e) => setService(i, { childQty: e.target.value })} /></Field>
+                    <Field label="Infants"><Input type="number" min="0" value={s.infantQty || 0} onChange={(e) => setService(i, { infantQty: e.target.value })} /></Field>
                   </div>
                 )}
+
+                {s.kind === 'transport' && (
+                  <div className="qb-grid-2">
+                    {!opt.sameCab
+                      ? <Field label="Vehicle">
+                          <PillSelect value={s.cabName || 'Select vehicle'} options={['Select vehicle', ...cabPool(s.cabType, s.days).map((c) => c.name)]}
+                            onChange={(v) => setService(i, pickCab(v, s))} />
+                        </Field>
+                      : <Field label="Vehicle"><div className="qb-inline-note">{opt.sameCabName || 'Set the cab above'}</div></Field>}
+                    <Field label=" "><div className="qb-inline-note">{s.seasonLabel ? `Season: ${s.seasonLabel}` : 'Rates auto-fill from the transport master'}</div></Field>
+                  </div>
+                )}
+
+                {canSeePricing && (s.kind === 'activity' ? (
+                  <>
+                    <div className="qb-grid-4">
+                      <Field label="Adult cost (₹)" hint={hasSupplier(s) ? 'overridden by supplier' : 'per adult'}><Input type="number" value={s.rate} onChange={(e) => setService(i, { rate: e.target.value })} placeholder="0" /></Field>
+                      <Field label="Adult selling (₹)"><Input type="number" value={s.given} onChange={(e) => setService(i, { given: e.target.value })} placeholder="0" /></Field>
+                      <Field label="Child cost (₹)"><Input type="number" value={s.rateChild ?? ''} onChange={(e) => setService(i, { rateChild: e.target.value })} placeholder="0" /></Field>
+                      <Field label="Child selling (₹)"><Input type="number" value={s.givenChild ?? ''} onChange={(e) => setService(i, { givenChild: e.target.value })} placeholder="0" /></Field>
+                    </div>
+                    {num(s.infantQty) > 0 && (
+                      <div className="qb-grid-2">
+                        <Field label="Infant cost (₹)" hint="usually 0"><Input type="number" value={s.rateInfant ?? ''} onChange={(e) => setService(i, { rateInfant: e.target.value })} placeholder="0" /></Field>
+                        <Field label="Infant selling (₹)" hint="usually 0"><Input type="number" value={s.givenInfant ?? ''} onChange={(e) => setService(i, { givenInfant: e.target.value })} placeholder="0" /></Field>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="qb-grid-2">
+                    <Field label="Rate (₹)" hint={hasSupplier(s) ? 'overridden by supplier' : 'cost per day / vehicle'}><Input type="number" value={s.rate} onChange={(e) => setService(i, { rate: e.target.value })} placeholder="0" /></Field>
+                    <Field label="Given (₹)" hint="selling per day / vehicle"><Input type="number" value={s.given} onChange={(e) => setService(i, { given: e.target.value })} placeholder="0" /></Field>
+                  </div>
+                ))}
+
+                {canSeePricing && (
+                  <div className="qb-grid-2 qb-supplier">
+                    <Field label="Supplier / B2B" hint="who quoted this net rate — optional"><Input value={s.supplierName || ''} onChange={(e) => setService(i, { supplierName: e.target.value })} placeholder="e.g. local DMC" /></Field>
+                    <Field label="Supplier net (₹)" hint="got a B2B price? enter it here — it replaces the cost rate above">
+                      <Input type="number" value={s.supplierRate || ''} onChange={(e) => setService(i, { supplierRate: e.target.value })} placeholder="leave blank to use the rate" />
+                    </Field>
+                  </div>
+                )}
+
                 <Field label="Description" full>
-                  <textarea className="control" rows={2} value={s.description || ''} onChange={(e) => setService(i, { description: e.target.value })}
+                  <textarea className="control qb-svc-desc" rows={4} value={s.description || ''} onChange={(e) => setService(i, { description: e.target.value })}
                     placeholder={s.kind === 'activity' ? 'What the guest will do / see — shown on the quote & WhatsApp' : 'Notes about this transfer — shown on the quote & WhatsApp'} />
                 </Field>
+                <ImageInput label={s.kind === 'activity' ? 'Activity photo' : 'Transfer photo'} hint="Overrides the master photo on the PDF for this trip"
+                  value={s.image || ''} onChange={(v) => setService(i, { image: v })} folder={s.kind === 'activity' ? 'activities' : 'services'} />
               </div>
               <PricePanel
                 title={s.kind === 'activity' ? 'Activity prices' : 'Transport prices'}
-                rows={s.days.map((d) => ({ label: chipDate(q.startDate, d - 1) || `Day ${d}`, sub: `${num(s.given)} × ${num(s.qty) || 1}`, rate: num(s.rate) * (num(s.qty) || 1), val: num(s.given) * (num(s.qty) || 1) }))}
-                cost={num(s.rate) * (num(s.qty) || 1) * Math.max(1, s.days.length)}
-                sell={num(s.given) * (num(s.qty) || 1) * Math.max(1, s.days.length)}
+                rows={svcRows(s, q)}
+                cost={svcCost(s)}
+                sell={svcSell(s)}
                 emptyHint="Select days to price this service"
               />
             </ItemCard>
           ))}
+        </Section>
+
+        {/* ---------------- Day-wise itinerary (hand-written) ---------------- */}
+        <Section icon="calendar" wide title="Day-wise Itinerary" desc="Each day is written from its transfers & activities. Open a day to write your own title, story and photo — what you type here is what the guest sees.">
+          <div className="qb-days">
+            {dayList.map((d) => {
+              const note = dayNote(d)
+              const svcs = opt.services.filter((x) => x.days.includes(d))
+              const stay = opt.stays.find((x) => x.nights.includes(d))
+              const auto = svcs.map((x) => x.location).filter(Boolean).join(', ') || (stay ? `Stay at ${stay.hotelName || 'hotel'}` : '')
+              const custom = !!(note.title || note.description || note.image)
+              const isOpen = openDay === d
+              return (
+                <div className={`qb-day ${custom ? 'custom' : ''} ${isOpen ? 'open' : ''}`} key={d}>
+                  <button className="qb-day-head" onClick={() => setOpenDay(isOpen ? null : d)}>
+                    <span className="qb-day-n">Day {d}</span>
+                    <span className="qb-day-meta">
+                      <span className="qb-day-title">{note.title || auto || 'Free day'}</span>
+                      <span className="qb-day-sub">{[dayCity(d), dayTown(d), chipDate(q.startDate, d - 1)].filter(Boolean).join(' · ')}</span>
+                    </span>
+                    {stay && <span className="qb-day-room">{num(stay.rooms)} × {stay.roomType}{stay.mealPlan ? ` · ${stay.mealPlan}` : ''}</span>}
+                    {custom && <span className="qb-day-flag">Custom</span>}
+                    {note.image && <span className="qb-day-thumb" style={{ backgroundImage: `url("${note.image}")` }} />}
+                    <span className={`qb-day-chev ${isOpen ? 'up' : ''}`}><Icon name="chevron" size={15} /></span>
+                  </button>
+                  {isOpen && (
+                    <div className="qb-day-body">
+                      <div className="qb-grid-2">
+                        <Field label="Day title" hint={auto ? `auto: ${auto}` : 'shown as the day heading'}>
+                          <Input value={note.title || ''} onChange={(e) => setDayNote(d, { title: e.target.value })} placeholder={auto || `Day ${d}`} />
+                        </Field>
+                        <Field label=" ">
+                          <div className="row gap-xs">
+                            <Button size="sm" variant="tertiary" onClick={() => clearDayNote(d)}>Reset to auto</Button>
+                          </div>
+                        </Field>
+                      </div>
+                      <Field label="What happens on this day" full>
+                        <textarea className="control qb-svc-desc" rows={4} value={note.description || ''} onChange={(e) => setDayNote(d, { description: e.target.value })}
+                          placeholder="Write the day in your own words — this replaces the auto-generated summary on the PDF, the shared itinerary and WhatsApp." />
+                      </Field>
+                      <ImageInput label="Day photo" hint="Leads this day on the quote PDF"
+                        value={note.image || ''} onChange={(v) => setDayNote(d, { image: v })} folder="itinerary" />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </Section>
 
         {/* ---------------- Flight Details ---------------- */}
@@ -747,10 +1008,10 @@ export default function QuoteBuilder() {
 }
 
 /* ============================ sub-components ============================ */
-function Section({ icon, title, desc, total, onAdd, addLabel, actions, toolbar, children }) {
+function Section({ icon, title, desc, total, onAdd, addLabel, actions, toolbar, wide, children }) {
   const { canSeePricing } = useApp()
   return (
-    <section className="qb-section">
+    <section className={`qb-section${wide ? ' qb-section-wide' : ''}`}>
       <div className="qb-section-head">
         <span className="qb-section-ic"><Icon name={icon} size={18} /></span>
         <div className="qb-section-meta">
@@ -860,14 +1121,19 @@ function IEList({ title, tone, master, selected, onToggle, onAddCustom }) {
 }
 
 /* ---------- Searchable hotel picker (name + City · Star) ---------- */
-function HotelPicker({ value, hotels, destFilter = [], onPick, placeholder = 'Select hotel' }) {
+function HotelPicker({ value, hotels, destFilter = [], cityFilter = [], onPick, placeholder = 'Select hotel' }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
-  const hasFilter = destFilter.length > 0
-  const scoped = hasFilter ? hotels.filter((h) => destFilter.includes(h.destination)) : hotels
-  const base = hasFilter && !showAll ? scoped : hotels
+  const hasFilter = destFilter.length > 0 || cityFilter.length > 0
+  // a hotel with no city set still shows — a half-filled master must never
+  // hide inventory the agent knows is there
+  const inScope = (h) =>
+    (!destFilter.length || destFilter.includes(h.destination)) &&
+    (!cityFilter.length || !h.city || cityFilter.includes(h.city))
+  const base = hasFilter && !showAll ? hotels.filter(inScope) : hotels
   const shown = query.trim() ? base.filter((h) => `${h.name} ${h.city}`.toLowerCase().includes(query.trim().toLowerCase())) : base
+  const scopeLabel = [...cityFilter, ...destFilter].filter(Boolean).join(', ')
   const sub = value?.city ? `${value.city}${value.star ? ` · ${value.star} Star` : ''}` : ''
   return (
     <div className="pill-select-wrap">
@@ -885,11 +1151,11 @@ function HotelPicker({ value, hotels, destFilter = [], onPick, placeholder = 'Se
             {hasFilter && (
               <label className="hp-dest-filter">
                 <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
-                <span>Show all destinations <span className="hp-dest-hint">(scoped to {destFilter.join(', ')} by default)</span></span>
+                <span>Show every city <span className="hp-dest-hint">(scoped to {scopeLabel} by default)</span></span>
               </label>
             )}
             <div className="hp-list">
-              {shown.length === 0 && <div className="pms-none">No hotels match{query ? ` “${query}”` : ` this destination`}{hasFilter && !showAll ? ' — try Show all destinations' : ''}</div>}
+              {shown.length === 0 && <div className="pms-none">No hotels match{query ? ` “${query}”` : ` this destination`}{hasFilter && !showAll ? ' — try Show every city' : ''}</div>}
               {shown.map((h) => (
                 <button key={h.id} className={`pill-menu-item hp-item ${h.id === value?.id ? 'selected' : ''}`} onClick={() => { onPick(h); setOpen(false); setQuery('') }}>
                   <span className="hp-name">{h.name}</span>
@@ -905,13 +1171,18 @@ function HotelPicker({ value, hotels, destFilter = [], onPick, placeholder = 'Se
 }
 
 /* ---------- Master picker (search a master list + allow a custom entry) ---------- */
-function MasterPicker({ value, items = [], destFilter = [], onPick, placeholder = 'Select…', sub }) {
+function MasterPicker({ value, items = [], destFilter = [], cityFilter = [], typeFilter = '', typeOf, onPick, placeholder = 'Select…', sub }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [showAll, setShowAll] = useState(false)
-  const hasFilter = destFilter.length > 0
-  const scoped = hasFilter ? items.filter((it) => destFilter.includes(it.destination)) : items
-  const base = hasFilter && !showAll ? scoped : items
+  const hasFilter = destFilter.length > 0 || cityFilter.length > 0 || !!typeFilter
+  // an entry with no city (or no type) still shows — only an explicit mismatch hides it
+  const inScope = (it) =>
+    (!destFilter.length || destFilter.includes(it.destination)) &&
+    (!cityFilter.length || !it.city || cityFilter.includes(it.city)) &&
+    (!typeFilter || !typeOf || !typeOf(it) || typeOf(it) === typeFilter)
+  const base = hasFilter && !showAll ? items.filter(inScope) : items
+  const scopeLabel = [...cityFilter, ...destFilter, typeFilter].filter(Boolean).join(', ')
   const q = query.trim().toLowerCase()
   const shown = q ? base.filter((it) => it.name.toLowerCase().includes(q)) : base
   const exact = items.some((it) => it.name.toLowerCase() === q)
@@ -929,7 +1200,7 @@ function MasterPicker({ value, items = [], destFilter = [], onPick, placeholder 
             {hasFilter && (
               <label className="hp-dest-filter">
                 <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
-                <span>Show all destinations <span className="hp-dest-hint">(scoped to {destFilter.join(', ')} by default)</span></span>
+                <span>Show everything <span className="hp-dest-hint">(scoped to {scopeLabel} by default)</span></span>
               </label>
             )}
             <div className="hp-list">
@@ -945,7 +1216,7 @@ function MasterPicker({ value, items = [], destFilter = [], onPick, placeholder 
                   <span className="hp-sub">custom entry</span>
                 </button>
               )}
-              {shown.length === 0 && !query.trim() && <div className="pms-none">No master entries{hasFilter && !showAll ? ' for this destination — try Show all destinations' : ' yet'}</div>}
+              {shown.length === 0 && !query.trim() && <div className="pms-none">No master entries{hasFilter && !showAll ? ' in this scope — try Show everything' : ' yet'}</div>}
             </div>
           </div>
         </>
@@ -1140,11 +1411,15 @@ function blankFlight(kind) {
 /* ============================ pure helpers ============================ */
 const toggle = (arr, v) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v].sort((a, b) => a - b))
 const hotelRooms = (hotels, id) => { const h = hotels.find((x) => x.id === id); const list = h?.roomTypes ? h.roomTypes.split(',').map((s) => s.trim()) : []; return list.length ? list : ROOM_TYPES }
-function cityForNight(sectors, n) {
+/** The sector (destination + city + nights) a given night falls in. */
+function sectorAt(sectors, n) {
   let acc = 0
-  for (const s of sectors || []) { acc += Math.max(0, num(s.nights)); if (n <= acc) return s.destination || '' }
-  return (sectors && sectors[sectors.length - 1]?.destination) || ''
+  for (const s of sectors || []) { acc += Math.max(0, num(s.nights)); if (n <= acc) return s }
+  return (sectors || [])[(sectors || []).length - 1] || null
 }
+function cityForNight(sectors, n) { return sectorAt(sectors, n)?.destination || '' }
+/** The CITY (the level below the destination) a given night is spent in. */
+function townForNight(sectors, n) { return sectorAt(sectors, n)?.city || '' }
 const sectorsFrom = (destStr, nights) => {
   const dests = (destStr || '').split(',').map((s) => s.trim()).filter((s) => s && s !== 'General Inquiry')
   if (dests.length <= 1) return [{ id: uid(), destination: dests[0] || '', nights: Math.max(1, num(nights)) }]
@@ -1154,27 +1429,113 @@ const sectorsFrom = (destStr, nights) => {
 }
 
 function blankOption(name) {
-  return { id: uid(), name, sameCab: false, sameCabId: '', sameCabName: '', stays: [], services: [], flights: [], extras: [], sellingOverride: '' }
+  return { id: uid(), name, sameCab: false, sameCabId: '', sameCabName: '', sameCabType: '', stays: [], services: [], flights: [], extras: [], sellingOverride: '' }
 }
 function blankStay(q, opt) {
-  return { id: uid(), nights: [], hotelId: '', hotelName: '', hotelCity: '', hotelStar: '', hotelImage: '', hotelDescription: '', mealPlan: 'CP', roomType: 'Deluxe', paxPerRoom: 2, rooms: q.rooms || 1, aweb: 0, cweb: 0, cnb: 0, awebRate: 0, cwebRate: 0, cnbRate: 0, compChild: COMP_CHILD[1], rate: '', given: '' }
+  return {
+    id: uid(), nights: [], manual: false,
+    hotelId: '', hotelName: '', hotelCity: '', hotelStar: '', hotelImage: '', hotelDescription: '',
+    mealPlan: 'CP', roomType: 'Deluxe', paxPerRoom: 2, rooms: q.rooms || 1,
+    aweb: 0, cweb: 0, cnb: 0, infants: 0,
+    awebRate: 0, cwebRate: 0, cnbRate: 0, infantRate: 0,
+    compChild: COMP_CHILD[1], rate: '', given: '',
+    supplierName: '', supplierRate: '', seasonLabel: '',
+  }
 }
 function blankService(kind, opt, q) {
-  return { id: uid(), kind, days: [], location: '', serviceType: kind === 'transport' ? 'Arrival Transfer' : '', description: '', durationMins: '', qty: kind === 'activity' ? (num(q.adults) || 1) : 1, cabId: opt.sameCabId || '', cabName: opt.sameCabName || '', rate: '', given: '' }
+  return {
+    id: uid(), kind, days: [], location: '', serviceType: kind === 'transport' ? 'Arrival Transfer' : '',
+    description: '', durationHours: '', image: '',
+    qty: kind === 'activity' ? (num(q.adults) || 1) : 1,
+    childQty: kind === 'activity' ? num(q.children) : 0,
+    infantQty: kind === 'activity' ? num(q.infants) : 0,
+    rateChild: '', givenChild: '', rateInfant: '', givenInfant: '',
+    cabId: opt.sameCabId || '', cabName: opt.sameCabName || '', cabType: '',
+    rate: '', given: '', supplierName: '', supplierRate: '', seasonLabel: '',
+  }
 }
 
-// hotel line = (base × rooms + extra-bed charges) × nights; bed rates come from the hotel master
-const bedPerNight = (st) => num(st.aweb) * num(st.awebRate) + num(st.cweb) * num(st.cwebRate) + num(st.cnb) * num(st.cnbRate)
-const stayCost = (st) => (num(st.rate) * num(st.rooms) + bedPerNight(st)) * st.nights.length
+/* A supplier (B2B) net price always wins over the master rate — that's the
+   whole point of typing one in: the agent got a real quote from the supplier
+   and everything downstream (cost, markup, profit) must price off it. */
+const hasSupplier = (x) => String(x?.supplierRate ?? '').trim() !== ''
+const costRate = (x) => (hasSupplier(x) ? num(x.supplierRate) : num(x.rate))
+
+// hotel line = (room rate × rooms + extra-bed / infant charges) × nights;
+// the bed rates come from the hotel master (season-resolved on pick)
+const bedPerNight = (st) => num(st.aweb) * num(st.awebRate) + num(st.cweb) * num(st.cwebRate) + num(st.cnb) * num(st.cnbRate) + num(st.infants) * num(st.infantRate)
+const stayCost = (st) => (costRate(st) * num(st.rooms) + bedPerNight(st)) * st.nights.length
 const staySell = (st) => (num(st.given) * num(st.rooms) + bedPerNight(st)) * st.nights.length
+
+/* A service line prices adults, children and infants separately — an activity
+   billed per head must never charge a child (or an infant) the adult rate. */
+const svcDays = (s) => Math.max(1, (s.days || []).length)
+const svcAdults = (s) => num(s.qty) || 1
+const perDayCost = (s) => (s.kind === 'activity'
+  ? costRate(s) * svcAdults(s) + num(s.rateChild) * num(s.childQty) + num(s.rateInfant) * num(s.infantQty)
+  : costRate(s) * svcAdults(s))
+const perDaySell = (s) => (s.kind === 'activity'
+  ? num(s.given) * svcAdults(s) + num(s.givenChild) * num(s.childQty) + num(s.givenInfant) * num(s.infantQty)
+  : num(s.given) * svcAdults(s))
+const svcCost = (s) => perDayCost(s) * svcDays(s)
+const svcSell = (s) => perDaySell(s) * svcDays(s)
+
+/* Extra beds the party actually needs: anyone who doesn't fit in the booked
+   rooms at the chosen occupancy goes on an extra bed — children first, since
+   a child bed is cheaper than an adult one. */
+function suggestBeds(st, q) {
+  const capacity = Math.max(0, num(st.rooms) * num(st.paxPerRoom))
+  const adults = num(q.adults), children = num(q.children)
+  const overflow = Math.max(0, adults + children - capacity)
+  const cweb = Math.min(children, overflow)
+  const aweb = Math.max(0, overflow - cweb)
+  const cnb = Math.max(0, children - cweb)
+  return { aweb, cweb, cnb, infants: num(q.infants) }
+}
+
+const bedLabel = (st) => [
+  num(st.aweb) && `${num(st.aweb)} AWEB`,
+  num(st.cweb) && `${num(st.cweb)} CWEB`,
+  num(st.cnb) && `${num(st.cnb)} CNB`,
+  num(st.infants) && `${num(st.infants)} infant${num(st.infants) > 1 ? 's' : ''}`,
+].filter(Boolean).join(' · ')
+
+/* One row per night with the extra-bed charge spelled out, so an AWEB or CNB
+   the agent typed is visible on the panel instead of hiding inside the room rate. */
+function stayRows(st, q) {
+  const bed = bedPerNight(st)
+  return (st.nights || []).map((n) => ({
+    label: chipDate(q.startDate, n - 1) || `Night ${n}`,
+    sub: bed ? `room × ${num(st.rooms)} + ${bedLabel(st)}` : `room × ${num(st.rooms)}`,
+    rate: costRate(st) * num(st.rooms) + bed,
+    val: num(st.given) * num(st.rooms) + bed,
+  }))
+}
+
+/* A service's per-day breakdown — adults, children and infants on their own
+   lines so nobody has to reverse-engineer a lump sum. */
+function svcRows(s, q) {
+  const parts = [
+    { who: `${svcAdults(s)} × adult`, cost: costRate(s) * svcAdults(s), sell: num(s.given) * svcAdults(s), on: true },
+    { who: `${num(s.childQty)} × child`, cost: num(s.rateChild) * num(s.childQty), sell: num(s.givenChild) * num(s.childQty), on: s.kind === 'activity' && num(s.childQty) > 0 },
+    { who: `${num(s.infantQty)} × infant`, cost: num(s.rateInfant) * num(s.infantQty), sell: num(s.givenInfant) * num(s.infantQty), on: s.kind === 'activity' && num(s.infantQty) > 0 },
+  ].filter((p) => p.on)
+  return (s.days || []).flatMap((d) => parts.map((p, ix) => ({
+    label: ix === 0 ? (chipDate(q.startDate, d - 1) || `Day ${d}`) : '',
+    sub: p.who,
+    rate: p.cost,
+    val: p.sell,
+  })))
+}
 
 function optionTotals(opt, q) {
   const hotelCost = opt.stays.reduce((s, st) => s + stayCost(st), 0)
   const hotelSell = opt.stays.reduce((s, st) => s + staySell(st), 0)
   const svc = (kind) => opt.services.filter((s) => s.kind === kind)
-  const sumSvc = (kind, field) => svc(kind).reduce((s, x) => s + num(x[field]) * (num(x.qty) || 1) * Math.max(1, x.days.length), 0)
-  const transportCost = sumSvc('transport', 'rate'), transportSell = sumSvc('transport', 'given')
-  const activityCost = sumSvc('activity', 'rate'), activitySell = sumSvc('activity', 'given')
+  const sumCost = (kind) => svc(kind).reduce((a, x) => a + svcCost(x), 0)
+  const sumSell = (kind) => svc(kind).reduce((a, x) => a + svcSell(x), 0)
+  const transportCost = sumCost('transport'), transportSell = sumSell('transport')
+  const activityCost = sumCost('activity'), activitySell = sumSell('activity')
   const flightCost = opt.flights.reduce((s, f) => s + num(f.cost), 0)
   const flightSell = opt.flights.reduce((s, f) => s + num(f.sell), 0)
   const extraCost = opt.extras.reduce((s, e) => s + num(e.cost), 0)
@@ -1225,7 +1586,7 @@ function init(editing, preClient, tpl, hotels, presets) {
     const sectors = b.sectors?.length ? b.sectors.map((s) => ({ ...s, id: s.id || uid() })) : sectorsFrom((editing.destination || '').split(' - ')[0], editing.nights)
     const nights = Math.max(1, sectors.reduce((s, x) => s + num(x.nights), 0))
     const options = (b.options || []).map((o) => ({ ...o, name: o.name || o.star || 'Option' }))
-    return { ...PRICING_DEFAULTS, taxPercent: editing.pricing?.gstPercent ?? PRICING_DEFAULTS.taxPercent, ...b, ieByDest: b.ieByDest || seedIE(sectors, presets, editing), options, sectors, clientId: editing.clientId, clientName: editing.clientName, clientPhone: editing.clientPhone, clientEmail: editing.clientEmail, destShort: sectors[0]?.destination || '', destination: sectors.map((s) => s.destination).filter(Boolean).join(', ') || editing.destination, startDate: editing.startDate, nights, days: nights + 1, comments: editing.comments || '' }
+    return { ...PRICING_DEFAULTS, taxPercent: editing.pricing?.gstPercent ?? PRICING_DEFAULTS.taxPercent, infants: 0, dayNotes: {}, ...b, ieByDest: b.ieByDest || seedIE(sectors, presets, editing), dayNotes: b.dayNotes || {}, options, sectors, clientId: editing.clientId, clientName: editing.clientName, clientPhone: editing.clientPhone, clientEmail: editing.clientEmail, destShort: sectors[0]?.destination || '', destination: sectors.map((s) => s.destination).filter(Boolean).join(', ') || editing.destination, startDate: editing.startDate, nights, days: nights + 1, comments: editing.comments || '' }
   }
   if (editing) return fromLegacy(editing, presets)
   const c = preClient
@@ -1235,9 +1596,10 @@ function init(editing, preClient, tpl, hotels, presets) {
     clientId: c?.id || '', clientName: c?.name || '', clientPhone: c?.phone || '', clientEmail: c?.email || '',
     sectors, destShort: sectors[0]?.destination || '', destination: sectors.map((s) => s.destination).filter(Boolean).join(', '),
     startDate: c?.query?.startDate || '', nights, days: nights + 1,
-    adults: c?.query?.adults || 2, children: c?.query?.children || 0, rooms: Math.max(1, Math.ceil((c?.query?.adults || 2) / 2)),
+    adults: c?.query?.adults || 2, children: c?.query?.children || 0, infants: c?.query?.infants || 0,
+    rooms: Math.max(1, Math.ceil((c?.query?.adults || 2) / 2)),
     options: [blankOption('4 Star')],
-    ieByDest: seedIE(sectors, presets),
+    ieByDest: seedIE(sectors, presets), dayNotes: {},
     ...PRICING_DEFAULTS, comments: '',
   }
 }
@@ -1248,9 +1610,17 @@ function fromLegacy(pkg, presets) {
   ;(pkg.hotelsAlloc || []).forEach((h) => {
     const last = stays[stays.length - 1]
     if (last && last.hotelName === h.name && last.roomType === h.roomType) last.nights.push(h.night)
-    else stays.push({ id: uid(), nights: [h.night], hotelId: h.hotelId || '', hotelName: h.name, hotelCity: h.city || '', hotelStar: h.star || '', hotelImage: h.image || '', hotelDescription: h.description || '', mealPlan: h.mealPlan || 'CP', roomType: h.roomType || 'Deluxe', paxPerRoom: 2, rooms: 1, aweb: 0, cweb: 0, cnb: 0, compChild: COMP_CHILD[1], rate: String(h.net || 0), given: String(h.price || 0) })
+    else stays.push({
+      id: uid(), nights: [h.night], manual: !h.hotelId, hotelId: h.hotelId || '', hotelName: h.name,
+      hotelCity: h.city || '', hotelStar: h.star || '', hotelImage: h.image || '', hotelDescription: h.description || '',
+      mealPlan: h.mealPlan || 'CP', roomType: h.roomType || 'Deluxe', paxPerRoom: num(h.paxPerRoom) || 2, rooms: num(h.rooms) || 1,
+      aweb: num(h.aweb), cweb: num(h.cweb), cnb: num(h.cnb), infants: num(h.infants),
+      awebRate: num(h.awebRate), cwebRate: num(h.cwebRate), cnbRate: num(h.cnbRate), infantRate: num(h.infantRate),
+      compChild: COMP_CHILD[1], rate: String(h.net || 0), given: String(h.price || 0),
+      supplierName: h.supplier || '', supplierRate: '', seasonLabel: h.season || '',
+    })
   })
-  const services = (pkg.cabs || []).map((c) => ({ id: uid(), kind: 'transport', days: c.days || [1], location: c.name || 'Transfer', serviceType: c.serviceType || 'Sightseeing', durationMins: '', qty: 1, cabId: c.cabId || '', cabName: c.type || '', rate: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))), given: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))) }))
+  const services = (pkg.cabs || []).map((c) => ({ id: uid(), kind: 'transport', days: c.days || [1], location: c.name || 'Transfer', serviceType: c.serviceType || 'Sightseeing', durationHours: c.durationHours ? String(c.durationHours) : '', qty: num(c.qty) || 1, childQty: 0, infantQty: 0, cabId: c.cabId || '', cabName: c.type || '', cabType: c.cabType || '', supplierName: c.supplier || '', supplierRate: '', rate: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))), given: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))) }))
   const extras = (pkg.categories || []).map((cat) => ({ id: uid(), name: cat.name, note: cat.description || '', cost: '', sell: String(cat.amount || 0) }))
   const option = { ...blankOption('4 Star'), stays, services, extras }
   const legShort = (pkg.destination || '').split(' - ')[0]
@@ -1259,9 +1629,9 @@ function fromLegacy(pkg, presets) {
     clientId: pkg.clientId || '', clientName: pkg.clientName || '', clientPhone: pkg.clientPhone || '', clientEmail: pkg.clientEmail || '',
     sectors: legSectors, destShort: legShort, destination: pkg.destination || '',
     startDate: pkg.startDate || '', nights: pkg.nights || 1, days: pkg.days || 2,
-    adults: pkg.pax?.adults || 2, children: pkg.pax?.children || 0, rooms: pkg.pax?.rooms || 1,
+    adults: pkg.pax?.adults || 2, children: pkg.pax?.children || 0, infants: pkg.pax?.infants || 0, rooms: pkg.pax?.rooms || 1,
     options: [option],
-    ieByDest: seedIE(legSectors, presets, pkg),
+    ieByDest: seedIE(legSectors, presets, pkg), dayNotes: {},
     ...PRICING_DEFAULTS, taxPercent: pkg.pricing?.gstPercent ?? 5, comments: pkg.comments || '',
   }
 }
@@ -1288,7 +1658,7 @@ function fromTemplate(tpl, preClient, hotels, presets) {
     ...base,
     clientId: c?.id || '', clientName: c?.name || '', clientPhone: c?.phone || '', clientEmail: c?.email || '',
     startDate: c?.query?.startDate || base.startDate || '',
-    adults: c?.query?.adults || base.adults, children: c?.query?.children || base.children,
+    adults: c?.query?.adults || base.adults, children: c?.query?.children || base.children, infants: c?.query?.infants || base.infants || 0,
     rooms: c ? Math.max(1, Math.ceil((c?.query?.adults || 2) / 2)) : base.rooms,
     sectors, destShort: sectors[0]?.destination || base.destShort,
     destination: sectors.map((s) => s.destination).filter(Boolean).join(', ') || base.destination,
@@ -1322,13 +1692,41 @@ function serialize(q, oi, t, destinations, presets) {
   const destLabel = sectors.length === 1
     ? (() => { const d = destinations.find((x) => x.name === sectors[0].destination); return d ? `${d.name} - ${d.location}` : (sectors[0].destination || q.destShort) })()
     : (sectors.map((s) => s.destination).join(', ') || q.destination || q.destShort)
-  const hotelsAlloc = opt.stays.flatMap((s) => { const bed = bedPerNight(s); return s.nights.map((n) => ({ night: n, hotelId: s.hotelId, name: s.hotelName, city: s.hotelCity || cityForNight(q.sectors, n), star: s.hotelStar, image: s.hotelImage || '', description: s.hotelDescription || '', roomType: s.roomType, mealPlan: s.mealPlan, rooms: num(s.rooms), aweb: num(s.aweb), cweb: num(s.cweb), cnb: num(s.cnb), price: num(s.given) * num(s.rooms) + bed, net: num(s.rate) * num(s.rooms) + bed })) })
-    .sort((a, b) => a.night - b.night)
+  const hotelsAlloc = opt.stays.flatMap((s) => {
+    const bed = bedPerNight(s)
+    return s.nights.map((n) => ({
+      night: n, hotelId: s.hotelId, name: s.hotelName,
+      city: s.hotelCity || cityForNight(q.sectors, n), star: s.hotelStar,
+      image: s.hotelImage || '', description: s.hotelDescription || '',
+      roomType: s.roomType, mealPlan: s.mealPlan, rooms: num(s.rooms), paxPerRoom: num(s.paxPerRoom),
+      aweb: num(s.aweb), cweb: num(s.cweb), cnb: num(s.cnb), infants: num(s.infants),
+      awebRate: num(s.awebRate), cwebRate: num(s.cwebRate), cnbRate: num(s.cnbRate), infantRate: num(s.infantRate),
+      bedCharge: bed, season: s.seasonLabel || '',
+      supplier: s.supplierName || '', supplierRate: num(s.supplierRate),
+      price: num(s.given) * num(s.rooms) + bed, net: costRate(s) * num(s.rooms) + bed,
+    }))
+  }).sort((a, b) => a.night - b.night)
   const transports = opt.services.filter((s) => s.kind === 'transport')
   const activities = opt.services.filter((s) => s.kind === 'activity')
-  const cabsOut = transports.map((tr) => ({ cabId: tr.cabId, name: tr.location, type: opt.sameCab ? opt.sameCabName : tr.cabName, km: 0, rate: num(tr.rate), given: num(tr.given), total: num(tr.given) * (num(tr.qty) || 1) * Math.max(1, tr.days.length), days: tr.days, serviceType: tr.serviceType, description: tr.description || '', durationMins: num(tr.durationMins), qty: num(tr.qty) || 1, image: tr.image || '' }))
+  const cabsOut = transports.map((tr) => ({
+    cabId: tr.cabId, name: tr.location, type: opt.sameCab ? opt.sameCabName : tr.cabName,
+    cabType: opt.sameCab ? opt.sameCabType : tr.cabType, km: 0,
+    rate: costRate(tr), given: num(tr.given), total: svcSell(tr), net: svcCost(tr),
+    days: tr.days, serviceType: tr.serviceType, description: tr.description || '',
+    durationHours: num(tr.durationHours), qty: num(tr.qty) || 1, image: tr.image || '',
+    supplier: tr.supplierName || '', season: tr.seasonLabel || '',
+  }))
   const categories = [
-    ...activities.map((a) => ({ kind: 'activity', name: a.location || 'Activity', description: a.description || a.serviceType || '', serviceType: a.serviceType || '', durationMins: num(a.durationMins), qty: num(a.qty) || 1, days: a.days, image: a.image || '', amount: num(a.given) * (num(a.qty) || 1) * Math.max(1, a.days.length) })),
+    ...activities.map((a) => ({
+      kind: 'activity', name: a.location || 'Activity',
+      description: a.description || a.serviceType || '', serviceType: a.serviceType || '',
+      durationHours: num(a.durationHours), qty: num(a.qty) || 1,
+      childQty: num(a.childQty), infantQty: num(a.infantQty),
+      adultPrice: num(a.given), childPrice: num(a.givenChild), infantPrice: num(a.givenInfant),
+      days: a.days, image: a.image || '',
+      supplier: a.supplierName || '', season: a.seasonLabel || '',
+      amount: svcSell(a),
+    })),
     ...opt.extras.map((e) => ({ name: e.name, description: e.note || '', amount: num(e.sell) })),
     ...opt.flights.map((f) => ({ name: `Flight · ${f.kind}`, description: `${f.fromCode || f.fromCity || ''} → ${f.toCode || f.toCity || ''}`, amount: num(f.sell) })),
   ]
@@ -1338,14 +1736,30 @@ function serialize(q, oi, t, destinations, presets) {
     const svcs = opt.services.filter((s) => s.days.includes(dnum))
     const stay = opt.stays.find((s) => s.nights.includes(dnum))
     const dayDest = dayCity(dnum) || q.destShort
-    const title = svcs[0]?.location || (dnum === q.days ? 'Departure' : `Day ${dnum}`)
+    const note = q.dayNotes?.[dnum] || {}
+    const title = note.title || svcs[0]?.location || (dnum === q.days ? 'Departure' : `Day ${dnum}`)
     const serviceText = svcs.map((s) => [s.location, s.description].filter(Boolean).join(' — ')).filter(Boolean).join('; ')
     return {
       day: dnum, title, template: '', mealPlan: stay?.mealPlan || '',
-      description: serviceText || (stay ? `Stay at ${stay.hotelName}` : ''),
+      description: note.description || serviceText || (stay ? `Stay at ${stay.hotelName}` : ''),
+      image: note.image || '',
+      custom: !!(note.title || note.description || note.image),
       activities: svcs.map((s) => s.serviceType).filter(Boolean).join(', '),
+      // the night's room allocation rides along with the day, so the itinerary
+      // and the PDF can show what the guest is actually sleeping in
+      stay: stay ? {
+        hotelId: stay.hotelId, name: stay.hotelName, city: stay.hotelCity, star: stay.hotelStar,
+        roomType: stay.roomType, mealPlan: stay.mealPlan, rooms: num(stay.rooms), paxPerRoom: num(stay.paxPerRoom),
+        aweb: num(stay.aweb), cweb: num(stay.cweb), cnb: num(stay.cnb), infants: num(stay.infants),
+        image: stay.hotelImage || '',
+      } : null,
+      city: townForNight(q.sectors, Math.min(dnum, q.nights)) || '',
       stops: [{ destination: dayDest, date: '', activity: svcs.map((s) => s.location || s.serviceType).filter(Boolean).join(', ') }],
-      services: svcs.map((s) => ({ kind: s.kind, name: s.location, serviceType: s.serviceType, description: s.description, durationMins: s.durationMins, image: s.image, qty: s.qty, cabId: s.cabId, cabName: s.cabName })),
+      services: svcs.map((s) => ({
+        kind: s.kind, name: s.location, location: s.location, serviceType: s.serviceType, description: s.description,
+        durationHours: s.durationHours, image: s.image, qty: s.qty, childQty: s.childQty, infantQty: s.infantQty,
+        cabId: s.cabId, cabName: s.cabName, cabType: s.cabType,
+      })),
       travel: '', notes: '',
     }
   })
@@ -1365,7 +1779,14 @@ function serialize(q, oi, t, destinations, presets) {
     sectors: q.sectors,
     fromLocation: '', route: '',
     days: q.days, nights: q.nights, startDate: q.startDate,
-    pax: { total: num(q.adults) + num(q.children), adults: num(q.adults), children: num(q.children), infants: num(q.infants), childrenNoBed: 0, extraBeds: 0, rooms: num(q.rooms), roomType: opt.stays[0]?.roomType || 'Deluxe' },
+    pax: {
+      // infants are counted, never priced as adults
+      total: num(q.adults) + num(q.children), adults: num(q.adults), children: num(q.children), infants: num(q.infants),
+      childrenNoBed: opt.stays.reduce((a, st) => Math.max(a, num(st.cnb)), 0),
+      extraBeds: opt.stays.reduce((a, st) => Math.max(a, num(st.aweb) + num(st.cweb)), 0),
+      rooms: num(q.rooms), paxPerRoom: num(opt.stays[0]?.paxPerRoom) || 2,
+      roomType: opt.stays[0]?.roomType || 'Deluxe',
+    },
     flightIncluded: opt.flights.length > 0, flights: opt.flights,
     flight: opt.flights[0] ? { ...opt.flights[0], depart: `${opt.flights[0].fromCode || ''} ${opt.flights[0].depTime || ''}`.trim(), arrive: `${opt.flights[0].toCode || ''} ${opt.flights[0].arrTime || ''}`.trim() } : { airline: '', flightNo: '', depart: '', arrive: '' },
     status: complete ? 'Quoted' : 'Draft',
@@ -1381,6 +1802,6 @@ function serialize(q, oi, t, destinations, presets) {
     },
     comments: q.comments, customerRemarks: q.customerRemarks || '',
     optionCount: q.options.length, activeOption: oi,
-    builderV2: { clientId: q.clientId, adults: q.adults, children: q.children, infants: q.infants, rooms: q.rooms, sectors: q.sectors, options: q.options, ieByDest: q.ieByDest, markupMode: q.markupMode, markupValue: q.markupValue, taxOn: q.taxOn, taxEnabled: q.taxEnabled, taxPercent: q.taxPercent, roundTo: q.roundTo, customerRemarks: q.customerRemarks || '' },
+    builderV2: { clientId: q.clientId, adults: q.adults, children: q.children, infants: q.infants, rooms: q.rooms, sectors: q.sectors, options: q.options, ieByDest: q.ieByDest, dayNotes: q.dayNotes || {}, markupMode: q.markupMode, markupValue: q.markupValue, taxOn: q.taxOn, taxEnabled: q.taxEnabled, taxPercent: q.taxPercent, roundTo: q.roundTo, customerRemarks: q.customerRemarks || '' },
   }
 }

@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Badge, Modal, Field, Input, PillSelect } from '../../../components/ui/UI'
+import { PageHeader, Card, Button, Badge, Modal, Field, Input, PillSelect, CityPicker } from '../../../components/ui/UI'
 import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
 export default function CabDetail() {
   const { id } = useParams()
-  const { cabs, packages, updateCab, removeCab, toast } = useApp()
+  const { cabs, packages, cabTypes, cities, destinations, updateCab, removeCab, toast } = useApp()
   const c = cabs.find((x) => x.id === id)
   const [edit, setEdit] = useState(false)
   const [f, setF] = useState(c || {})
@@ -29,7 +29,8 @@ export default function CabDetail() {
           <hr className="divider" />
           {c.image && <img src={c.image} alt={c.name} style={{ width: '100%', height: 170, objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 14 }} />}
           <div className="kv-grid">
-            <KV k="Type" v={c.type} /><KV k="AC" v={c.acType} />
+            <KV k="Type" v={c.type || 'Universal'} /><KV k="AC" v={c.acType} />
+            <KV k="City" v={c.city || 'Any'} />
             <KV k="Capacity" v={`${c.capacity} pax`} /><KV k="Rate / KM" v={inr(c.ratePerKm)} />
             <KV k="Rate / Day" v={inr(c.ratePerDay || 0)} /><KV k="Status" v={c.status} />
             <KV k="Contact" v={c.contact} />
@@ -46,9 +47,14 @@ export default function CabDetail() {
         footer={<><Button variant="secondary" onClick={() => setEdit(false)}>Cancel</Button><Button onClick={save}>Save</Button></>}>
         <div className="form-grid">
           <Field label="Name"><Input value={f.name || ''} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
-          <Field label="Type"><PillSelect value={f.type} options={['Sedan', 'SUV', 'Tempo Traveller', 'Universal']} onChange={(v) => setF({ ...f, type: v })} /></Field>
+          <Field label="Type"><PillSelect value={f.type || 'Universal'} options={cabTypes?.length ? cabTypes : ['Sedan', 'SUV', 'Tempo Traveller', 'Universal']} onChange={(v) => setF({ ...f, type: v })} /></Field>
           <Field label="AC"><PillSelect value={f.acType} options={['AC', 'Non-AC']} onChange={(v) => setF({ ...f, acType: v })} /></Field>
           <Field label="Capacity"><Input value={f.capacity || ''} onChange={(e) => setF({ ...f, capacity: e.target.value })} /></Field>
+          <Field label="Destination">
+            <PillSelect value={f.destination || 'Any destination'} options={['Any destination', ...destinations.map((d) => d.name)]}
+              onChange={(v) => setF({ ...f, destination: v === 'Any destination' ? '' : v })} />
+          </Field>
+          <Field label="City"><CityPicker value={f.city || ''} cities={cities} destination={f.destination} onChange={(v) => setF({ ...f, city: v })} allLabel="Any city" /></Field>
           <Field label="Rate / KM"><Input value={f.ratePerKm || ''} onChange={(e) => setF({ ...f, ratePerKm: e.target.value })} /></Field>
           <Field label="Rate / Day" hint="Auto-fills the quote builder"><Input value={f.ratePerDay || ''} onChange={(e) => setF({ ...f, ratePerDay: e.target.value })} /></Field>
           <div className="field-full"><ImageInput label="Main vehicle photo" value={f.image || ''} onChange={(v) => setF({ ...f, image: v })} folder="cabs" /></div>

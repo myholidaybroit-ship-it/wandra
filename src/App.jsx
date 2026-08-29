@@ -28,6 +28,8 @@ import LeadForm from './pages/admin/clients/LeadForm'
 import DestinationList from './pages/admin/destinations/DestinationList'
 import DestinationCreate from './pages/admin/destinations/DestinationCreate'
 import DestinationDetail from './pages/admin/destinations/DestinationDetail'
+import CityList from './pages/admin/cities/CityList'
+import CityCreate from './pages/admin/cities/CityCreate'
 import HotelList from './pages/admin/hotels/HotelList'
 import HotelCreate from './pages/admin/hotels/HotelCreate'
 import HotelDetail from './pages/admin/hotels/HotelDetail'
@@ -61,6 +63,8 @@ import UserManagement from './pages/admin/UserManagement'
 import Billing from './pages/admin/Billing'
 import UpgradePro from './pages/admin/UpgradePro'
 import HelpSupport from './pages/admin/HelpSupport'
+import FollowUps from './pages/admin/tasks/FollowUps'
+import FollowupRules from './pages/admin/tasks/FollowupRules'
 
 export default function App() {
   return (
@@ -99,6 +103,8 @@ export default function App() {
           <Route path="destinations" element={<DestinationList />} />
           <Route path="destinations/new" element={<DestinationCreate />} />
           <Route path="destinations/:id" element={<DestinationDetail />} />
+          <Route path="cities" element={<CityList />} />
+          <Route path="cities/new" element={<CityCreate />} />
           <Route path="hotels" element={<HotelList />} />
           <Route path="hotels/new" element={<HotelCreate />} />
           <Route path="hotels/:id" element={<HotelDetail />} />
@@ -129,6 +135,8 @@ export default function App() {
           <Route path="invoices/settings" element={<InvoiceSettings />} />
           <Route path="invoices/:id" element={<InvoiceDetail />} />
           <Route path="quotations" element={<QuotationList />} />
+          <Route path="followups" element={<FollowUps />} />
+          <Route path="followups/rules" element={<FollowupRules />} />
           <Route path="reports" element={<Reports />} />
           <Route path="gallery" element={<Gallery />} />
           <Route path="settings" element={<Settings />} />

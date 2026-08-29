@@ -6,11 +6,11 @@
 .um-avatar {
   flex: 0 0 auto; display: inline-grid; place-items: center; width: 36px; height: 36px;
   border-radius: var(--radius-full); background: var(--color-surface-soft);
-  border: 1px solid var(--color-hairline-soft); font-size: 12px; font-weight: 800; letter-spacing: .4px;
+  border: 1px solid var(--color-hairline-soft); font-size: 11px; font-weight: 800; letter-spacing: .4px;
 }
 .um-owner {
   display: inline-block; margin-left: 8px; vertical-align: 1px;
-  font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px;
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px;
   color: #fff; background: var(--color-ink); border-radius: var(--radius-full); padding: 2.5px 8px;
 }
 
@@ -25,10 +25,10 @@
   width: 26px; height: 26px; border-radius: var(--radius-full);
   background: var(--color-ink); color: #fff; margin-top: 1px;
 }
-.um-banner p { font-size: 13px; line-height: 1.55; color: var(--color-body); margin: 0; }
+.um-banner p { font-size: 11.5px; line-height: 1.55; color: var(--color-body); margin: 0; }
 .um-banner-link {
   border: none; background: none; padding: 0; font: inherit; font-weight: 700;
   color: var(--color-ink); text-decoration: underline; cursor: pointer;
 }
 
-.um-modal-note { font-size: 12.5px; color: var(--color-stone); margin-top: 14px; line-height: 1.5; }
+.um-modal-note { font-size: 11px; color: var(--color-stone); margin-top: 14px; line-height: 1.5; }

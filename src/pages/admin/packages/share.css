@@ -3,11 +3,11 @@
    ============================================================ */
 .pshare { min-height: calc(100vh - 200px); display: grid; place-items: center; padding: 48px 20px; }
 .pshare-inner { width: 100%; max-width: 520px; text-align: center; }
-.pshare-missing { padding: 48px 20px; font-size: 15px; color: var(--color-stone); }
+.pshare-missing { padding: 48px 20px; font-size: 13.5px; color: var(--color-stone); }
 
 .pshare-badge { width: 58px; height: 58px; border-radius: var(--radius-full); background: var(--color-success-bg); color: var(--color-success-text); display: grid; place-items: center; margin: 0 auto 18px; }
-.pshare-title { font-size: 28px; font-weight: 700; letter-spacing: -0.6px; }
-.pshare-sub { font-size: 14px; color: var(--color-stone); margin-top: 6px; }
+.pshare-title { font-size: 25px; font-weight: 700; letter-spacing: -0.6px; }
+.pshare-sub { font-size: 12.5px; color: var(--color-stone); margin-top: 6px; }
 .pshare-sub strong { color: var(--color-ink); }
 
 .pshare-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 560px; margin: 30px auto 0; }
@@ -23,8 +23,8 @@
 .pshare-btn:active { transform: translateY(0); }
 .pshare-ic { width: 46px; height: 46px; border-radius: var(--radius-full); display: grid; place-items: center; }
 .pshare-ic svg, .pshare-ic .icon { width: 22px; height: 22px; }
-.pshare-label { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
-.pshare-desc { font-size: 10.5px; color: var(--color-stone); line-height: 1.35; }
+.pshare-label { font-size: 12.5px; font-weight: 700; letter-spacing: -0.2px; }
+.pshare-desc { font-size: 10px; color: var(--color-stone); line-height: 1.35; }
 
 /* tones */
 .tone-wa .pshare-ic { background: #e7f8ee; color: #1ebe5d; }
@@ -35,25 +35,25 @@
 .tone-pdf:hover { border-color: var(--color-brand-coral); }
 
 .pshare-foot { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
-.pshare-link { font-size: 13px; font-weight: 600; color: var(--color-brand-blue-deep); }
+.pshare-link { font-size: 11.5px; font-weight: 600; color: var(--color-brand-blue-deep); }
 .pshare-link:hover { text-decoration: underline; }
 .pshare-link.muted { color: var(--color-stone); }
 
-@media (max-width: 480px) { .pshare-grid { max-width: 320px; gap: 14px; } .pshare-title { font-size: 24px; } }
+@media (max-width: 480px) { .pshare-grid { max-width: 320px; gap: 14px; } .pshare-title { font-size: 21.5px; } }
 
 /* WhatsApp message modal */
-.wa-hint { font-size: 12.5px; color: var(--color-stone); margin-bottom: 12px; }
+.wa-hint { font-size: 11px; color: var(--color-stone); margin-bottom: 12px; }
 .wa-preview {
   white-space: pre-wrap; word-break: break-word;
-  font-size: 13px; line-height: 1.55; color: var(--color-charcoal);
+  font-size: 11.5px; line-height: 1.55; color: var(--color-charcoal);
   background: var(--color-surface-soft); border: 1px solid var(--color-hairline-soft);
   border-radius: var(--radius-lg); padding: 16px 18px;
   max-height: 52vh; overflow-y: auto;
   font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
 }
 .em-subject { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; margin-bottom: 12px; background: var(--color-surface); border: 1px solid var(--color-hairline-soft); border-radius: var(--radius-md); }
-.em-subject-k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--color-stone); flex-shrink: 0; }
-.em-subject-v { font-size: 14px; font-weight: 600; color: var(--color-ink); }
+.em-subject-k { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--color-stone); flex-shrink: 0; }
+.em-subject-v { font-size: 12.5px; font-weight: 600; color: var(--color-ink); }
 
 /* ---------- PDF variations modal ---------- */
 .pdfm { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
@@ -63,10 +63,10 @@
 .pdfm-item:hover { background: var(--color-surface-soft); }
 .pdfm-item.on { border-color: var(--color-primary); background: var(--color-surface-soft); box-shadow: inset 3px 0 0 var(--color-primary); }
 .pdfm-item-b { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.pdfm-item-t { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
-.pdfm-item-d { font-size: 11px; color: var(--color-stone); line-height: 1.35; }
-.pdfm-hint { font-size: 11px; color: var(--color-stone); margin-top: 6px; line-height: 1.4; }
-.pdfm-pro { font-size: 8.5px; font-weight: 800; letter-spacing: .5px; color: #7a4a12; background: linear-gradient(135deg, #ffe08a, #f7b955); padding: 2px 6px; border-radius: 5px; }
+.pdfm-item-t { font-size: 11.5px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+.pdfm-item-d { font-size: 10px; color: var(--color-stone); line-height: 1.35; }
+.pdfm-hint { font-size: 10px; color: var(--color-stone); margin-top: 6px; line-height: 1.4; }
+.pdfm-pro { font-size: 10px; font-weight: 800; letter-spacing: .5px; color: #7a4a12; background: linear-gradient(135deg, #ffe08a, #f7b955); padding: 2px 6px; border-radius: 5px; }
 .pdfm-item.is-pro { border-color: #f0d9a8; background: linear-gradient(180deg, #fffdf7, var(--color-canvas)); }
 .pdfm-item.is-pro.on { border-color: #e6b455; box-shadow: inset 3px 0 0 #e6a821; }
 .pdf-dl-ic { transform: rotate(180deg); }
@@ -96,8 +96,8 @@
 
 /* per-option quotation selector (multi-option packages) */
 .pdfm-options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 2px 14px; margin-bottom: 4px; border-bottom: 1px solid var(--color-hairline-soft); }
-.pdfm-options-k { font-size: 12px; font-weight: 700; color: var(--color-stone); }
-.pdfm-opt { padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-hairline); background: var(--color-canvas); font-size: 12px; font-weight: 600; color: var(--color-charcoal); cursor: pointer; transition: background .15s ease; }
+.pdfm-options-k { font-size: 11px; font-weight: 700; color: var(--color-stone); }
+.pdfm-opt { padding: 6px 14px; border-radius: var(--radius-full); border: 1px solid var(--color-hairline); background: var(--color-canvas); font-size: 11px; font-weight: 600; color: var(--color-charcoal); cursor: pointer; transition: background .15s ease; }
 .pdfm-opt:hover { background: var(--color-surface); }
 .pdfm-opt.on { background: var(--color-ink); color: #fff; border-color: var(--color-ink); }
-.pdfm-options-hint { flex-basis: 100%; font-size: 11px; color: var(--color-muted-soft); }
+.pdfm-options-hint { flex-basis: 100%; font-size: 10px; color: var(--color-muted-soft); }

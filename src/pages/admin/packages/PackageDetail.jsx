@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../../store/AppContext'
 import { Button, Badge } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
+import FollowUpPanel from '../../../components/ui/FollowUpPanel'
 import './detail.css'
 
 function fmtD(iso, opts = { day: '2-digit', month: 'short' }) {
@@ -15,6 +16,16 @@ function addDays(iso, n) {
   const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n)
   return d.toISOString().slice(0, 10)
 }
+
+const NN = (v) => Number(v) || 0
+/* Extra beds & infants on a stay, spelled out — an AWEB or CNB the agent typed
+   has to be visible somewhere other than the price. */
+const bedsLine = (h) => [
+  NN(h.aweb) && `${NN(h.aweb)} AWEB`,
+  NN(h.cweb) && `${NN(h.cweb)} CWEB`,
+  NN(h.cnb) && `${NN(h.cnb)} CNB`,
+  NN(h.infants) && `${NN(h.infants)} infant${NN(h.infants) > 1 ? 's' : ''}`,
+].filter(Boolean).join(' · ')
 
 export default function PackageDetail() {
   const { id } = useParams()
@@ -41,8 +52,9 @@ export default function PackageDetail() {
       else {
         const m = hotels.find((x) => x.id === h.hotelId) || hotels.find((x) => x.name === h.name)
         stays.push({
-          name: h.name || '—', room: h.roomType || '', meal: h.mealPlan || '', city: m?.city || '',
-          star: Number(m?.rating) || 0, image: m?.image || '', nightsCount: 1,
+          name: h.name || '—', room: h.roomType || '', meal: h.mealPlan || '', city: h.city || m?.city || '',
+          rooms: Number(h.rooms) || 1, paxPerRoom: Number(h.paxPerRoom) || 0, beds: bedsLine(h),
+          star: Number(m?.rating) || 0, image: h.image || m?.image || '', nightsCount: 1,
           from: addDays(pkg.startDate, h.night - 1), to: addDays(pkg.startDate, h.night),
         })
       }
@@ -57,7 +69,8 @@ export default function PackageDetail() {
         const m = hotels.find((x) => x.id === st.hotelId) || hotels.find((x) => x.name === st.hotelName)
         return {
           name: st.hotelName || m?.name || '—', room: st.roomType || '', meal: st.mealPlan || '', city: st.hotelCity || m?.city || '',
-          star: Number(st.hotelStar || m?.rating) || 0, image: m?.image || '', nightsCount: ns.length,
+          rooms: Number(st.rooms) || 1, paxPerRoom: Number(st.paxPerRoom) || 0, beds: bedsLine(st),
+          star: Number(st.hotelStar || m?.rating) || 0, image: st.hotelImage || m?.image || '', nightsCount: ns.length,
           from: addDays(pkg.startDate, Math.min(...ns) - 1), to: addDays(pkg.startDate, Math.max(...ns)),
         }
       }),
@@ -103,7 +116,7 @@ export default function PackageDetail() {
               {client ? <Link to={`/app/clients/${client.id}`} className="pd-meta-item link">{pkg.clientName}</Link> : <span className="pd-meta-item">{pkg.clientName}</span>}
               <span className="pd-meta-item">{fmtD(pkg.startDate, { day: '2-digit', month: 'short', year: 'numeric' })}</span>
               <span className="pd-meta-item">{pkg.nights}N / {pkg.days}D</span>
-              <span className="pd-meta-item">{Number(pax.adults) || 0} Adults{Number(pax.children) ? ` · ${pax.children} Children` : ''}</span>
+              <span className="pd-meta-item">{Number(pax.adults) || 0} Adults{Number(pax.children) ? ` · ${pax.children} Children` : ''}{Number(pax.infants) ? ` · ${pax.infants} Infants` : ''}{Number(pax.rooms) ? ` · ${pax.rooms} Room${Number(pax.rooms) > 1 ? 's' : ''}` : ''}</span>
             </div>
           </div>
           {canSeePricing && (
@@ -135,6 +148,11 @@ export default function PackageDetail() {
       <div className="pd-grid">
         {/* ================= LEFT ================= */}
         <div className="pd-main">
+          {/* Chasing this quote */}
+          <div className="mb-lg">
+            <FollowUpPanel kind="package" id={pkg.id} code={pkg.code} label={pkg.clientName || pkg.destination} title="Chasing this quote" />
+          </div>
+
           {/* Stay */}
           {(model.optionStays.length || model.stays.length) > 0 && (
             <section className="pd-card">
@@ -151,7 +169,7 @@ export default function PackageDetail() {
                         <div className="pd-stay-img" style={s.image ? { backgroundImage: `url("${s.image}")` } : undefined} />
                         <div className="pd-stay-b">
                           <div className="pd-stay-n">{s.name}{s.star ? <span className="pd-stars">{'★'.repeat(s.star)}</span> : null}</div>
-                          <div className="pd-stay-m">{[s.city, s.room, s.meal].filter(Boolean).join(' · ')}</div>
+                          <div className="pd-stay-m">{[s.city, `${s.rooms} × ${s.room}`, s.paxPerRoom ? `${s.paxPerRoom} pax/room` : '', s.meal, s.beds].filter(Boolean).join(' · ')}</div>
                           <div className="pd-stay-d">{fmtD(s.from)} → {fmtD(s.to)} · {s.nightsCount} night{s.nightsCount > 1 ? 's' : ''}</div>
                         </div>
                       </div>

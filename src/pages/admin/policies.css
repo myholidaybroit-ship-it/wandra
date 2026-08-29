@@ -2,12 +2,12 @@
    Policies & Notes — editable document blocks for quote PDFs
    ============================================================ */
 .pn { max-width: 860px; margin: 0 auto; }
-.pn-count { font-size: 13px; color: var(--color-stone); margin: 0 0 16px; }
+.pn-count { font-size: 11.5px; color: var(--color-stone); margin: 0 0 16px; }
 .pn-card { margin-bottom: 14px; }
 .pn-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .pn-title { flex: 1; font-weight: 700; }
 .pn-switch { flex: none; }
-.pn-show { flex: none; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--color-stone); min-width: 52px; }
+.pn-show { flex: none; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--color-stone); min-width: 52px; }
 .pn-show.on { color: var(--color-success-text); }
 .pn-del {
   flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px;

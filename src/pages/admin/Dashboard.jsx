@@ -1,7 +1,10 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../store/AppContext'
-import { Card, Sparkline, AreaChart, BarChart, DonutChart, HBars, Funnel, ProgressRing, StackBar, StackedColumns, ComboChart, Heatmap } from '../../components/ui/UI'
+import { Card, Sparkline, AreaChart, BarChart, DonutChart, HBars, Funnel, ProgressRing, StackBar, StackedColumns, ComboChart, Heatmap, Button } from '../../components/ui/UI'
+import { Icon } from '../../components/ui/icons'
+import { bucketOf, dueLabel, LINK_KINDS, TYPE_META } from '../../utils/followups'
 import './dashboard.css'
+import './tasks/followups.css'
 
 /* Monochrome data-viz ramp — ink → silver */
 const MONO = {
@@ -36,8 +39,72 @@ function Kpi({ label, value, series, deltaPct }) {
   )
 }
 
+/* ---------- "Your day" — the follow-ups that need doing now ---------- */
+function YourDay() {
+  const { taskSummary, taskScope, completeTask, hasFeature, can, toast } = useApp()
+  const nav = useNavigate()
+  if (!hasFeature('tasks.view') || !hasFeature('tasks.dashboard') || !can('tasks')) return null
+
+  const { overdue = 0, today = 0, doneToday = 0, next = [] } = taskSummary
+  const due = overdue + today
+  const clear = async (id) => {
+    try { await completeTask(id); toast('Done — nice work') } catch (e) { toast(e.message || 'Could not update') }
+  }
+
+  return (
+    <Card pad={24} className="yd">
+      <div className="row-between">
+        <div>
+          <span className="t-title-sm">{taskScope === 'team' ? "The team's day" : 'Your day'}</span>
+          <div className="t-caption c-muted mt-xs">
+            {due === 0
+              ? doneToday > 0 ? `All clear — ${doneToday} cleared today.` : 'Nothing outstanding right now.'
+              : `${overdue} overdue · ${today} due today${doneToday ? ` · ${doneToday} cleared` : ''}`}
+          </div>
+        </div>
+        <Link className="t-body-sm c-link" to="/app/followups">Follow-ups →</Link>
+      </div>
+      <hr className="divider" />
+      {next.length === 0 ? (
+        <div className="yd-empty">
+          <Icon name="check" size={18} strokeWidth={2.4} />
+          <span>Your queue is clear. New enquiries, sent quotes and unpaid invoices land here on their own.</span>
+        </div>
+      ) : (
+        <div className="yd-list">
+          {next.slice(0, 5).map((t) => {
+            const bucket = bucketOf(t)
+            const link = t.link?.kind ? LINK_KINDS[t.link.kind] : null
+            const type = TYPE_META[t.type] || TYPE_META.other
+            return (
+              <div key={t.id} className="yd-row">
+                <button className="fu-check" title="Mark done" onClick={() => clear(t.id)}><span className="fu-check-box" /></button>
+                <span className={`fu-type ${t.priority}`} title={type.label}><Icon name={type.icon} size={13} /></span>
+                <button
+                  className="yd-main"
+                  onClick={() => nav(link && t.link.id ? link.to(t.link.id) : '/app/followups')}
+                >
+                  <span className="yd-title">{t.title}</span>
+                  <span className={`yd-sub ${bucket === 'overdue' ? 'overdue' : bucket === 'today' ? 'today' : ''}`}>
+                    {dueLabel(t)}{t.link?.code ? ` · ${t.link.code}` : ''}{t.assigneeName ? ` · ${t.assigneeName}` : ' · unclaimed'}
+                  </span>
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {due > 0 && (
+        <Button size="sm" variant="secondary" className="w-full mt-base" onClick={() => nav('/app/followups')}>
+          Work the queue ({due})
+        </Button>
+      )}
+    </Card>
+  )
+}
+
 export default function Dashboard() {
-  const { packages, bookings, clients, invoices, dashboardSeries, dashboardAnalytics: A, canSeePricing } = useApp()
+  const { packages, bookings, clients, invoices, dashboardSeries, dashboardAnalytics: A, canSeePricing, can } = useApp()
   const revenue = invoices.flatMap((i) => i.payments || []).reduce((s, p) => s + p.amount, 0)
   const grossRevenue = packages.reduce((s, p) => s + computePricing(p).grandTotal, 0)
   const activePackages = packages.filter((p) => p.status !== 'Cancelled').length
@@ -52,15 +119,22 @@ export default function Dashboard() {
   const statusSegs = A.packageStatusMix.map((s, i) => ({ ...s, color: RAMP[i % RAMP.length] }))
   const agingBars = A.invoiceAging.map((b, i) => ({ ...b, color: RAMP[i % RAMP.length] }))
 
+  // A KPI is only honest if the viewer's role can actually read that module —
+  // otherwise the list behind it is empty and the tile would read a false zero.
+  const kpis = [
+    canSeePricing && can('invoices') && <Kpi key="rev" label="Total Revenue" value={inr(revenue)} series={dashboardSeries.revenue} deltaPct={delta(A.collectedByMonth)} />,
+    can('bookings') && <Kpi key="bkg" label="Total Bookings" value={bookings.length} series={dashboardSeries.bookings} deltaPct={delta(A.bookingsByMonth)} />,
+    can('builder') && <Kpi key="pkg" label="Active Packages" value={activePackages} series={dashboardSeries.packages} deltaPct={delta(A.grossByMonth)} />,
+    can('clients') && <Kpi key="cli" label="Total Clients" value={clients.length} series={dashboardSeries.clients} deltaPct={delta(A.weeklyInquiries)} />,
+  ].filter(Boolean)
+
   return (
     <div className="dash">
       {/* KPI row */}
-      <div className={`grid ${canSeePricing ? 'grid-4' : 'grid-3'}`}>
-        {canSeePricing && <Kpi label="Total Revenue" value={inr(revenue)} series={dashboardSeries.revenue} deltaPct={delta(A.collectedByMonth)} />}
-        <Kpi label="Total Bookings" value={bookings.length} series={dashboardSeries.bookings} deltaPct={delta(A.bookingsByMonth)} />
-        <Kpi label="Active Packages" value={activePackages} series={dashboardSeries.packages} deltaPct={delta(A.grossByMonth)} />
-        <Kpi label="Total Clients" value={clients.length} series={dashboardSeries.clients} deltaPct={delta(A.weeklyInquiries)} />
-      </div>
+      {kpis.length > 0 && <div className={`grid grid-${Math.min(4, kpis.length)}`}>{kpis}</div>}
+
+      {/* What needs doing today — before any chart */}
+      <div className="dash-day mt-lg"><YourDay /></div>
 
       {/* Revenue trend + target / collection — hidden without pricing access */}
       {canSeePricing && (

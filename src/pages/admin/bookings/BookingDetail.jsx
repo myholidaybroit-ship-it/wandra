@@ -3,10 +3,13 @@ import { useParams, Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
 import { Button, Badge, Modal, Field, Input, PillSelect, DatePicker } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
+import FollowUpPanel from '../../../components/ui/FollowUpPanel'
 import './booking.css'
 
 const STATUSES = ['Active', 'Muted', 'Completed', 'Cancelled']
 const METHODS = ['Online', 'UPI', 'Bank Transfer', 'Cash']
+const N = (v) => Number(v) || 0
+const today = () => new Date().toISOString().slice(0, 10)
 
 function addDays(iso, n) {
   if (!iso) return ''
@@ -35,11 +38,37 @@ function countdown(bk, days) {
 
 export default function BookingDetail() {
   const { id } = useParams()
-  const { bookings, packages, clients, hotels, cabs, agency, addBookingPayment, setBookingStatus, cancelBooking, toast, canSeePricing } = useApp()
+  const { bookings, packages, clients, hotels, cabs, agency, addBookingPayment, setBookingStatus, cancelBooking, setBookingSchedule, generateBookingSchedule, hasFeature, toast, canSeePricing } = useApp()
   const bk = bookings.find((b) => b.id === id)
   const [open, setOpen] = useState(false)
   const [supplierOpen, setSupplierOpen] = useState(false)
-  const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
+  const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: today() })
+
+  /* ---------- payment schedule ---------- */
+  const [schedOpen, setSchedOpen] = useState(false)
+  const [rows, setRows] = useState([])
+  const openSchedule = () => {
+    setRows((bk.schedule || []).map((r) => ({ ...r })))
+    setSchedOpen(true)
+  }
+  const setRow = (i, patch) => setRows((l) => l.map((r, x) => (x === i ? { ...r, ...patch } : r)))
+  const addRow = () => setRows((l) => [...l, { label: `Instalment ${l.length + 1}`, percent: '', amount: '', dueDate: bk?.travelDate || today(), status: 'Due' }])
+  const rmRow = (i) => setRows((l) => l.filter((_, x) => x !== i))
+  /* Typing a % fills the amount, and typing an amount fills the % — agents
+     think in both, and the two must never drift apart on screen. */
+  const setPercent = (i, v) => setRow(i, { percent: v, amount: Math.round(N(bk.value) * N(v) / 100) })
+  const setAmount = (i, v) => setRow(i, { amount: v, percent: N(bk.value) ? Math.round((N(v) / N(bk.value)) * 1000) / 10 : 0 })
+  const rowsTotal = rows.reduce((a, r) => a + N(r.amount), 0)
+  const saveSchedule = async () => {
+    try {
+      await setBookingSchedule(bk.id, rows.filter((r) => N(r.amount) > 0 || r.label))
+      toast('Payment schedule saved'); setSchedOpen(false)
+    } catch (ex) { toast(ex.message || 'Could not save the schedule') }
+  }
+  const regenerate = async () => {
+    try { await generateBookingSchedule(bk.id); toast('Default plan rebuilt — advance now, balance before departure') }
+    catch (ex) { toast(ex.message || 'Could not rebuild the schedule') }
+  }
 
   const pkg = packages.find((p) => p.id === bk?.packageId)
 
@@ -110,6 +139,9 @@ export default function BookingDetail() {
       </div>
 
       <div className="bk-grid">
+        {/* ---------- What still has to happen ---------- */}
+        <FollowUpPanel kind="booking" id={bk.id} code={bk.code} label={bk.clientName} title="Trip checklist" />
+
         {/* ---------- Schedule ---------- */}
         <section className="bk-card">
           <div className="bk-card-head">
@@ -163,6 +195,36 @@ export default function BookingDetail() {
             <Button className="w-full mt-base" onClick={() => setOpen(true)}>+ Add Payment</Button>
           </div>
 
+          {hasFeature('bookings.payment_schedule') && (
+            <div className="bk-card">
+              <div className="bk-card-head">
+                <span className="bk-card-title">Payment schedule</span>
+                <span className="bk-card-sub">{(bk.schedule || []).length ? `${(bk.schedule || []).filter((r) => r.status === 'Paid').length}/${bk.schedule.length} settled` : 'not set'}</span>
+              </div>
+              {(bk.schedule || []).length === 0 && (
+                <div className="bk-empty">No plan yet — split this trip into an advance and a balance so the follow-up engine can chase each due date.</div>
+              )}
+              {(bk.schedule || []).map((r, i) => {
+                const late = r.status !== 'Paid' && r.dueDate && r.dueDate < today()
+                return (
+                  <div className={`bk-inst ${r.status === 'Paid' ? 'paid' : ''} ${late ? 'late' : ''}`} key={r.id || i}>
+                    <span className="bk-inst-dot" />
+                    <span className="bk-inst-m">
+                      <span className="bk-inst-l">{r.label || `Instalment ${i + 1}`}{N(r.percent) ? <span className="bk-inst-pct">{N(r.percent)}%</span> : null}</span>
+                      <span className="bk-inst-d">{r.status === 'Paid' ? `Paid ${part(r.paidDate, { day: '2-digit', month: 'short' }) || ''}` : `Due ${part(r.dueDate, { day: '2-digit', month: 'short', year: 'numeric' })}`}{late ? ' · overdue' : ''}</span>
+                    </span>
+                    <span className="bk-inst-amt">{inr(r.amount)}</span>
+                  </div>
+                )
+              })}
+              <div className="row gap-xs mt-base">
+                <Button size="sm" variant="secondary" className="w-full" onClick={openSchedule}>{(bk.schedule || []).length ? 'Edit plan' : 'Set up plan'}</Button>
+                <Button size="sm" variant="tertiary" onClick={regenerate} title="Rebuild the default advance / balance split">Reset</Button>
+              </div>
+              <div className="bk-inst-note">Instalments settle automatically against the payments you record — they never claim more paid than you've collected.</div>
+            </div>
+          )}
+
           {(bk.payments || []).length > 0 && (
             <div className="bk-card">
               <div className="bk-card-head"><span className="bk-card-title">Payments</span><span className="bk-card-sub">{bk.payments.length}</span></div>
@@ -195,6 +257,38 @@ export default function BookingDetail() {
           <Field label="Method"><PillSelect value={pay.method} options={METHODS} onChange={(v) => setPay({ ...pay, method: v })} /></Field>
           <Field label="Reference No."><Input value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} placeholder="UTR / txn id — optional" /></Field>
           <Field label="Date"><DatePicker value={pay.date} onChange={(v) => setPay({ ...pay, date: v })} /></Field>
+        </div>
+      </Modal>
+
+      {/* ---------- Payment schedule ---------- */}
+      <Modal open={schedOpen} onClose={() => setSchedOpen(false)} title="Payment schedule" width={720}
+        footer={<>
+          <Button variant="tertiary" onClick={() => setSchedOpen(false)}>Cancel</Button>
+          <Button onClick={saveSchedule}>Save plan</Button>
+        </>}>
+        <div className="col gap-base">
+          <p className="t-body-sm c-muted">
+            Split <strong>{inr(bk.value)}</strong> into the instalments this trip is actually billed in. Each due date gets its own
+            follow-up, and rows settle themselves as you record payments.
+          </p>
+          <div className="bk-sched-head"><span>Instalment</span><span>%</span><span>Amount (₹)</span><span>Due date</span><span /></div>
+          {rows.map((r, i) => (
+            <div className="bk-sched-row" key={r.id || i}>
+              <Input value={r.label || ''} onChange={(e) => setRow(i, { label: e.target.value })} placeholder="e.g. Advance to confirm" />
+              <Input type="number" value={r.percent ?? ''} onChange={(e) => setPercent(i, e.target.value)} placeholder="30" />
+              <Input type="number" value={r.amount ?? ''} onChange={(e) => setAmount(i, e.target.value)} placeholder="0" />
+              <DatePicker value={r.dueDate || ''} onChange={(v) => setRow(i, { dueDate: v })} placeholder="Due" />
+              <button className="ic-x" title="Remove instalment" onClick={() => rmRow(i)}><Icon name="trash" size={13} /></button>
+            </div>
+          ))}
+          {rows.length === 0 && <div className="bk-empty">No instalments — add one, or hit Reset to rebuild the default split.</div>}
+          <div className="row-between">
+            <Button size="sm" variant="secondary" onClick={addRow}>+ Add instalment</Button>
+            <span className={`bk-sched-total ${rowsTotal === Math.round(N(bk.value)) ? 'ok' : 'off'}`}>
+              {inr(rowsTotal)} of {inr(bk.value)}
+              {rowsTotal !== Math.round(N(bk.value)) && <span className="bk-sched-gap"> · {inr(Math.round(N(bk.value)) - rowsTotal)} unallocated</span>}
+            </span>
+          </div>
         </div>
       </Modal>
 

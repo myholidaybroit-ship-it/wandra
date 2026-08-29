@@ -34,3 +34,15 @@
 
 /* agency logo in the hero (fixed box — safe for PDF capture) */
 .itin-logo { width: auto; height: auto; max-width: 170px; max-height: 48px; object-fit: contain; object-position: center; display: block; margin: 0 auto 8px; }
+
+/* The night's room allocation on each day card — rooms, occupancy, meal plan
+   and any extra beds, so the guest can see exactly what's booked. */
+.itin-stay {
+  margin-top: 10px; padding: 8px 12px; border-radius: 8px;
+  background: rgba(0, 0, 0, .04); font-size: 13px; color: #3a3a42; line-height: 1.55;
+}
+.itin-stay strong { color: #17171a; }
+.itin-day-photo {
+  width: 100%; aspect-ratio: 16 / 7; border-radius: 10px; margin-bottom: 12px;
+  background-size: cover; background-position: center;
+}

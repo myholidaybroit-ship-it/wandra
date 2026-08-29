@@ -5,6 +5,7 @@ import { api } from '../../../api'
 import { fileToUploadable } from '../../../utils/image'
 import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, DataTable, EmptyState, PillSelect } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
+import FollowUpPanel from '../../../components/ui/FollowUpPanel'
 import { useLeadSources } from '../../../utils/sources'
 import '../packages/detail.css'
 import './client-hub.css'
@@ -103,6 +104,11 @@ export default function ClientDetail() {
           </>}
         </div>
       </Card>
+
+      {/* ---- What happens next for this lead ---- */}
+      <div className="mt-lg">
+        <FollowUpPanel kind="client" id={c.id} code={c.code} label={c.name} title="What happens next" />
+      </div>
 
       {/* ---- One place for the whole journey ---- */}
       <Card pad={0} className="mt-lg ch-card">

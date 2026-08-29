@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Field, Input, PillSelect } from '../../../components/ui/UI'
+import { PageHeader, Card, Button, Field, Input, PillSelect, CityPicker } from '../../../components/ui/UI'
 import { ImageInput, GalleryInput } from '../../../components/ui/ImageInput'
 
 export default function CabCreate() {
-  const { addCab, toast } = useApp()
+  const { addCab, cabTypes, cities, destinations, toast } = useApp()
   const nav = useNavigate()
-  const [f, setF] = useState({ name: '', type: 'Sedan', acType: 'AC', capacity: 4, ratePerKm: '', ratePerDay: '', contact: '', image: '', gallery: [] })
+  const [f, setF] = useState({ name: '', type: 'Sedan', acType: 'AC', capacity: 4, destination: '', city: '', ratePerKm: '', ratePerDay: '', contact: '', image: '', gallery: [] })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
     if (!f.name) return toast('Cab name is required')
@@ -20,9 +20,16 @@ export default function CabCreate() {
       <Card>
         <div className="form-grid">
           <Field label="Cab type name" required><Input value={f.name} onChange={set('name')} placeholder="e.g. Swift Dzire" /></Field>
-          <Field label="Type"><PillSelect value={f.type} options={['Sedan', 'SUV', 'Tempo Traveller', 'Universal']} onChange={(v) => setF({ ...f, type: v })} /></Field>
+          <Field label="Type" hint="Vehicle category the builder filters by"><PillSelect value={f.type} options={cabTypes?.length ? cabTypes : ['Sedan', 'SUV', 'Tempo Traveller', 'Universal']} onChange={(v) => setF({ ...f, type: v })} /></Field>
           <Field label="AC"><PillSelect value={f.acType} options={['AC', 'Non-AC']} onChange={(v) => setF({ ...f, acType: v })} /></Field>
           <Field label="Capacity (pax)"><Input type="number" min="1" value={f.capacity} onChange={set('capacity')} /></Field>
+          <Field label="Destination" hint="Optional — leave blank if this vehicle runs everywhere">
+            <PillSelect value={f.destination || 'Any destination'} options={['Any destination', ...destinations.map((d) => d.name)]}
+              onChange={(v) => setF({ ...f, destination: v === 'Any destination' ? '' : v, city: '' })} />
+          </Field>
+          <Field label="City" hint="Optional — filters the builder's cab picker city-wise">
+            <CityPicker value={f.city} cities={cities} destination={f.destination} onChange={(v) => setF({ ...f, city: v })} allLabel="Any city" />
+          </Field>
           <Field label="Rate per KM (₹)"><Input value={f.ratePerKm} onChange={set('ratePerKm')} placeholder="20" /></Field>
           <Field label="Rate per Day (₹)" hint="Auto-fills transport pricing in the quote builder"><Input value={f.ratePerDay} onChange={set('ratePerDay')} placeholder="3800" /></Field>
           <Field label="Contact"><Input value={f.contact} onChange={set('contact')} placeholder="Driver / vendor phone" /></Field>

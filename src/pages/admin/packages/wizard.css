@@ -8,6 +8,6 @@
 @media (max-width: 900px) { .cab-row, .hotel-row, .cat-row { grid-template-columns: 1fr 1fr; } }
 .day-card { border: 1px solid var(--color-hairline-strong); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px; }
 .stop-row { border-left: 3px solid var(--color-hairline-strong); padding-left: 12px; margin-bottom: 12px; }
-.check-line { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--color-body); padding: 7px 0; }
+.check-line { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--color-body); padding: 7px 0; }
 .check-line input { margin: 0; }
 .sec-banner .badge { flex-shrink: 0; }

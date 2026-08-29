@@ -4,6 +4,7 @@ import { useApp, inr, DEFAULT_INVOICE_SETTINGS } from '../../../store/AppContext
 import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select } from '../../../components/ui/UI'
 import { AgencyLogo } from '../../../components/ui/AgencyBrand'
 import { PayTo } from '../../../components/ui/PayTo'
+import FollowUpPanel from '../../../components/ui/FollowUpPanel'
 import { preloadAndDownload } from '../../../utils/pdf'
 import './invoice.css'
 
@@ -85,6 +86,10 @@ export default function InvoiceDetail() {
           </>}
         </div>
       </Card>
+      </div>
+
+      <div className="mt-lg">
+        <FollowUpPanel kind="invoice" id={inv.id} code={inv.code} label={inv.clientName} title="Collecting this invoice" />
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Record Payment"

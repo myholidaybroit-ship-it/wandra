@@ -7,6 +7,22 @@ import { preloadAndDownload } from '../../utils/pdf'
 import './itinerary.css'
 
 const THEME_ACCENT = { standard: '#171717', classic: '#0d74ce', modern: '#16a34a', premium: '#8145b5', marine: '#0e7490', extensive: '#000000' }
+const N = (v) => Number(v) || 0
+
+/* What the guest is actually sleeping in on a given day. Resolved from the
+   day's own saved stay, falling back to the night-by-night hotel allocation so
+   older quotes show their rooms too. */
+function stayForDay(pkg, day) {
+  if (pkg.itinerary?.find((d) => d.day === day)?.stay) return pkg.itinerary.find((d) => d.day === day).stay
+  const h = (pkg.hotelsAlloc || []).find((x) => x.night === day)
+  return h ? { name: h.name, roomType: h.roomType, mealPlan: h.mealPlan, rooms: N(h.rooms), paxPerRoom: N(h.paxPerRoom), aweb: N(h.aweb), cweb: N(h.cweb), cnb: N(h.cnb), infants: N(h.infants) } : null
+}
+const bedsLine = (st) => [
+  N(st.aweb) && `${N(st.aweb)} adult extra bed${N(st.aweb) > 1 ? 's' : ''}`,
+  N(st.cweb) && `${N(st.cweb)} child extra bed${N(st.cweb) > 1 ? 's' : ''}`,
+  N(st.cnb) && `${N(st.cnb)} child without bed`,
+  N(st.infants) && `${N(st.infants)} infant${N(st.infants) > 1 ? 's' : ''}`,
+].filter(Boolean).join(' · ')
 
 export default function ItineraryPreview() {
   const { code } = useParams()
@@ -47,8 +63,8 @@ export default function ItineraryPreview() {
           <h1 className="itin-h1">Your Journey to {pkg.destination?.split(' ')[0]}</h1>
           <div className="itin-hero-meta">
             <span>{pkg.days} Days / {pkg.nights} Nights</span>
-            <span>•</span><span>{pkg.pax?.adults} Adults</span>
-            <span>•</span><span>Private Transfer Included</span>
+            <span>•</span><span>{N(pkg.pax?.adults)} Adults{N(pkg.pax?.children) ? ` · ${N(pkg.pax.children)} Children` : ''}{N(pkg.pax?.infants) ? ` · ${N(pkg.pax.infants)} Infants` : ''}</span>
+            <span>•</span><span>{N(pkg.pax?.rooms) || 1} Room{(N(pkg.pax?.rooms) || 1) > 1 ? 's' : ''}</span>
           </div>
         </div>
       </div>
@@ -58,6 +74,7 @@ export default function ItineraryPreview() {
         <div className="itin-summary">
           <div className="sum-chip"><span className="sc-k">Travelers</span><span className="sc-v">{paxTotal ? `${paxTotal} pax` : '—'}</span></div>
           <div className="sum-chip"><span className="sc-k">Stay</span><span className="sc-v">{pkg.nights} nights</span></div>
+          <div className="sum-chip"><span className="sc-k">Rooms</span><span className="sc-v">{N(pkg.pax?.rooms) || 1} × {pkg.pax?.roomType || 'room'}</span></div>
           <div className="sum-chip"><span className="sc-k">Transport</span><span className="sc-v">Private cab</span></div>
           <div className="sum-chip"><span className="sc-k">Theme</span><span className="sc-v">{theme}</span></div>
         </div>
@@ -70,9 +87,20 @@ export default function ItineraryPreview() {
             <div className="itin-day" key={d.day}>
               <div className="itin-day-rail"><span className="itin-day-num">Day {d.day}</span></div>
               <div className="itin-day-card">
+                {d.image && <div className="itin-day-photo" style={{ backgroundImage: `url("${d.image}")` }} />}
                 <div className="t-title-md">{d.title}</div>
                 <div className="t-caption c-muted">{d.mealPlan}</div>
                 <p className="t-body-sm c-body mt-xs">{d.description}</p>
+                {(() => {
+                  const st = stayForDay(pkg, d.day)
+                  if (!st) return null
+                  const beds = bedsLine(st)
+                  return (
+                    <div className="itin-stay">
+                      <strong>Stay:</strong> {[st.name, `${N(st.rooms) || 1} × ${st.roomType || 'room'}`, N(st.paxPerRoom) ? `${N(st.paxPerRoom)} pax/room` : '', st.mealPlan, beds].filter(Boolean).join('  ·  ')}
+                    </div>
+                  )
+                })()}
                 {d.activities && <div className="itin-activities"><strong>Activities:</strong> {d.activities}</div>}
                 <div className="itin-stops">
                   {d.stops?.filter((s) => s.destination).map((s, i) => (

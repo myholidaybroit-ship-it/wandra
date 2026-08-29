@@ -1,0 +1,46 @@
+/* ---------- Season-wise rate rows (hotels / activities / transport) ---------- */
+.sr { border: 1px solid var(--color-hairline); border-radius: var(--radius-lg); padding: 14px; background: var(--color-surface-soft); }
+.sr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.sr-title { font-size: 11.5px; font-weight: 700; color: var(--color-ink); }
+.sr-sub { font-size: 10.5px; color: var(--color-stone); margin-top: 2px; max-width: 62ch; line-height: 1.5; }
+
+.sr-empty {
+  border: 1px dashed var(--color-hairline); border-radius: var(--radius-md);
+  padding: 14px; text-align: center; font-size: 11px; color: var(--color-stone); background: var(--color-canvas);
+}
+
+.sr-row {
+  background: var(--color-canvas); border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md); padding: 12px; margin-bottom: 10px;
+}
+.sr-row.clash { border-color: var(--color-warning); box-shadow: inset 3px 0 0 var(--color-warning); }
+.sr-row:last-child { margin-bottom: 0; }
+
+.sr-row-top { display: grid; grid-template-columns: 22px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.sr-seq {
+  width: 22px; height: 22px; border-radius: var(--radius-full); display: grid; place-items: center;
+  background: var(--color-ink); color: var(--color-on-primary); font-size: 10px; font-weight: 700; margin-bottom: 7px;
+}
+.sr-row-acts { display: flex; gap: 4px; padding-bottom: 4px; }
+.sr-act {
+  width: 26px; height: 26px; display: grid; place-items: center; border-radius: var(--radius-sm);
+  border: 1px solid var(--color-hairline); background: var(--color-canvas); color: var(--color-steel);
+}
+.sr-act:hover { background: var(--color-surface); color: var(--color-ink); }
+.sr-act.danger:hover { color: var(--color-error); border-color: var(--color-error); }
+
+.sr-prices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.sr-prices:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.sr-foot { display: flex; gap: 12px; align-items: center; margin-top: 8px; font-size: 10px; color: var(--color-stone); }
+.sr-warn { color: var(--color-warning); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .sr-row-top { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .sr-prices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* plan-gated state — the capability is explained, not just hidden */
+.sr-locked { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.sr-upgrade { font-size: 11.5px; font-weight: 700; color: var(--color-brand-blue-deep); }
+.sr-upgrade:hover { text-decoration: underline; }

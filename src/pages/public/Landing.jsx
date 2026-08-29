@@ -125,7 +125,7 @@ export default function Landing() {
 
       {/* ================= STATS ================= */}
       <section className="wl-section wl-stats" data-reveal>
-        {[['6', 'designer PDF & itinerary themes'], ['1', 'unified Travel Pass per trip'], ['140+', 'features under the hood'], ['24×7', 'human support on WhatsApp']].map(([n, k]) => (
+        {[['6', 'designer PDF & itinerary themes'], ['1', 'unified Travel Pass per trip'], ['147', 'features under the hood'], ['24×7', 'human support on WhatsApp']].map(([n, k]) => (
           <div className="wl-stat" key={k}><strong>{n}</strong><span>{k}</span></div>
         ))}
       </section>

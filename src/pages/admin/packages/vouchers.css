@@ -5,17 +5,17 @@
 .voucher { display: grid; grid-template-columns: 1fr 150px; background: var(--color-primary); color: var(--color-on-dark); border-radius: var(--radius-xxl); overflow: hidden;
   background-image: radial-gradient(120% 90% at 80% -10%, rgba(255,255,255,.10), transparent 60%); }
 .v-left { padding: 20px; }
-.v-brand { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
+.v-brand { font-size: 11.5px; font-weight: 700; letter-spacing: .5px; }
 .v-tag { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: var(--radius-pill); }
 .v-tag-transport { background: #facc15; color: #1a1a1a; }
 .v-tag-hotel { background: #47c2ff; color: #06283d; }
-.v-hotel-name { font-size: 19px; font-weight: 600; margin: 18px 0; }
+.v-hotel-name { font-size: 17px; font-weight: 600; margin: 18px 0; }
 .v-route { display: flex; align-items: center; gap: 14px; margin: 18px 0; }
-.v-from, .v-to { font-size: 22px; font-weight: 700; }
+.v-from, .v-to { font-size: 20px; font-weight: 700; }
 .v-arrow { color: var(--color-on-dark-soft); }
 .v-meta { display: flex; gap: 22px; flex-wrap: wrap; }
-.v-k { display: block; font-size: 9px; letter-spacing: .6px; color: var(--color-on-dark-soft); }
-.v-v { font-size: 12px; font-weight: 600; }
+.v-k { display: block; font-size: 10px; letter-spacing: .6px; color: var(--color-on-dark-soft); }
+.v-v { font-size: 11px; font-weight: 600; }
 .v-right { background: #0e0e0e; border-left: 2px dashed #333; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 10px; }
 .v-pass { font-size: 10px; letter-spacing: 1px; color: var(--color-on-dark-soft); }
 .v-logo { width: 68px; padding: 7px 9px; border-radius: var(--radius-lg); background: #fff; display: grid; place-items: center; }
@@ -24,7 +24,7 @@
 
 /* ---------- refreshed voucher extras ---------- */
 .v-tag-activity { background: #5fd68f; color: #05301a; }
-.v-code { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: .8px; color: rgba(255,255,255,.85); }
+.v-code { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; letter-spacing: .8px; color: rgba(255,255,255,.85); }
 .v-acts { display: flex; gap: 6px; }
 .v-act {
   width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px;
@@ -39,8 +39,8 @@
 /* empty state */
 .v-empty { text-align: center; padding: 52px 24px; border: 1px dashed var(--color-hairline-strong); border-radius: var(--radius-xxl); margin-bottom: 20px; }
 .v-empty-ic { display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: var(--radius-full); background: var(--color-surface); color: var(--color-steel); margin-bottom: 12px; }
-.v-empty-t { font-size: 16px; font-weight: 700; }
-.v-empty p { font-size: 13px; color: var(--color-stone); margin-top: 6px; }
+.v-empty-t { font-size: 14.5px; font-weight: 700; }
+.v-empty p { font-size: 11.5px; color: var(--color-stone); margin-top: 6px; }
 .v-empty .row.center { justify-content: center; }
 
 /* create modal grids */

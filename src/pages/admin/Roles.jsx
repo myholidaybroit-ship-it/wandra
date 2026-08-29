@@ -5,29 +5,20 @@ import { PageHeader, Button, Modal, Field, Select } from '../../components/ui/UI
 import { Icon } from '../../components/ui/icons'
 import './roles.css'
 
-const FEATURES = [
-  { key: 'dashboard', label: 'Dashboard', desc: 'KPIs, charts & pipeline overview' },
-  { key: 'clients', label: 'Trips & Clients', desc: 'Leads, client hub, documents' },
-  { key: 'builder', label: 'Quote Builder', desc: 'Create & edit packages, pricing, markup' },
-  { key: 'bookings', label: 'Bookings & Payments', desc: 'Confirm trips, record collections' },
-  { key: 'invoices', label: 'Invoices', desc: 'Issue invoices, record payments' },
-  { key: 'vouchers', label: 'Vouchers', desc: 'Hotel / transport / activity passes' },
-  { key: 'master', label: 'Master Data', desc: 'Destinations, hotels, cabs, activities, presets' },
-  { key: 'reports', label: 'Reports', desc: 'Lead & revenue analytics, exports' },
-  { key: 'landing', label: 'Landing Page', desc: 'Lead-capture site builder' },
-  { key: 'settings', label: 'Settings & Billing', desc: 'Agency profile, plan, users' },
-  { key: 'viewPricing', label: 'Pricing & Profit', desc: 'See cost, selling price, markup & profit everywhere', pricing: true },
-]
+/* The module list and each role's resolved access both come from the API
+   (`/config` → roleModules, `/roles` → role.access), which is the very same
+   map the backend gatekeeper enforces. Nothing about permissions is decided
+   in the frontend, so this table can never show access the API would refuse. */
 
 const REQUEST_TYPES = ['Add user seats', 'Create a new role', 'Change what a role can access', 'Something else']
 
 export default function Roles() {
-  const { roles, users, currentUser, limitFor, toast } = useApp()
+  const { roles, users, currentUser, roleModules, limitFor, toast } = useApp()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ type: REQUEST_TYPES[0], message: '' })
   const [sending, setSending] = useState(false)
 
-  const members = (roleName) => users.filter((u) => u.role === roleName).length
+  const members = (roleName) => roles.find((r) => r.name === roleName)?.members ?? users.filter((u) => u.role === roleName).length
   const seatLimit = limitFor('team')
   const seatsUsed = users.length
 
@@ -82,15 +73,15 @@ export default function Roles() {
               </tr>
             </thead>
             <tbody>
-              {FEATURES.map((f) => (
-                <tr key={f.key} className={f.pricing ? 'rl-row-pricing' : ''}>
+              {roleModules.map((f) => (
+                <tr key={f.key} className={f.pricing || f.scope ? 'rl-row-pricing' : ''}>
                   <td className="rl-feat">
                     <span className="rl-feat-name">{f.label}</span>
                     <span className="rl-feat-desc">{f.desc}</span>
                   </td>
                   {roles.map((r) => {
-                    // pricing visibility defaults ON — it's opt-out; every other perm is opt-in
-                    const on = f.pricing ? (r.system || r.perms?.viewPricing !== false) : (r.system || r.perms?.[f.key] === true)
+                    // resolved server-side — exactly what the API allows
+                    const on = r.access ? r.access[f.key] !== false : !!r.system
                     return (
                       <td key={r.id} className="rl-cell">
                         {on
@@ -104,7 +95,7 @@ export default function Roles() {
             </tbody>
           </table>
         </div>
-        <p className="rl-note">Admin is a system role and always has full access. These permissions are managed by the Wandra team — to add a role or change what a role can access, hit <strong>Request a change</strong> and we'll configure it from our side.</p>
+        <p className="rl-note">Admin is a system role and always has full access. A tick here is the same check the app makes on every request — anything not ticked returns "your role doesn't cover this". These permissions are managed by the Wandra team — to add a role or change what a role can access, hit <strong>Request a change</strong> and we'll configure it from our side.</p>
       </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Request a change" width={480}
