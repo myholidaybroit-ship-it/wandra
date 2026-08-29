@@ -149,6 +149,7 @@ export const HOTEL_SEASON_FIELDS = [
   { key: 'extraBedAdult', label: 'AWEB (₹)', hint: 'adult extra bed' },
   { key: 'extraBedChild', label: 'CWEB (₹)', hint: 'child extra bed' },
   { key: 'childNoBed', label: 'CNB (₹)', hint: 'child no bed' },
+  { key: 'infantCharge', label: 'Infant (₹)', hint: 'usually 0 — infants stay free' },
 ]
 export const ACTIVITY_SEASON_FIELDS = [
   { key: 'cost', label: 'Adult cost (₹)' },

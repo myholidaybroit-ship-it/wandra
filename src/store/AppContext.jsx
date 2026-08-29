@@ -215,7 +215,7 @@ export function AppProvider({ children }) {
     const featureMap = ent.features || {}
     const permsMap = me.perms || {}
     const allowed = ([feature, perm]) =>
-      (!feature || featureMap[feature] !== false) && (!perm || permsMap[perm] !== false)
+      (!feature || featureMap[feature] === true) && (!perm || permsMap[perm] === true)
     await Promise.all(Object.entries(LOADERS)
       .filter(([name]) => !LOADER_GATES[name] || allowed(LOADER_GATES[name]))
       .map(([, fn]) => fn().catch(() => {})))
@@ -377,7 +377,9 @@ export function AppProvider({ children }) {
 
   /* ---------- current user + permission flags ---------- */
   const currentUser = users.find((u) => u.id === currentUserId) || session?.user || null
-  const currentRole = roles.find((r) => r.name === currentUser?.role) || session?.role
+  // case-insensitive — a user saved with role "operations" must still resolve
+  // the "Operations" role instead of silently falling through to admin-ish defaults
+  const currentRole = roles.find((r) => String(r.name).toLowerCase() === String(currentUser?.role || '').toLowerCase()) || session?.role
   const isAdmin = currentUserId === session?.user?.id ? session?.isAdmin : !!currentRole?.system
   const canSeePricing = currentRole
     ? (currentRole.system || currentRole.perms?.viewPricing !== false)
@@ -401,10 +403,10 @@ export function AppProvider({ children }) {
   }, [sessionPerms, viewingSelf, currentRole])
 
   /* ---------- plan feature flags (admin-controlled) ----------
-     hasFeature(key) → is this feature enabled for the agency? Unknown keys
-     default to enabled so we never hide something the catalog doesn't cover. */
-  const hasFeature = useCallback((key) => features[key] !== false, [features])
-  const limitFor = useCallback((key) => (limitsMap[key] == null ? -1 : limitsMap[key]), [limitsMap])
+     hasFeature(key) → is this feature explicitly enabled for the agency.
+     Missing keys fail closed, matching the backend gatekeeper. */
+  const hasFeature = useCallback((key) => features[key] === true, [features])
+  const limitFor = useCallback((key) => (limitsMap[key] == null ? 0 : limitsMap[key]), [limitsMap])
 
   const value = {
     ready, authed, session, login, logout, sessionExpiresAt,

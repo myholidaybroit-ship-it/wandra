@@ -44,7 +44,7 @@ export default function RenewalBanner() {
     )
   }
   const pro = plans?.find((p) => p.id === 'pro') || {}
-  const proPrice = Number(pro.price) || 999
+  const proPrice = Number(pro.price) || 0
   const billedYearly = (pro.billingCycle || 'yearly') === 'yearly'
 
   const respond = async (answer) => {

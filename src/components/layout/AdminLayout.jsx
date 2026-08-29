@@ -32,13 +32,16 @@ const NAV_END = [
   { to: '/app/landing', label: 'Landing Page', icon: 'wand', feature: 'landing.builder', perm: 'landing' },
   { to: '/app/reports', label: 'Reports', icon: 'reports', feature: 'reports.view', perm: 'reports' },
   { to: '/app/gallery', label: 'Reviews', icon: 'star', feature: 'reviews.view' },
+  // teasers — visible to everyone, not clickable until the features ship
+  { to: '#ai', label: 'AI Assistant', icon: 'wand', soon: true },
+  { to: '#whatsapp-ai', label: 'WhatsApp Bot AI', icon: 'clients', soon: true },
 ]
 const NAV_BOTTOM = [
   { to: '/app/settings', label: 'Settings', icon: 'settings', feature: 'branding.agency_profile', perm: 'settings' },
   { to: '/app/users', label: 'User Management', icon: 'users', feature: 'team.users', perm: 'settings' },
   { to: '/app/roles', label: 'Roles & Permissions', icon: 'check', feature: 'team.roles', perm: 'settings' },
   { to: '/app/assignment', label: 'Lead Assignment', icon: 'refresh', feature: 'team.lead_assignment', perm: 'settings' },
-  { to: '/app/billing', label: 'Billing & Subscription', icon: 'billing' },
+  { to: '/app/billing', label: 'Billing & Subscription', icon: 'billing', perm: 'settings' },
   { to: '/app/support', label: 'Help & Support', icon: 'help' },
 ]
 
@@ -306,12 +309,18 @@ export default function AdminLayout() {
             </>
           ))}
 
-          {navEnd.map((n) => (
+          {navEnd.map((n) => (n.soon ? (
+            <span key={n.to} className="side-link soon" title={collapsed ? `${n.label} — coming soon` : undefined}>
+              <span className="side-ic"><Icon name={n.icon} /></span>
+              <span className="side-txt">{n.label}</span>
+              <span className="side-soon-badge">Soon</span>
+            </span>
+          ) : (
             <NavLink key={n.to} to={n.to} className="side-link" title={collapsed ? n.label : undefined} onClick={() => setOpen(false)}>
               <span className="side-ic"><Icon name={n.icon} /></span>
               <span className="side-txt">{n.label}</span>
             </NavLink>
-          ))}
+          )))}
         </nav>
         <div className="sidebar-bottom">
           <div className="side-plan-card">

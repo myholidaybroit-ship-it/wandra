@@ -3,20 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useApp, inr } from '../../store/AppContext'
 import { PageHeader, Button, Modal, Field, Input, Textarea } from '../../components/ui/UI'
 import { Icon } from '../../components/ui/icons'
+import { api } from '../../api'
 import './billing.css'
-
-/* Fallback plan cards — used only if the backend config hasn't returned plans yet
-   (empty Plan collection / older backend), so this page never shows a blank gap. */
-const FALLBACK_FREE = {
-  id: 'free', name: 'Free', price: 0, period: 'forever',
-  tagline: 'Everything you need to start selling trips.',
-  perks: ['Up to 100 clients', 'Quote builder with markup pricing', 'Itineraries, quotations & PDF downloads', 'WhatsApp & email sharing', 'Basic reports', 'Email support'],
-}
-const FALLBACK_PRO = {
-  id: 'pro', name: 'Pro', price: 999, period: 'mo', billingCycle: 'yearly', annualDiscountPercent: 0, annualTotal: 11988,
-  tagline: 'The complete engine for a growing agency.', plus: 'Everything in Free, plus:',
-  perks: ['Unlimited clients & enquiries', 'Bookings, invoices & payment tracking', 'Vouchers — hotel, transport & activity', 'Lead-capture landing page', 'Auto lead assignment (round robin)', 'In-depth reports with Excel / CSV export', 'Team accounts with roles & permissions', 'Your branding on every document', 'Priority WhatsApp support'],
-}
 
 export default function Billing() {
   const { plans, agency, clients, packages, users, limitFor, toast } = useApp()
@@ -37,14 +25,20 @@ export default function Billing() {
   const [talk, setTalk] = useState(false)
   const [msg, setMsg] = useState({ name: '', email: '', message: '' })
   const openTalk = () => { setMsg({ name: agency.name, email: agency.email, message: '' }); setTalk(true) }
-  const sendTalk = () => {
+  const sendTalk = async () => {
     if (!msg.message.trim()) return toast('Tell us a little about what you need')
-    setTalk(false)
-    toast(`Message sent — we'll reply to ${msg.email} within a working day`)
+    try {
+      await api.post('/support/inquiries', {
+        subject: 'Billing & subscription inquiry', category: 'Billing', message: msg.message.trim(), contactEmail: msg.email,
+      })
+      setTalk(false)
+      toast(`Message sent — we'll reply to ${msg.email}`)
+    } catch (error) { toast(error.message || 'Could not send the billing inquiry') }
   }
   const byId = (id) => plans.find((p) => (p.id || p.key || p.name || '').toLowerCase() === id)
-  const free = byId('free') || FALLBACK_FREE
-  const pro = byId('pro') || FALLBACK_PRO
+  const free = byId('free')
+  const pro = byId('pro')
+  const seatPrice = Number(pro?.seatPrice) || 0
   const isPro = (agency?.plan?.name || '').toLowerCase() === 'pro'
   const used = clients.length
   const unlimited = agency?.plan?.limit === -1
@@ -97,7 +91,7 @@ export default function Billing() {
             )
           })}
         </div>
-        <p className="bl-usage-note">Destinations, hotels &amp; cab types are unlimited on every plan. Team seats are ₹999 / user / month.</p>
+        <p className="bl-usage-note">Destinations, hotels &amp; cab types are unlimited on every plan. Team seats are {inr(seatPrice)} / user / month.</p>
       </div>
 
       {/* Pro members don't get an upgrade push — just their status + support */}

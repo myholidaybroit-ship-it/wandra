@@ -254,7 +254,9 @@ textarea.control:focus { padding: 9px 13px; }
 /* Inside form fields: dropdown behaves like a full-width input, menu hugs the trigger */
 .field .pill-select-wrap { width: 100%; }
 .field .pill-select { width: 100%; justify-content: space-between; }
-.field .pill-menu { left: 0; right: 0; min-width: 0; }
+/* the open menu may grow WIDER than its field — long route / activity names
+   must be readable in full, not clipped to a half-column */
+.field .pill-menu { left: 0; right: auto; min-width: 100%; width: max-content; max-width: min(520px, 86vw); }
 
 /* Interactive star rating picker */
 .star-pick { display: flex; align-items: center; gap: 2px; }

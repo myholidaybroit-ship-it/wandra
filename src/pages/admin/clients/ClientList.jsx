@@ -13,7 +13,7 @@ const STATUSES = ['New Query', 'In Progress', 'Converted', 'On Trip', 'Past Trip
 const PAGE_SIZES = [10, 25, 50, 100]
 const PAGE_SIZE_KEY = 'wandra.clients.perPage'
 const storedPageSize = () => {
-  try { const v = Number(localStorage.getItem(PAGE_SIZE_KEY)); return PAGE_SIZES.includes(v) ? v : 10 } catch { return 10 }
+  try { const v = Number(localStorage.getItem(PAGE_SIZE_KEY)); return PAGE_SIZES.includes(v) ? v : 50 } catch { return 50 }
 }
 
 const EMPTY_FILTERS = {

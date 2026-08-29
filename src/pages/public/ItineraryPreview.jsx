@@ -40,7 +40,9 @@ export default function ItineraryPreview() {
   const pr = pkg.computed || computePricing(pkg)
   // builder-v2 quotes store their price in pricing.grandTotal — the legacy engine returns 0 for them
   const grandTotal = Number(pkg.pricing?.grandTotal) || pr.grandTotal || 0
-  const paxTotal = ['adults', 'children', 'infants'].reduce((s, k) => s + (Number(pkg.pax?.[k]) || 0), 0) || Number(pkg.pax?.total) || 0
+  // the priced head count is adults + children — infants are listed but never
+  // counted into the party size (matches the PDF's per-pax math)
+  const paxTotal = ['adults', 'children'].reduce((s, k) => s + (Number(pkg.pax?.[k]) || 0), 0) || Number(pkg.pax?.total) || 0
   const accent = THEME_ACCENT[theme] || '#0d74ce'
   const findDest = (name) => {
     if (!name) return null
@@ -49,7 +51,7 @@ export default function ItineraryPreview() {
   }
   const destName = (pkg.sectors || []).find((s) => s.destination)?.destination || pkg.destination?.split(' - ')[0]
   const heroImage = findDest(destName)?.image || ''
-  const imageForStop = (name) => findDest(name)?.image || (masters.activities || []).find((a) => a.name === name)?.image || (masters.serviceLocations || []).find((s) => s.name === name)?.image || ''
+  const imageForStop = (name) => findDest(name)?.image || (masters.cities || []).find((c) => c.name === name)?.image || (masters.activities || []).find((a) => a.name === name)?.image || (masters.serviceLocations || []).find((s) => s.name === name)?.image || ''
 
   return (
     <div className={`itin itin-${theme}`} style={{ '--accent': accent }} ref={docRef}>

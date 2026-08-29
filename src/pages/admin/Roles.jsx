@@ -13,7 +13,9 @@ import './roles.css'
 const REQUEST_TYPES = ['Add user seats', 'Create a new role', 'Change what a role can access', 'Something else']
 
 export default function Roles() {
-  const { roles, users, currentUser, roleModules, limitFor, toast } = useApp()
+  const { roles, users, currentUser, roleModules, limitFor, plans, toast } = useApp()
+  const seatPrice = Number(plans.find((plan) => plan.id === 'pro')?.seatPrice) || 0
+  const seatLabel = `₹${seatPrice.toLocaleString('en-IN')}`
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ type: REQUEST_TYPES[0], message: '' })
   const [sending, setSending] = useState(false)
@@ -50,7 +52,7 @@ export default function Roles() {
       <div className="rl-banner">
         <span className="rl-banner-ic"><Icon name="help" size={15} /></span>
         <p>
-          Wandra is priced at <strong>₹999 per user / month</strong> — you're using {seatsUsed}{seatLimit === -1 ? '' : ` of ${seatLimit}`} seat{seatsUsed === 1 && seatLimit === -1 ? '' : 's'}.
+          Wandra is priced at <strong>{seatLabel} per user / month</strong> — you're using {seatsUsed}{seatLimit === -1 ? '' : ` of ${seatLimit}`} seat{seatsUsed === 1 && seatLimit === -1 ? '' : 's'}.
           Need more seats, a new role, or different access for a role? <button className="rl-banner-link" onClick={() => setOpen(true)}>Send us a request</button> and our team will set it up for you.
         </p>
       </div>
@@ -110,7 +112,7 @@ export default function Roles() {
             onChange={(e) => setForm({ ...form, message: e.target.value })}
             placeholder="e.g. We need a “Vendor Coordinator” role that can only see Vouchers and Master Data…" maxLength="5000" />
         </Field>
-        <p className="rl-modal-note">Your request goes straight to the Wandra team. Extra users are <strong>₹999 per user / month</strong> — we'll confirm the details with you before making changes.</p>
+        <p className="rl-modal-note">Your request goes straight to the Wandra team. Extra users are <strong>{seatLabel} per user / month</strong> — we'll confirm the details with you before making changes.</p>
       </Modal>
     </div>
   )

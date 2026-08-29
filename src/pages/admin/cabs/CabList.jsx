@@ -22,7 +22,7 @@ export default function CabList() {
     { key: 'name', head: 'Vehicle', render: (r) => (
       <div className="row gap-sm">
         <span className="master-thumb" style={r.image ? { backgroundImage: `url("${r.image}")` } : undefined} />
-        <div><span className="cell-strong">{r.name}</span><div className="cell-sub">{r.acType} · {r.capacity} pax</div></div>
+        <div><span className="cell-strong">{r.name}</span><div className="cell-sub">{r.acType} · {Number(r.capacity) || 0} pax</div></div>
       </div>
     ) },
     { key: 'type', head: 'Type', render: (r) => <Badge tone="neutral">{r.type || 'Universal'}</Badge> },

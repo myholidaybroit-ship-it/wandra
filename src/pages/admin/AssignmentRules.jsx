@@ -53,7 +53,7 @@ function MemberPicker({ team, selected = [], nextName, onToggle }) {
 }
 
 export default function AssignmentRules() {
-  const { assignment, updateAssignment, addAssignRule, updateAssignRule, removeAssignRule, users, clients, destinations, toast } = useApp()
+  const { assignment, updateAssignment, addAssignRule, updateAssignRule, removeAssignRule, users, clients, destinations, hasFeature, toast } = useApp()
   const SOURCES = useLeadSources()
   const [openId, setOpenId] = useState(assignment.rules[0]?.id || '')
   const dragIdx = useRef(null)
@@ -92,6 +92,10 @@ export default function AssignmentRules() {
   const autoCount = clients.filter((c) => c.query?.assignedVia).length
 
   const fb = assignment.fallback || { mode: 'all', members: [], next: 0 }
+
+  if (!hasFeature('team.round_robin')) {
+    return <div className="as"><PageHeader title="Lead Assignment" subtitle="Round-robin routing is not enabled for this agency. Ask Wandra to enable it on the plan or agency." /></div>
+  }
 
   return (
     <div className="as">

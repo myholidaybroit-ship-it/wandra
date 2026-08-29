@@ -12,7 +12,7 @@ export default function CabDetail() {
   const [f, setF] = useState(c || {})
   if (!c) return <div>Cab type not found. <Link className="c-link" to="/app/cabs">Back</Link></div>
   const usedIn = packages.filter((p) => p.cabs?.some((a) => a.cabId === c.id || a.name === c.name) || p.builderV2?.options?.some((o) => o.sameCabId === c.id || o.services?.some((s) => s.cabId === c.id || s.cabName === c.name)))
-  const save = () => { updateCab(c.id, { ...f, capacity: Number(f.capacity), ratePerKm: Number(f.ratePerKm) || 0, ratePerDay: Number(f.ratePerDay) || 0 }); toast('Cab type updated'); setEdit(false) }
+  const save = () => { updateCab(c.id, { ...f, capacity: Number(f.capacity) || 0, ratePerKm: Number(f.ratePerKm) || 0, ratePerDay: Number(f.ratePerDay) || 0 }); toast('Cab type updated'); setEdit(false) }
   const remove = async () => {
     if (usedIn.length && !window.confirm(`This cab is used in ${usedIn.length} package(s). Delete it from master data anyway? Existing packages will keep their saved cab text.`)) return
     await removeCab(c.id)
@@ -21,7 +21,7 @@ export default function CabDetail() {
   }
   return (
     <div>
-      <PageHeader title={c.name} subtitle={`${c.type} · ${c.capacity} pax`}
+      <PageHeader title={c.name} subtitle={`${c.type} · ${Number(c.capacity) || 0} pax`}
         actions={<><Link to="/app/cabs"><Button variant="secondary" size="sm">← Back</Button></Link><Button variant="secondary" size="sm" onClick={remove}>Delete</Button><Button size="sm" onClick={() => { setF(c); setEdit(true) }}>✎ Edit</Button></>} />
       <div className="detail-grid">
         <Card>
@@ -31,7 +31,7 @@ export default function CabDetail() {
           <div className="kv-grid">
             <KV k="Type" v={c.type || 'Universal'} /><KV k="AC" v={c.acType} />
             <KV k="City" v={c.city || 'Any'} />
-            <KV k="Capacity" v={`${c.capacity} pax`} /><KV k="Rate / KM" v={inr(c.ratePerKm)} />
+            <KV k="Capacity" v={`${Number(c.capacity) || 0} pax`} /><KV k="Rate / KM" v={inr(c.ratePerKm)} />
             <KV k="Rate / Day" v={inr(c.ratePerDay || 0)} /><KV k="Status" v={c.status} />
             <KV k="Contact" v={c.contact} />
           </div>

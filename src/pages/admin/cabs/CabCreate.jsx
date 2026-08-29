@@ -11,7 +11,7 @@ export default function CabCreate() {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
     if (!f.name) return toast('Cab name is required')
-    addCab({ ...f, capacity: Number(f.capacity), ratePerKm: Number(f.ratePerKm) || 0, ratePerDay: Number(f.ratePerDay) || 0 })
+    addCab({ ...f, capacity: Number(f.capacity) || 0, ratePerKm: Number(f.ratePerKm) || 0, ratePerDay: Number(f.ratePerDay) || 0 })
     toast('Cab added'); nav('/app/cabs')
   }
   return (

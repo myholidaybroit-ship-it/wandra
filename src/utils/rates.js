@@ -48,7 +48,7 @@ export function resolveRates(master, date, fields) {
   return out
 }
 
-export const HOTEL_RATE_FIELDS = ['buyingPrice', 'extraBedAdult', 'extraBedChild', 'childNoBed']
+export const HOTEL_RATE_FIELDS = ['buyingPrice', 'extraBedAdult', 'extraBedChild', 'childNoBed', 'infantCharge']
 export const ACTIVITY_RATE_FIELDS = ['cost', 'sell', 'costChild', 'sellChild']
 export const SERVICE_RATE_FIELDS = ['cost', 'sell']
 

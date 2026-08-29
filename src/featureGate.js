@@ -8,8 +8,9 @@
                  Missing it means this TEAMMATE isn't allowed → 403.
 
    Nav visibility and route access both read this table, so the UI can
-   never offer something the backend would refuse. Billing, upgrade,
-   support and the dashboard shell stay reachable for everyone.
+   never offer something the backend would refuse. Support and the
+   dashboard shell stay reachable for everyone; billing & upgrade need
+   the `settings` role permission.
    ============================================================ */
 
 // ordered longest-prefix-first so nested routes match correctly
@@ -37,6 +38,9 @@ export const ROUTE_ACCESS = [
   ['/app/assignment', 'team.lead_assignment', 'settings'],
   ['/app/policies', 'branding.agency_profile', 'settings'],
   ['/app/settings', 'branding.agency_profile', 'settings'],
+  // plan & billing are the agency owner's business — not every teammate's
+  ['/app/billing', null, 'settings'],
+  ['/app/upgrade', null, 'settings'],
 ]
 
 /** The [feature, perm] pair guarding a pathname — nulls mean "always allowed". */

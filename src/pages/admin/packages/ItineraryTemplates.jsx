@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../../../store/AppContext'
-import { PageHeader, Card, Button, Badge, Modal, Field, Input, Textarea, PillSelect, DestGroup, groupByDestination } from '../../../components/ui/UI'
+import { PageHeader, Card, Button, Badge, Modal, Field, Input, Textarea, PillSelect, CityPicker, DestGroup, groupByDestination } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 
 const MEAL_PLANS = ['EP', 'CP', 'HB', 'MAP', 'AP']
@@ -12,10 +12,10 @@ const rowId = () => `s${++seq}`
 const blankService = (kind) => ({ id: rowId(), kind, location: '', serviceType: kind === 'transport' ? 'Sightseeing' : '', description: '', qty: 1, rate: '', given: '' })
 
 export default function ItineraryTemplates() {
-  const { templates, destinations, serviceLocations, activities, addItineraryTemplate, updateItineraryTemplate, removeItineraryTemplate, toast } = useApp()
+  const { templates, destinations, cities, serviceLocations, activities, addItineraryTemplate, updateItineraryTemplate, removeItineraryTemplate, toast } = useApp()
   const activityCats = [...new Set((activities || []).map((a) => a.category))]
   const [edit, setEdit] = useState(null)
-  const blank = { name: '', destination: '', mealPlan: 'MAP', description: '', services: [] }
+  const blank = { name: '', destination: '', city: '', mealPlan: 'MAP', description: '', services: [] }
   const openNew = () => setEdit({ ...blank, services: [] })
 
   const setSvc = (i, patch) => setEdit((e) => ({ ...e, services: e.services.map((s, x) => (x === i ? { ...s, ...patch } : s)) }))
@@ -87,7 +87,10 @@ export default function ItineraryTemplates() {
           <div className="col gap-base">
             <div className="form-grid">
               <Field label="Day name" full><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="e.g. Pattaya City Tour (Gems Gallery, Big Buddha, View Point)" /></Field>
-              <Field label="Destination"><PillSelect value={edit.destination || 'Any destination'} options={['Any destination', ...destinations.map((d) => d.name)]} onChange={(v) => setEdit({ ...edit, destination: v === 'Any destination' ? '' : v })} /></Field>
+              <Field label="Destination"><PillSelect value={edit.destination || 'Any destination'} options={['Any destination', ...destinations.map((d) => d.name)]} onChange={(v) => setEdit({ ...edit, destination: v === 'Any destination' ? '' : v, city: '' })} /></Field>
+              <Field label="City" hint="optional — narrows where this day applies">
+                <CityPicker value={edit.city || ''} cities={cities || []} destination={edit.destination} onChange={(v) => setEdit({ ...edit, city: v })} allLabel="Any city" />
+              </Field>
               <Field label="Meal plan"><PillSelect value={edit.mealPlan || 'MAP'} options={MEAL_PLANS} onChange={(v) => setEdit({ ...edit, mealPlan: v })} /></Field>
               <Field label="Day description" full><Textarea rows={2} value={edit.description || ''} onChange={(e) => setEdit({ ...edit, description: e.target.value })} placeholder="Short summary shown on the itinerary / PDF" /></Field>
             </div>

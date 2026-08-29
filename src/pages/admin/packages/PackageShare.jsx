@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../../store/AppContext'
 import { Button, Modal } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
+import { hoursOf, fmtHours } from '../../../utils/rates'
 import './share.css'
 
 /* per-destination inclusion / exclusion groups (falls back to the flat lists) */
@@ -323,7 +324,8 @@ export function buildWaMessage(pkg, client, agency, mode = 'full') {
   // Day-wise itinerary — only in the 'full' style; the 'hotels' style stops at hotel details
   const services = mode === 'full' ? (activeOpt.services || []) : []
   ;(mode === 'full' ? (pkg.itinerary || []) : []).forEach((d) => {
-    const city = d.stops?.[0]?.destination || d.title
+    // the day's own city first — stops[0].destination is the DESTINATION
+    const city = d.city || d.stops?.[0]?.destination || ''
     L.push('')
     L.push(`${B(`Day – ${d.day}`)}`)
     if (city) L.push(`${B(city)}`)
@@ -332,6 +334,7 @@ export function buildWaMessage(pkg, client, agency, mode = 'full') {
     services.filter((s) => s.kind === 'transport' && (s.days || []).includes(d.day)).forEach((tr) => {
       L.push(`${B('Transfer Details')}`)
       L.push(`${B('Service')}: ${tr.location || '—'}${tr.serviceType ? ` (${tr.serviceType})` : ''}`)
+      if (hoursOf(tr)) L.push(`${B('Duration')}: ${fmtHours(hoursOf(tr))}`)
       if (tr.cabName) L.push(`${B('Vehicle')}: ${tr.cabName}`)
       L.push(`${B('Quantity')}: ${N(tr.qty) || 1}`)
       if (tr.description) L.push(`${B('Remarks')}: ${tr.description}`)
@@ -340,6 +343,7 @@ export function buildWaMessage(pkg, client, agency, mode = 'full') {
       L.push(`${B('Activity Details')}`)
       L.push(`${B('Activity')}: ${a.location || '—'}`)
       if (a.serviceType) L.push(`${B('Type')}: ${a.serviceType}`)
+      if (hoursOf(a)) L.push(`${B('Duration')}: ${fmtHours(hoursOf(a))}`)
       L.push(`${B('Quantity')}: ${N(a.qty) || 1}`)
       if (a.description) L.push(`${B('Description')}: ${a.description}`)
     })
@@ -422,7 +426,7 @@ export function buildEmail(pkg, client, agency) {
   if ((pkg.itinerary || []).length) {
     L.push('', 'DAY-WISE ITINERARY')
     pkg.itinerary.forEach((d) => {
-      const city = d.stops?.[0]?.destination || ''
+      const city = d.city || d.stops?.[0]?.destination || ''
       L.push('')
       L.push(`Day ${d.day}${city ? ` — ${city}` : ''}`)
       if (d.title) L.push(`  ${d.title}`)

@@ -5,6 +5,7 @@ import { usePublic } from '../../hooks/usePublic'
 import { preloadAndDownload } from '../../utils/pdf'
 import { AgencyLogo } from '../../components/ui/AgencyBrand'
 import { normalizeCfg, themeVars, patternBg, rgba } from '../../utils/pdfTheme'
+import { hoursOf, fmtHours } from '../../utils/rates'
 import PdfStudio from './PdfStudio'
 import './pdf.css'
 
@@ -95,7 +96,7 @@ function optionGrandTotal(opt, s = {}) {
 }
 
 /* ---------- build one flat model from the package ---------- */
-function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster, serviceLocationsMaster = [], cabsMaster = [], optionIdx = null) {
+function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster, serviceLocationsMaster = [], cabsMaster = [], optionIdx = null, citiesMaster = []) {
   const opts = pkg.builderV2?.options || []
   const defaultIdx = pkg.activeOption ?? 0
   const activeIdx = optionIdx != null && opts[optionIdx] ? optionIdx : defaultIdx
@@ -111,9 +112,11 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
 
   // image lookups — everything resolves from master data
   const norm = (v) => String(v || '').trim().toLowerCase()
+  // fuzzy match, but only for needles long enough to mean something — a short
+  // name substring-matching half the master is how Leh Ladakh got a Pattaya photo
   const loose = (needle, hay) => {
     const a = norm(needle), b = norm(hay)
-    return a && b && (a === b || a.includes(b) || b.includes(a))
+    return a && b && (a === b || (b.length >= 4 && a.includes(b)) || (a.length >= 4 && b.includes(a)))
   }
   const findDest = (name) => {
     if (!name) return null
@@ -121,9 +124,18 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
   }
   const destImg = (name) => findDest(name)?.image || ''
   const destGal = (name) => { const d = findDest(name); return d ? [d.image, ...(d.gallery || [])].filter(Boolean) : [] }
-  const actImg = (name) => {
+  // the City master (level below the destination) — its photos back the day collage
+  const findCity = (name) => (name ? citiesMaster.find((x) => norm(x.name) === norm(name)) || null : null)
+  const cityGal = (name) => { const c = findCity(name); return c ? [c.image, ...(c.gallery || [])].filter(Boolean) : [] }
+  // a master tagged with a place only matches a day IN that place — an untagged
+  // master still matches anywhere (a half-filled master must never hide a photo)
+  const inPlace = (x, dest, city) =>
+    (!dest || !x.destination || norm(x.destination) === norm(dest)) &&
+    (!city || !x.city || norm(x.city) === norm(city))
+  const actImg = (name, dest = '', city = '') => {
     if (!name) return ''
-    const a = activitiesMaster.find((x) => norm(x.name) === norm(name)) || activitiesMaster.find((x) => loose(name, x.name) || loose(name, x.category))
+    const pool = activitiesMaster.filter((x) => inPlace(x, dest, city))
+    const a = pool.find((x) => norm(x.name) === norm(name)) || pool.find((x) => loose(name, x.name) || loose(name, x.category))
     return a?.image || ''
   }
   const cabImg = (name, id, type) => {
@@ -132,9 +144,10 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     return c?.image || ''
   }
   // transport routes resolve their photo + notes from the Service Locations master (by route name)
-  const svcMaster = (name) => {
+  const svcMaster = (name, dest = '', city = '') => {
     if (!name) return null
-    return serviceLocationsMaster.find((x) => norm(x.name) === norm(name)) || serviceLocationsMaster.find((x) => loose(name, x.name) || loose(name, x.serviceType)) || null
+    const pool = serviceLocationsMaster.filter((x) => inPlace(x, dest, city))
+    return pool.find((x) => norm(x.name) === norm(name)) || pool.find((x) => loose(name, x.name) || loose(name, x.serviceType)) || null
   }
 
   const stayRows = (o) => (o?.stays || []).map((st) => {
@@ -145,9 +158,10 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
       room: st.roomType || '', meal: st.mealPlan || '', rooms: N(st.rooms) || 1,
       paxPerRoom: N(st.paxPerRoom) || 0, beds: bedsLine(st),
       nightsCount: ns.length, checkIn: addDays(start, Math.min(...ns) - 1), checkOut: addDays(start, Math.max(...ns)),
-      desc: st.hotelDescription || h?.description || '', image: st.hotelImage || h?.image || destImg(st.hotelCity),
-      // the hotel's own uploaded photos drive the accommodation collage; city gallery fills any gaps
-      gallery: [...new Set([st.hotelImage, h?.image, ...(h?.gallery || []), ...destGal(st.hotelCity)].filter(Boolean))],
+      desc: st.hotelDescription || h?.description || '', image: st.hotelImage || h?.image || findCity(st.hotelCity)?.image || destImg(h?.destination) || '',
+      // the hotel's own uploaded photos drive the accommodation collage; the
+      // CITY's gallery (then the destination's) fills any gaps
+      gallery: [...new Set([st.hotelImage, h?.image, ...(h?.gallery || []), ...cityGal(st.hotelCity), ...destGal(h?.destination)].filter(Boolean))],
     }
   })
 
@@ -167,19 +181,24 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     const stored = (d.services || []).map((s) => ({ ...s, location: s.location || s.name || '', kind: s.kind || 'transport' }))
     const fromOpt = services.filter((s) => (s.days || []).includes(d.day))
     const dayServices = fromOpt.length ? fromOpt : stored
+    // the day's CITY is serialized on the day itself; stops[0].destination is
+    // the DESTINATION — the two must never swap on the printed page
+    const dest = d.stops?.[0]?.destination || ''
+    const city = d.city || ''
     // transfers carry their own resolved photo + description (own value, else the route master's)
     const transfers = dayServices.filter((s) => s.kind === 'transport')
-      .map((t) => { const sm = svcMaster(t.location); return { ...t, image: t.image || sm?.image || cabImg(t.cabName || t.location, t.cabId, t.serviceType) || '', description: t.description || sm?.description || '' } })
+      .map((t) => { const sm = svcMaster(t.location, dest, city); return { ...t, image: t.image || sm?.image || cabImg(t.cabName || t.location, t.cabId, t.serviceType) || '', description: t.description || sm?.description || '' } })
     const dayActs = dayServices.filter((s) => s.kind === 'activity')
-    const city = d.stops?.[0]?.destination || ''
-    // collage pool: this day's activity + service photos, then the city's gallery rotated by day number so consecutive days differ
-    const actImgs = dayActs.map((a) => a.image || actImg(a.location)).filter(Boolean)
+    // collage pool: this day's activity + service photos, then the city's own
+    // gallery, then the destination's — never a fuzzy match on the day TITLE
+    // (that is how a "Pattaya City Tour" title put Pattaya photos on a Leh trip)
+    const actImgs = dayActs.map((a) => a.image || actImg(a.location, dest, city)).filter(Boolean)
     const svcImgs = transfers.map((t) => t.image).filter(Boolean)
-    const pool = destGal(city).length ? destGal(city) : destGal(d.title)
+    const pool = cityGal(city).length ? cityGal(city) : (destGal(dest).length ? destGal(dest) : destGal(city))
     const rotated = pool.length ? Array.from({ length: pool.length }, (_, i) => pool[(d.day - 1 + i) % pool.length]) : []
     const images = [...new Set([...actImgs, ...svcImgs, ...rotated])].slice(0, 3)
     // each activity carries its own resolved photo (fallbacks handled at render)
-    const acts = dayActs.map((a, ai) => ({ ...a, image: a.image || actImg(a.location || a.serviceType) || images[ai % Math.max(1, images.length)] || '' }))
+    const acts = dayActs.map((a, ai) => ({ ...a, image: a.image || actImg(a.location || a.serviceType, dest, city) || images[ai % Math.max(1, images.length)] || '' }))
     // the night's room allocation — from the saved day, else resolved from the
     // active option's stays, so rooms show on older quotes too
     const stay = d.stay || (() => {
@@ -189,7 +208,7 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     // a hand-written day (title / story / photo) always wins over the auto text
     const custom = d.custom || !!d.image
     return {
-      n: d.day, title: d.title || `Day ${d.day}`, city, desc: d.description || '', meal: d.mealPlan || '',
+      n: d.day, title: d.title || `Day ${d.day}`, city: city || dest, desc: d.description || '', meal: d.mealPlan || '',
       stay, rooms: roomLine(stay), custom,
       transfers, activities: acts,
       image: d.image || images[0] || '', images: [...new Set([d.image, ...images].filter(Boolean))].slice(0, 3),
@@ -270,7 +289,7 @@ export default function PdfDoc() {
   const v = sp.get('v') || 'classic'
   const premium = isPremiumVariant(v)
   const optionParam = sp.get('option') != null ? Number(sp.get('option')) : null
-  const m = useMemo(() => (pkg ? buildModel(pkg, client, agency, hotels, destinations, activities, serviceLocations, cabs, optionParam) : null), [pkg, agency, data, optionParam]) // eslint-disable-line react-hooks/exhaustive-deps
+  const m = useMemo(() => (pkg ? buildModel(pkg, client, agency, hotels, destinations, activities, serviceLocations, cabs, optionParam, masters.cities || []) : null), [pkg, agency, data, optionParam]) // eslint-disable-line react-hooks/exhaustive-deps
   const docRef = useRef(null)
   const [busy, setBusy] = useState(false)
 
@@ -422,7 +441,7 @@ function DaySvc({ d }) {
       <div className="pdf-svc" key={`t${i}`}>
         <span className="pdf-svc-k">Transfer</span>
         {t.image && <Img src={t.image} className="pdf-svc-img" />}
-        <div><strong>{t.location || '—'}</strong>{t.serviceType ? ` · ${t.serviceType}` : ''}{t.cabName ? ` · ${t.cabName}` : ''}
+        <div><strong>{t.location || '—'}</strong>{t.serviceType ? ` · ${t.serviceType}` : ''}{t.cabName ? ` · ${t.cabName}` : ''}{hoursOf(t) ? ` · ${fmtHours(hoursOf(t))}` : ''}
           {dedupeDesc(d.desc, t.description) && <div className="pdf-svc-desc">{dedupeDesc(d.desc, t.description)}</div>}</div>
       </div>
     ))}
@@ -430,7 +449,7 @@ function DaySvc({ d }) {
       <div className="pdf-svc" key={`a${i}`}>
         <span className="pdf-svc-k">Activity</span>
         {a.image && <Img src={a.image} className="pdf-svc-img" />}
-        <div><strong>{a.location || '—'}</strong>{a.serviceType ? ` · ${a.serviceType}` : ''}
+        <div><strong>{a.location || '—'}</strong>{a.serviceType ? ` · ${a.serviceType}` : ''}{hoursOf(a) ? ` · ${fmtHours(hoursOf(a))}` : ''}
           {dedupeDesc(d.desc, a.description) && <div className="pdf-svc-desc">{dedupeDesc(d.desc, a.description)}</div>}</div>
       </div>
     ))}
@@ -833,14 +852,14 @@ function Holiday({ m, cfg }) {
             {d.transfers.map((t, i) => (
               <div className={`hd-tr ${t.image && cfg.showDayImages ? 'has-img' : ''}`} key={`t${i}`}>
                 {t.image && cfg.showDayImages ? <Img src={t.image} className="hd-tr-img" /> : <span className="hd-tr-ic"></span>}
-                <span><strong>{t.location || 'Transfer'}</strong>{t.serviceType ? ` · ${t.serviceType}` : ''}{dedupeDesc(d.desc, t.description) && <div className="hd-tr-d">{dedupeDesc(d.desc, t.description)}</div>}</span>
+                <span><strong>{t.location || 'Transfer'}</strong>{t.serviceType ? ` · ${t.serviceType}` : ''}{hoursOf(t) ? ` · ${fmtHours(hoursOf(t))}` : ''}{dedupeDesc(d.desc, t.description) && <div className="hd-tr-d">{dedupeDesc(d.desc, t.description)}</div>}</span>
               </div>
             ))}
             {d.activities.map((a, i) => (
               <div className="hd-act" key={`a${i}`}>
                 {cfg.showDayImages && <Img src={a.image} className="hd-act-img">{!a.image && <span>{(a.location || '').slice(0, 1)}</span>}</Img>}
                 <div className="hd-act-b">
-                  <div className="hd-act-t">{a.location || 'Activity'}</div>
+                  <div className="hd-act-t">{a.location || 'Activity'}{hoursOf(a) ? ` · ${fmtHours(hoursOf(a))}` : ''}</div>
                   {dedupeDesc(d.desc, a.description) && <p className="hd-act-p">{dedupeDesc(d.desc, a.description)}</p>}
                   <div className="hd-act-note">✓ {a.serviceType || 'Included as per itinerary'}</div>
                 </div>
@@ -994,13 +1013,13 @@ function Coastal({ m, cfg }) {
                 {d.transfers.map((t, i) => (t.image && cfg.showDayImages ? (
                   <div className="cs-item" key={`t${i}`}>
                     <Img src={t.image} className="cs-item-img" />
-                    <div className="cs-item-b"><strong>Transfer · {t.location || '—'}</strong>{dedupeDesc(d.desc, t.description) && <p>{dedupeDesc(d.desc, t.description)}</p>}</div>
+                    <div className="cs-item-b"><strong>Transfer · {t.location || '—'}</strong>{hoursOf(t) ? ` · ${fmtHours(hoursOf(t))}` : ''}{dedupeDesc(d.desc, t.description) && <p>{dedupeDesc(d.desc, t.description)}</p>}</div>
                   </div>
                 ) : <p className="cs-line" key={`t${i}`}><strong>Transfer:</strong> {t.location || '—'}{dedupeDesc(d.desc, t.description) ? ` — ${dedupeDesc(d.desc, t.description)}` : ''}</p>))}
                 {d.activities.map((a, i) => (a.image && cfg.showDayImages ? (
                   <div className="cs-item" key={`a${i}`}>
                     <Img src={a.image} className="cs-item-img" />
-                    <div className="cs-item-b"><strong>{a.location || 'Activity'}</strong>{(dedupeDesc(d.desc, a.description) || a.serviceType) && <p>{dedupeDesc(d.desc, a.description) || a.serviceType}</p>}</div>
+                    <div className="cs-item-b"><strong>{a.location || 'Activity'}</strong>{hoursOf(a) ? ` · ${fmtHours(hoursOf(a))}` : ''}{(dedupeDesc(d.desc, a.description) || a.serviceType) && <p>{dedupeDesc(d.desc, a.description) || a.serviceType}</p>}</div>
                   </div>
                 ) : <p className="cs-line" key={`a${i}`}><strong>{a.location || 'Activity'}:</strong> {dedupeDesc(d.desc, a.description) || a.serviceType || 'Included as per itinerary'}</p>))}
                 {d.meal && <p className="cs-line"><strong>Meals:</strong> {d.meal}</p>}

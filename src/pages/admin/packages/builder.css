@@ -268,10 +268,13 @@
 .hp-name { font-size: 12.5px; font-weight: 600; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .hp-sub { font-size: 10px; font-weight: 500; color: var(--color-stone); }
 .pms-empty.hp-select .hp-value { color: var(--color-muted); font-weight: 400; }
-.hp-menu { min-width: 260px; padding: 0; }
-.hp-list { max-height: 240px; overflow-y: auto; padding: 6px; }
+.hp-menu { min-width: 320px; padding: 0; }
+.hp-list { max-height: 280px; overflow-y: auto; padding: 6px; }
 .hp-item { flex-direction: column; align-items: flex-start; gap: 2px; }
 .hp-item .hp-sub { font-weight: 400; }
+/* inside the OPEN list a long name wraps instead of truncating — the agent
+   must see the whole route / activity title before picking it */
+.hp-list .hp-item .hp-name { white-space: normal; overflow: visible; text-overflow: clip; }
 
 .hp-dest-filter {
   display: flex; align-items: flex-start; gap: 8px;

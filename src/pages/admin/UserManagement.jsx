@@ -13,7 +13,9 @@ const REQUEST_TYPES = ['Add a new user', "Update a user's details", 'Reset a pas
 const initials = (n) => (n || '?').split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 
 export default function UserManagement() {
-  const { users, currentUser, limitFor, toast } = useApp()
+  const { users, currentUser, limitFor, plans, toast } = useApp()
+  const seatPrice = Number(plans.find((plan) => plan.id === 'pro')?.seatPrice) || 0
+  const seatLabel = `₹${seatPrice.toLocaleString('en-IN')}`
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ type: REQUEST_TYPES[0], message: '' })
   const [sending, setSending] = useState(false)
@@ -64,13 +66,13 @@ export default function UserManagement() {
   return (
     <div>
       <PageHeader title="User Management"
-        subtitle={`Your team's logins, managed for you by the Wandra team. ₹999 per user / month · ${seatsLabel}.`}
+        subtitle={`Your team's logins, managed for you by the Wandra team. ${seatLabel} per user / month · ${seatsLabel}.`}
         actions={<Button onClick={() => setOpen(true)}>Request a change</Button>} />
 
       <div className="um-banner">
         <span className="um-banner-ic"><Icon name="users" size={15} /></span>
         <p>
-          Every user is a paid seat at <strong>₹999 per user / month</strong> — the owner account counts too.
+          Every user is a paid seat at <strong>{seatLabel} per user / month</strong> — the owner account counts too.
           To add a teammate, change someone's name, email, role or password, or remove a user —{' '}
           <button className="um-banner-link" onClick={() => setOpen(true)}>send us a request</button> and our operations team will do it for you.
         </p>
@@ -91,7 +93,7 @@ export default function UserManagement() {
             onChange={(e) => setForm({ ...form, message: e.target.value })}
             placeholder="e.g. Add Rika Sharma (rika@agency.com) as a Sales user — she joins Monday…" maxLength="5000" />
         </Field>
-        <p className="um-modal-note">Your request goes straight to the Wandra team. New users are <strong>₹999 per user / month</strong> — we'll confirm the details with you before making changes.</p>
+        <p className="um-modal-note">Your request goes straight to the Wandra team. New users are <strong>{seatLabel} per user / month</strong> — we'll confirm the details with you before making changes.</p>
       </Modal>
     </div>
   )
