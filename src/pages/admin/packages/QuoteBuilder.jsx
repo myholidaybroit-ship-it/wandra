@@ -15,7 +15,7 @@ const SERVICE_TYPES = ['Arrival Transfer', 'Departure Transfer', 'Intercity Tran
 const COMP_CHILD = ['No comp', 'Upto 5y (0C)', 'Upto 6y (0C)', 'Upto 8y (0C)', 'Upto 11y (0C)']
 const STARS = ['3 Star', '4 Star', '5 Star', 'Luxury']
 const ROUND_OPTS = [0, 100, 500, 1000]
-const PRICING_DEFAULTS = { markupMode: 'percent', markupValue: 20, taxOn: 'cost_markup', taxEnabled: true, taxPercent: 5, roundTo: 0, customerRemarks: '' }
+const PRICING_DEFAULTS = { markupMode: 'percent', markupValue: 0, taxOn: 'cost_markup', taxEnabled: true, taxPercent: 5, roundTo: 0, customerRemarks: '' }
 // A package that has already moved past the quote stage must never be pulled
 // back to Draft/Quoted by re-saving the builder.
 const LOCKED_STATUSES = ['Booked', 'Confirmed', 'Completed', 'Cancelled']
@@ -483,7 +483,7 @@ export default function QuoteBuilder() {
             <span className="qb-opt-lead">Package Types / Options · {q.options.length}</span>
             {q.options.map((o, i) => (
               <button key={o.id} className={`qb-opt-tab ${i === oi ? 'on' : ''}`} onClick={() => setOi(i)}>
-                Option {i + 1}<span className="qb-opt-tab-star">{o.name}</span>
+                Option {i + 1}{o.name ? <span className="qb-opt-tab-star">{o.name}</span> : null}
               </button>
             ))}
             <button className="qb-opt-add" onClick={addOption}><Icon name="plus" size={14} /> Add option</button>
@@ -492,7 +492,7 @@ export default function QuoteBuilder() {
           <div className="qb-opt-toolbar">
             <div className="qb-opt-star">
               <span className="qb-mini-k">Editing</span>
-              <strong className="qb-opt-current">Option {oi + 1}: {opt.name}</strong>
+              <strong className="qb-opt-current">Option {oi + 1}{opt.name ? ': ' + opt.name : ''}</strong>
             </div>
             <div className="qb-opt-acts">
               <button className="qb-act" onClick={openCopyModal}><Icon name="copy" size={14} /> Copy…</button>
@@ -789,6 +789,19 @@ export default function QuoteBuilder() {
                         <textarea className="control qb-svc-desc" rows={4} value={note.description || ''} onChange={(e) => setDayNote(d, { description: e.target.value })}
                           placeholder="Write the day in your own words — this replaces the auto-generated summary on the PDF, the shared itinerary and WhatsApp." />
                       </Field>
+                      <Field label="Meals on this day" hint="tick what's included — shows on the PDF & shared itinerary" full>
+                        <div className="qb-meal-chips">
+                          {['Breakfast', 'Lunch', 'Dinner'].map((m) => {
+                            const on = (note.meals || []).includes(m)
+                            return (
+                              <button key={m} className={`qb-meal-chip ${on ? 'on' : ''}`}
+                                onClick={() => setDayNote(d, { meals: on ? (note.meals || []).filter((x) => x !== m) : [...(note.meals || []), m] })}>
+                                <Icon name="check" size={12} strokeWidth={2.6} /> {m}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </Field>
                       <ImageInput label="Day photo" hint="Leads this day on the quote PDF"
                         value={note.image || ''} onChange={(v) => setDayNote(d, { image: v })} folder="itinerary" />
                     </div>
@@ -890,7 +903,7 @@ export default function QuoteBuilder() {
               const act = ot.activityCost + ot.extraCost
               return (
                 <div key={o.id} className={`qb-cost-card ${i === oi ? 'on' : ''}`} onClick={() => setOi(i)}>
-                  <div className="qb-cost-name">Option {i + 1}: {o.name}</div>
+                  <div className="qb-cost-name">Option {i + 1}{o.name ? ': ' + o.name : ''}</div>
                   <div className="qb-cost-total"><span className="qb-cost-k">Total cost</span><span className="qb-cost-v">{inr(ot.costPrice)}</span></div>
                   {ot.b2bCost > 0 ? (
                     <div className="qb-cost-breakup"><span>Complete <b>B2B package price</b>{o.b2bSupplier ? ` · ${o.b2bSupplier}` : ''}</span></div>
@@ -932,7 +945,7 @@ export default function QuoteBuilder() {
                 it ONCE here instead of a supplier net on every hotel & activity */}
             <div className="qb-b2b">
               <div className="qb-b2b-copy">
-                <span className="qb-label">Complete B2B package cost <span className="qb-opt">optional · Option {oi + 1}: {opt.name}</span></span>
+                <span className="qb-label">Complete B2B package cost <span className="qb-opt">optional · Option {oi + 1}{opt.name ? ': ' + opt.name : ''}</span></span>
                 <span className="qb-b2b-hint">Got one all-in price from a DMC / B2B supplier? Enter it once — it replaces the summed cost above, and your markup &amp; tax apply on top of it.</span>
               </div>
               <div className="qb-b2b-fields">
@@ -948,7 +961,7 @@ export default function QuoteBuilder() {
                 const ot = optionTotals(o, q)
                 return (
                   <div key={o.id} className={`qb-sell-row ${i === oi ? 'on' : ''}`} onClick={() => setOi(i)}>
-                    <span className="qb-sell-name">Opt {i + 1}: {o.name}</span>
+                    <span className="qb-sell-name">Opt {i + 1}{o.name ? ': ' + o.name : ''}</span>
                     <span>{inr(ot.costPrice)}</span>
                     <span className="qb-sell-markup">+{inr(ot.markup)}</span>
                     <span>{inr(ot.tax)}</span>
@@ -996,7 +1009,7 @@ export default function QuoteBuilder() {
         footer={<><Button variant="tertiary" onClick={() => setCopyModal(false)}>Cancel</Button><Button onClick={applyCopy}>Copy</Button></>}>
         {copyState && (
           <div className="copy-modal">
-            <div className="copy-src">Source Option: <strong>Option {oi + 1}: {opt.name}</strong></div>
+            <div className="copy-src">Source Option: <strong>Option {oi + 1}{opt.name ? ': ' + opt.name : ''}</strong></div>
 
             <div className="copy-target">
               <div>
@@ -1711,7 +1724,7 @@ function init(editing, preClient, tpl, hotels, presets, fromPkg) {
     startDate: c?.query?.startDate || '', nights, days: nights + 1,
     adults: c?.query?.adults || 2, children: c?.query?.children || 0, infants: c?.query?.infants || 0,
     rooms: Math.max(1, Math.ceil((c?.query?.adults || 2) / 2)),
-    options: [blankOption('4 Star')],
+    options: [blankOption('')],
     ieByDest: seedIE(sectors, presets), dayNotes: {},
     ...PRICING_DEFAULTS, comments: '',
   }
@@ -1735,7 +1748,7 @@ function fromLegacy(pkg, presets) {
   })
   const services = (pkg.cabs || []).map((c) => ({ id: uid(), kind: 'transport', days: c.days || [1], location: c.name || 'Transfer', serviceType: c.serviceType || 'Sightseeing', durationHours: c.durationHours ? String(c.durationHours) : '', qty: num(c.qty) || 1, childQty: 0, infantQty: 0, cabId: c.cabId || '', cabName: c.type || '', cabType: c.cabType || '', supplierName: c.supplier || '', supplierRate: '', rate: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))), given: String(c.total ? Math.round(c.total / Math.max(1, (c.days || [1]).length)) : (num(c.km) * num(c.rate))) }))
   const extras = (pkg.categories || []).map((cat) => ({ id: uid(), name: cat.name, note: cat.description || '', cost: '', sell: String(cat.amount || 0) }))
-  const option = { ...blankOption('4 Star'), stays, services, extras }
+  const option = { ...blankOption(''), stays, services, extras }
   const legShort = (pkg.destination || '').split(' - ')[0]
   const legSectors = sectorsFrom(legShort, pkg.nights || 1)
   return {
@@ -1876,8 +1889,11 @@ function serialize(q, oi, t, destinations, presets) {
     const note = q.dayNotes?.[dnum] || {}
     const title = note.title || svcs[0]?.location || (dnum === q.days ? 'Departure' : `Day ${dnum}`)
     const serviceText = svcs.map((s) => [s.location, s.description].filter(Boolean).join(' — ')).filter(Boolean).join('; ')
+    // ticked meals win over the hotel's meal plan on every guest-facing output
+    const meals = (note.meals || []).filter(Boolean)
     return {
-      day: dnum, title, template: '', mealPlan: stay?.mealPlan || '',
+      day: dnum, title, template: '', meals,
+      mealPlan: meals.length ? meals.join(' · ') : (stay?.mealPlan || ''),
       description: note.description || serviceText || (stay ? `Stay at ${stay.hotelName}` : ''),
       image: note.image || '',
       custom: !!(note.title || note.description || note.image),
@@ -1910,6 +1926,11 @@ function serialize(q, oi, t, destinations, presets) {
   })
   const flatInclusions = [...new Set(inclusionGroups.flatMap((g) => g.inclusions))]
   const flatExclusions = [...new Set(inclusionGroups.flatMap((g) => g.exclusions))]
+  // this trip's country rules & documents-to-carry, per destination —
+  // frozen onto the quote so every PDF for it prints the right rules
+  const policyGroups = (ieKeys.length ? ieKeys : [])
+    .map((d) => ({ destination: d, policies: [...((presets?.byDest?.[d]?.policies) || [])] }))
+    .filter((g) => g.policies.length)
   return {
     clientId: q.clientId, clientName: q.clientName, clientPhone: q.clientPhone, clientEmail: q.clientEmail, clientAddress: '',
     destination: destLabel,
@@ -1931,7 +1952,7 @@ function serialize(q, oi, t, destinations, presets) {
     flight: opt.flights[0] ? { ...opt.flights[0], depart: `${opt.flights[0].fromCode || ''} ${opt.flights[0].depTime || ''}`.trim(), arrive: `${opt.flights[0].toCode || ''} ${opt.flights[0].arrTime || ''}`.trim() } : { airline: '', flightNo: '', depart: '', arrive: '' },
     status: complete ? 'Quoted' : 'Draft',
     cabs: cabsOut, hotelsAlloc, itinerary,
-    inclusions: flatInclusions, exclusions: flatExclusions, inclusionGroups,
+    inclusions: flatInclusions, exclusions: flatExclusions, inclusionGroups, policyGroups,
     categories,
     pricing: {
       mode: 'Builder', costPrice: t.costPrice, sellingPrice: t.grandTotal, grandTotal: t.grandTotal, profit: t.profit,

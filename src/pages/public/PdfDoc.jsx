@@ -231,8 +231,16 @@ function buildModel(pkg, client, agency, hotels, destinations, activitiesMaster,
     adults: N(pax.adults), children: N(pax.children),
     perPax: (N(pax.adults) + N(pax.children)) ? Math.round(grandTotal / (N(pax.adults) + N(pax.children))) : grandTotal,
     remarks: pkg.customerRemarks || '', agency,
-    // agency policy / payment blocks ticked "Show on PDF" (Policies & Notes page)
-    blocks: (agency?.docBlocks || []).filter((b) => b && b.show && b.title && b.content),
+    // agency policy / payment blocks ticked "Show on PDF" (Policies & Notes page),
+    // led by this trip's own country rules & documents-to-carry per destination
+    blocks: [
+      ...(pkg.policyGroups || []).filter((g) => g?.policies?.length).map((g) => ({
+        show: true,
+        title: `Travel rules & documents — ${g.destination}`,
+        content: g.policies.map((p) => `• ${p}`).join('\n'),
+      })),
+      ...(agency?.docBlocks || []).filter((b) => b && b.show && b.title && b.content),
+    ],
   }
 }
 

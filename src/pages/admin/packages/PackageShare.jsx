@@ -358,6 +358,11 @@ export function buildWaMessage(pkg, client, agency, mode = 'full') {
       if (g.exclusions.length) { L.push('', `${B(multi && g.destination ? `Exclusions — ${g.destination}` : 'Exclusion')}`, ''); g.exclusions.forEach((x) => L.push(`${x}`)) }
     })
   }
+  ;(pkg.policyGroups || []).forEach((g) => {
+    if (!g?.policies?.length) return
+    L.push('', `${B(`Travel rules & documents — ${g.destination}`)}`, '')
+    g.policies.forEach((p) => L.push(`• ${p}`))
+  })
   if (pkg.customerRemarks) { L.push('', `${B('Remarks')}`, pkg.customerRemarks) }
 
   // Contact
@@ -450,6 +455,11 @@ export function buildEmail(pkg, client, agency) {
       if (g.exclusions.length) { L.push('', multi && g.destination ? `EXCLUSIONS — ${g.destination.toUpperCase()}` : 'EXCLUSIONS'); g.exclusions.forEach((x) => L.push(`  - ${x}`)) }
     })
   }
+  ;(pkg.policyGroups || []).forEach((g) => {
+    if (!g?.policies?.length) return
+    L.push('', `TRAVEL RULES & DOCUMENTS — ${(g.destination || '').toUpperCase()}`)
+    g.policies.forEach((p) => L.push(`  - ${p}`))
+  })
   {
     const prices = optionPrices(pkg).filter((p) => p.total)
     if (prices.length > 1) { L.push('', 'PACKAGE PRICE'); prices.forEach((p) => L.push(`  ${p.name}: ${money(p.total)}`)) }

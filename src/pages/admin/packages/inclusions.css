@@ -102,3 +102,9 @@
 }
 .ie-add:hover:not(:disabled) { transform: translateY(-1px); }
 .ie-add:disabled { opacity: .35; cursor: default; }
+
+/* country rules & documents column (third preset list) */
+.ie-col.pol .ie-col-mark { background: var(--color-surface); color: var(--color-ink); }
+.ie-col.pol .ie-col-title { color: var(--color-ink); }
+@media (min-width: 1200px) { .ie-grid { grid-template-columns: 1fr 1fr 1fr; } }
+.ie-count-chip.pol { background: var(--color-surface); color: var(--color-ink); }

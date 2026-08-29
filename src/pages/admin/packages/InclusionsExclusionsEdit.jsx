@@ -11,7 +11,7 @@ export default function InclusionsExclusionsEdit() {
   const { dest } = useParams()                        // destination name (URL-decoded)
   const nav = useNavigate()
   const { inclusionPresets, addInclusionPreset, removeInclusionPreset, updateInclusionPreset, toast } = useApp()
-  const ie = inclusionPresets.byDest?.[dest] || { inclusions: [], exclusions: [] }
+  const ie = inclusionPresets.byDest?.[dest] || { inclusions: [], exclusions: [], policies: [] }
 
   return (
     <div className="ie">
@@ -27,6 +27,9 @@ export default function InclusionsExclusionsEdit() {
         <PresetCol dest={dest} type="exclusions" title="Exclusions" tone="exc" mark="✕"
           sub={`Not included on ${dest} packages`}
           items={ie.exclusions} onAdd={addInclusionPreset} onUpdate={updateInclusionPreset} onRemove={removeInclusionPreset} toast={toast} />
+        <PresetCol dest={dest} type="policies" title="Country rules & documents" tone="pol" mark="§"
+          sub={`Rules, visa notes & documents to carry for ${dest} — printed on every PDF`}
+          items={ie.policies || []} onAdd={addInclusionPreset} onUpdate={updateInclusionPreset} onRemove={removeInclusionPreset} toast={toast} />
       </div>
     </div>
   )
@@ -66,7 +69,7 @@ function PresetCol({ dest, type, title, tone, mark, sub, items, onAdd, onUpdate,
       </div>
 
       <div className="ie-composer">
-        <input value={draft} placeholder={`Add a new ${type === 'inclusions' ? 'inclusion' : 'exclusion'}…`}
+        <input value={draft} placeholder={`Add a new ${type === 'inclusions' ? 'inclusion' : type === 'policies' ? 'rule / document' : 'exclusion'}…`}
           onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
         <button className="ie-add" onClick={add} disabled={!draft.trim()}><Icon name="plus" size={14} /> Add</button>
       </div>

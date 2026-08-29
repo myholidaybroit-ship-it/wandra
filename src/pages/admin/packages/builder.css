@@ -518,3 +518,30 @@
 .qb-section-wide { width: calc(100% + 140px); margin-left: -70px; }
 .qb-section-wide .qb-item-main { grid-template-columns: 1fr 300px; }
 @media (max-width: 1560px) { .qb-section-wide { width: 100%; margin-left: 0; } }
+
+/* per-day meal ticks — Breakfast / Lunch / Dinner, printed on the PDF */
+.qb-meal-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.qb-meal-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+  border: 1px solid var(--color-hairline); border-radius: 999px; background: var(--color-canvas);
+  font-size: 12px; font-weight: 600; color: var(--color-slate); cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.qb-meal-chip .icon { opacity: 0; transition: opacity .2s ease; }
+.qb-meal-chip.on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-dark); }
+.qb-meal-chip.on .icon { opacity: 1; }
+
+/* laptop density — a 13" screen gets the whole builder without dead margins */
+@media (max-width: 1440px) {
+  .content:has(.qb) { padding: 20px 18px 44px; }
+  .qb-topbar { margin: -20px -18px 20px; padding-left: 18px; padding-right: 18px; }
+  .qb-body { gap: 16px; }
+  .qb-basic { padding: 16px 18px; }
+  .qb-section-head { padding: 14px 18px; }
+  .qb-section-toolbar { padding: 11px 18px; }
+  .qb-section-body { padding: 14px 18px; gap: 14px; }
+  .qb-section-actions { padding: 0 18px 16px; }
+  .qb-section-ic { width: 34px; height: 34px; }
+  .qb-item-main { grid-template-columns: 1fr 260px; }
+  .qb-section-wide .qb-item-main { grid-template-columns: 1fr 250px; }
+}

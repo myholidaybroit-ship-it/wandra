@@ -16,8 +16,8 @@ export default function InclusionsExclusions() {
   const rows = destinations
     .filter((d) => (d.name + ' ' + (d.location || '')).toLowerCase().includes(term))
     .map((d) => {
-      const ie = inclusionPresets.byDest?.[d.name] || { inclusions: [], exclusions: [] }
-      return { id: d.name, name: d.name, location: d.location, slug: encodeURIComponent(d.name), inc: ie.inclusions.length, exc: ie.exclusions.length, image: d.image }
+      const ie = inclusionPresets.byDest?.[d.name] || { inclusions: [], exclusions: [], policies: [] }
+      return { id: d.name, name: d.name, location: d.location, slug: encodeURIComponent(d.name), inc: ie.inclusions.length, exc: ie.exclusions.length, pol: (ie.policies || []).length, image: d.image }
     })
 
   const go = (r) => nav(`/app/packages/inclusions/${r.slug}`)
@@ -41,6 +41,7 @@ export default function InclusionsExclusions() {
     ) },
     { key: 'inc', head: 'Inclusions', render: (r) => <span className="ie-count-chip inc">{r.inc}</span> },
     { key: 'exc', head: 'Exclusions', render: (r) => <span className="ie-count-chip exc">{r.exc}</span> },
+    { key: 'pol', head: 'Rules & docs', render: (r) => <span className="ie-count-chip pol">{r.pol}</span> },
     { key: 'status', head: '', render: (r) => (r.inc + r.exc === 0 ? <Badge tone="neutral">Not set up</Badge> : null) },
     { key: 'actions', head: '', align: 'right', render: (r) => (
       <div className="ie-row-acts" onClick={(e) => e.stopPropagation()}>

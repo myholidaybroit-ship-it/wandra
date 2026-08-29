@@ -120,6 +120,14 @@ export default function ItineraryPreview() {
           <div className="incl-card"><div className="t-title-sm c-error">Exclusions</div><ul className="mt-sm">{pkg.exclusions?.map((x) => <li key={x} className="t-body-sm c-body itin-li">✕ {x}</li>)}</ul></div>
         </div>
 
+        {/* country rules & documents to carry, per destination */}
+        {(pkg.policyGroups || []).filter((g) => g?.policies?.length).map((g) => (
+          <div className="incl-card mt-lg" key={g.destination}>
+            <div className="t-title-sm">Travel rules &amp; documents — {g.destination}</div>
+            <ul className="mt-sm">{g.policies.map((p) => <li key={p} className="t-body-sm c-body itin-li">• {p}</li>)}</ul>
+          </div>
+        ))}
+
         {/* grand total */}
         <div className="itin-total"><span>Grand Total</span><span>{inr(grandTotal)}</span></div>
 
