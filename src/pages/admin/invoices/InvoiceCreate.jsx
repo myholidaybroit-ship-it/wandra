@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../../store/AppContext'
 import { PageHeader, Button, Field, Input, PillSelect, DatePicker } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
@@ -88,6 +88,18 @@ export default function InvoiceCreate() {
     setItems([{ description: `Travel Package ${pkg?.code || b.code} — ${b.clientName}`, qty: 1, rate: b.value || 0, tax: 0 }])
     toast(`Loaded ${b.code} — ${inr(b.value || 0)}`)
   }
+
+  /* Arriving from a booking / package / client page pre-fills everything —
+     no hunting through the client dropdown. */
+  const [sp] = useSearchParams()
+  const seeded = useRef(false)
+  useEffect(() => {
+    if (seeded.current || !bookings.length && !packages.length && !clients.length) return
+    const bid = sp.get('booking'), pid = sp.get('package'), cid = sp.get('client')
+    if (bid && bookings.some((b) => b.id === bid)) { seeded.current = true; loadFromBooking(bid) }
+    else if (pid && packages.some((p) => p.id === pid)) { seeded.current = true; loadFromPackage(pid) }
+    else if (cid && clients.some((c) => c.id === cid)) { seeded.current = true; setF((s) => ({ ...s, clientId: cid })) }
+  }, [bookings, packages, clients]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const lineAmt = (it) => (Number(it.qty) || 0) * (Number(it.rate) || 0) * (1 + (Number(it.tax) || 0) / 100)
   const subtotal = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.rate) || 0), 0)

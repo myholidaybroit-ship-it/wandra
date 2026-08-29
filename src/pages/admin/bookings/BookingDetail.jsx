@@ -38,8 +38,12 @@ function countdown(bk, days) {
 
 export default function BookingDetail() {
   const { id } = useParams()
-  const { bookings, packages, clients, hotels, cabs, agency, addBookingPayment, setBookingStatus, cancelBooking, setBookingSchedule, generateBookingSchedule, hasFeature, toast, canSeePricing } = useApp()
+  const { bookings, packages, clients, hotels, cabs, invoices, agency, addBookingPayment, setBookingStatus, cancelBooking, setBookingSchedule, generateBookingSchedule, hasFeature, toast, canSeePricing } = useApp()
   const bk = bookings.find((b) => b.id === id)
+  // the booking's own invoice — payments recorded here mirror onto it
+  const linkedInv = bk ? (invoices.find((i) => i.id === bk.invoiceId) || invoices.find((i) => i.bookingId === bk.id)) : null
+  const invTotal = (i) => (i.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.rate) || 0) * (1 + (Number(it.tax) || 0) / 100), 0)
+  const invPaid = (i) => (i.payments || []).reduce((s, p) => s + Number(p.amount || 0), 0)
   const [open, setOpen] = useState(false)
   const [supplierOpen, setSupplierOpen] = useState(false)
   const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: today() })
@@ -119,7 +123,9 @@ export default function BookingDetail() {
               else { setBookingStatus(bk.id, v); toast(`Booking ${v}`) }
             }} />
             {canSeePricing && <>
-              <Link to={`/app/invoices/new?booking=${bk.id}`}><Button variant="secondary" size="sm">Create Invoice</Button></Link>
+              {linkedInv
+                ? <Link to={`/app/invoices/${linkedInv.id}`}><Button variant="secondary" size="sm">Invoice {linkedInv.code}</Button></Link>
+                : <Link to={`/app/invoices/new?booking=${bk.id}`}><Button variant="secondary" size="sm">Create Invoice</Button></Link>}
               <Button size="sm" onClick={() => setOpen(true)}>+ Add Payment</Button>
             </>}
             <Button variant="secondary" size="sm" onClick={() => setSupplierOpen(true)}>Supplier Messages</Button>
@@ -193,6 +199,29 @@ export default function BookingDetail() {
             <div className="bk-money-row"><span>Balance due</span><strong className={balance > 0 ? 'due' : 'ok'}>{inr(balance)}</strong></div>
             <div className="bk-bar"><span style={{ width: `${Math.min(100, pct)}%` }} /></div>
             <Button className="w-full mt-base" onClick={() => setOpen(true)}>+ Add Payment</Button>
+          </div>
+
+          {/* ---------- Invoice — same pipeline as the collection ---------- */}
+          <div className="bk-card">
+            <div className="bk-card-head">
+              <span className="bk-card-title">Invoice</span>
+              {linkedInv && <Badge tone={linkedInv.status}>{linkedInv.status}</Badge>}
+            </div>
+            {linkedInv ? (
+              <>
+                <div className="bk-money-row"><span>Invoice</span><strong className="mono">{linkedInv.code}</strong></div>
+                <div className="bk-money-row"><span>Total</span><strong>{inr(invTotal(linkedInv))}</strong></div>
+                <div className="bk-money-row"><span>Received</span><strong className="ok">{inr(invPaid(linkedInv))}</strong></div>
+                <div className="bk-money-row"><span>Balance</span><strong className={invTotal(linkedInv) - invPaid(linkedInv) > 0 ? 'due' : 'ok'}>{inr(Math.max(0, invTotal(linkedInv) - invPaid(linkedInv)))}</strong></div>
+                <Link to={`/app/invoices/${linkedInv.id}`}><Button variant="secondary" size="sm" className="w-full mt-base">Open invoice</Button></Link>
+                <div className="bk-inst-note">Payments recorded here land on this invoice automatically — it flips to Paid the moment the balance clears.</div>
+              </>
+            ) : (
+              <>
+                <div className="bk-empty">No invoice yet — one generates itself with the first payment, or create it now.</div>
+                <Link to={`/app/invoices/new?booking=${bk.id}`}><Button variant="secondary" size="sm" className="w-full mt-base">Create invoice</Button></Link>
+              </>
+            )}
           </div>
 
           {hasFeature('bookings.payment_schedule') && (

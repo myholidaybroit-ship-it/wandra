@@ -315,14 +315,23 @@ export function AppProvider({ children }) {
   }
   const cancelBooking = async (id) => { await api.post(`/bookings/${id}/cancel`); await reload('bookings', 'invoices', 'quotations', 'packages') }
   const removeBooking = async (id) => { await api.del(`/bookings/${id}`); setBookings((l) => l.filter((b) => b.id !== id)); await reload('invoices', 'quotations', 'packages') }
-  const addBookingPayment = async (id, pay) => replace(setBookings)(await api.post(`/bookings/${id}/payments`, pay))
+  const addBookingPayment = async (id, pay) => {
+    replace(setBookings)(await api.post(`/bookings/${id}/payments`, pay))
+    // the payment also landed on the booking's invoice (single pipeline) —
+    // refresh the invoice list so its status/balance is current everywhere
+    try { const r = await api.get('/invoices'); setInvoices(r.items) } catch { /* list refreshes on next load */ }
+  }
   const setBookingStatus = async (id, status) => replace(setBookings)(await api.patch(`/bookings/${id}/status`, { status }))
   const setBookingSchedule = async (id, schedule) => replace(setBookings)(await api.patch(`/bookings/${id}/schedule`, { schedule }))
   const generateBookingSchedule = async (id) => replace(setBookings)(await api.post(`/bookings/${id}/schedule/generate`, {}))
 
   /* ---------- invoices ---------- */
   const addInvoice = async (inv) => { const rec = await api.post('/invoices', inv); prepend(setInvoices)(rec); return rec }
-  const addPayment = async (invId, pay) => replace(setInvoices)(await api.post(`/invoices/${invId}/payments`, pay))
+  const addPayment = async (invId, pay) => {
+    replace(setInvoices)(await api.post(`/invoices/${invId}/payments`, pay))
+    // mirrored onto the linked booking's collection — refresh it too
+    try { const r = await api.get('/bookings'); setBookings(r.items) } catch { /* refreshes on next load */ }
+  }
   const removeInvoice = async (id) => { await api.del(`/invoices/${id}`); setInvoices((l) => l.filter((i) => i.id !== id)) }
 
   /* ---------- quotations ---------- */
