@@ -204,6 +204,20 @@ export default function BookingDetail() {
               {(bk.schedule || []).length === 0 && (
                 <div className="bk-empty">No plan yet — split this trip into an advance and a balance so the follow-up engine can chase each due date.</div>
               )}
+              {(bk.schedule || []).length > 0 && (() => {
+                // at-a-glance: how many instalments are still open, and how much is left to collect
+                const rows = bk.schedule || []
+                const pending = rows.filter((r) => r.status !== 'Paid')
+                const toCollect = pending.reduce((a, r) => a + N(r.amount), 0)
+                const settled = rows.reduce((a, r) => a + (r.status === 'Paid' ? N(r.amount) : 0), 0)
+                return (
+                  <div className="bk-inst-sum">
+                    <span><b>{pending.length}</b> instalment{pending.length === 1 ? '' : 's'} pending</span>
+                    <span className="due"><b>{inr(toCollect)}</b> to collect</span>
+                    <span><b>{inr(settled)}</b> settled</span>
+                  </div>
+                )
+              })()}
               {(bk.schedule || []).map((r, i) => {
                 const late = r.status !== 'Paid' && r.dueDate && r.dueDate < today()
                 return (

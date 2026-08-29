@@ -220,7 +220,8 @@ function optionGrandTotal(opt, s = {}) {
     .reduce((a, x) => a + perDay(x) * Math.max(1, (x.days || []).length), 0)
   const flightCost = (opt.flights || []).reduce((a, f) => a + nn(f.cost), 0)
   const extraCost = (opt.extras || []).reduce((a, e) => a + nn(e.cost), 0)
-  const costPrice = hotelCost + svcCost('transport') + svcCost('activity') + flightCost + extraCost
+  // a complete B2B package price replaces the summed cost — same rule as the builder
+  const costPrice = nn(opt.b2bCost) > 0 ? nn(opt.b2bCost) : hotelCost + svcCost('transport') + svcCost('activity') + flightCost + extraCost
   const markup = s.markupMode === 'flat' ? nn(s.markupValue) : costPrice * nn(s.markupValue) / 100
   const taxBase = s.taxOn === 'cost_markup' ? costPrice + markup : costPrice
   const tax = s.taxEnabled ? Math.round(taxBase * nn(s.taxPercent) / 100 * 100) / 100 : 0

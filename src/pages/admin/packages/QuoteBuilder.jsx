@@ -46,8 +46,10 @@ export default function QuoteBuilder() {
   const editing = packages.find((p) => p.id === editId)
   const preClient = clients.find((x) => x.id === sp.get('client')) || clients.find((x) => x.id === editing?.clientId)
   const startTpl = sp.get('template') ? (packageTemplates || []).find((t) => t.id === sp.get('template')) : null
+  // ?from=<packageId> clones one of the agency's own past quotes for this client
+  const startFrom = sp.get('from') ? packages.find((p) => p.id === sp.get('from')) : null
 
-  const [q, setQ] = useState(() => init(editing, preClient, startTpl, hotels, inclusionPresets))
+  const [q, setQ] = useState(() => init(editing, preClient, startTpl, hotels, inclusionPresets, startFrom))
 
   /* ---------- inclusions / exclusions — kept per destination, seeded from that
        destination's own master presets (falls back to the general list) ---------- */
@@ -559,14 +561,18 @@ export default function QuoteBuilder() {
                   {canSeePricing && <Field label="Given / night (₹)" hint="selling"><Input type="number" value={st.given} onChange={(e) => setStay(i, { given: e.target.value })} placeholder="0" /></Field>}
                 </div>
 
-                {canSeePricing && (
+                {canSeePricing && (hasSupplier(st) || st.showSupplier ? (
                   <div className="qb-grid-2 qb-supplier">
                     <Field label="Supplier / B2B" hint="who quoted this net rate — optional"><Input value={st.supplierName || ''} onChange={(e) => setStay(i, { supplierName: e.target.value })} placeholder="e.g. TravelBoutique, Hotelbeds" /></Field>
                     <Field label="Supplier net / night (₹)" hint="got a B2B price? enter it here — it replaces the cost rate above">
                       <Input type="number" value={st.supplierRate || ''} onChange={(e) => setStay(i, { supplierRate: e.target.value })} placeholder="leave blank to use the rate" />
                     </Field>
                   </div>
-                )}
+                ) : (
+                  // collapsed by default — one B2B price for the whole package
+                  // goes in the Summary instead of a box on every card
+                  <button className="qb-linkbtn qb-supplier-link" onClick={() => setStay(i, { showSupplier: true })}>+ Supplier net for this hotel only <span className="qb-opt">(one complete B2B package price? enter it once in the Summary below)</span></button>
+                ))}
 
                 <div className="qb-beds-head">
                   <span className="qb-label">Extra beds &amp; children</span>
@@ -715,14 +721,16 @@ export default function QuoteBuilder() {
                   </div>
                 ))}
 
-                {canSeePricing && (
+                {canSeePricing && (hasSupplier(s) || s.showSupplier ? (
                   <div className="qb-grid-2 qb-supplier">
                     <Field label="Supplier / B2B" hint="who quoted this net rate — optional"><Input value={s.supplierName || ''} onChange={(e) => setService(i, { supplierName: e.target.value })} placeholder="e.g. local DMC" /></Field>
                     <Field label="Supplier net (₹)" hint="got a B2B price? enter it here — it replaces the cost rate above">
                       <Input type="number" value={s.supplierRate || ''} onChange={(e) => setService(i, { supplierRate: e.target.value })} placeholder="leave blank to use the rate" />
                     </Field>
                   </div>
-                )}
+                ) : (
+                  <button className="qb-linkbtn qb-supplier-link" onClick={() => setService(i, { showSupplier: true })}>+ Supplier net for this item only <span className="qb-opt">(one complete B2B package price? enter it once in the Summary below)</span></button>
+                ))}
 
                 <Field label="Description" full>
                   <textarea className="control qb-svc-desc" rows={4} value={s.description || ''} onChange={(e) => setService(i, { description: e.target.value })}
@@ -884,12 +892,16 @@ export default function QuoteBuilder() {
                 <div key={o.id} className={`qb-cost-card ${i === oi ? 'on' : ''}`} onClick={() => setOi(i)}>
                   <div className="qb-cost-name">Option {i + 1}: {o.name}</div>
                   <div className="qb-cost-total"><span className="qb-cost-k">Total cost</span><span className="qb-cost-v">{inr(ot.costPrice)}</span></div>
-                  <div className="qb-cost-breakup">
-                    <span><b>{inr(ot.hotelCost)}</b> Hotels</span><i>+</i>
-                    <span><b>{inr(ot.transportCost)}</b> Transports</span><i>+</i>
-                    <span><b>{inr(act)}</b> Activities / Tickets</span>
-                    {ot.flightCost > 0 && <><i>+</i><span><b>{inr(ot.flightCost)}</b> Flights</span></>}
-                  </div>
+                  {ot.b2bCost > 0 ? (
+                    <div className="qb-cost-breakup"><span>Complete <b>B2B package price</b>{o.b2bSupplier ? ` · ${o.b2bSupplier}` : ''}</span></div>
+                  ) : (
+                    <div className="qb-cost-breakup">
+                      <span><b>{inr(ot.hotelCost)}</b> Hotels</span><i>+</i>
+                      <span><b>{inr(ot.transportCost)}</b> Transports</span><i>+</i>
+                      <span><b>{inr(act)}</b> Activities / Tickets</span>
+                      {ot.flightCost > 0 && <><i>+</i><span><b>{inr(ot.flightCost)}</b> Flights</span></>}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -914,6 +926,20 @@ export default function QuoteBuilder() {
                 </div>
               </Field>
               <Field label="Round to"><PillSelect value={q.roundTo ? `Nearest ${q.roundTo}` : 'No rounding'} options={['No rounding', 'Nearest 100', 'Nearest 500', 'Nearest 1000']} onChange={(v) => upd({ roundTo: v === 'No rounding' ? 0 : Number(v.replace('Nearest ', '')) })} /></Field>
+            </div>
+
+            {/* One complete B2B package price replaces the summed cost — enter
+                it ONCE here instead of a supplier net on every hotel & activity */}
+            <div className="qb-b2b">
+              <div className="qb-b2b-copy">
+                <span className="qb-label">Complete B2B package cost <span className="qb-opt">optional · Option {oi + 1}: {opt.name}</span></span>
+                <span className="qb-b2b-hint">Got one all-in price from a DMC / B2B supplier? Enter it once — it replaces the summed cost above, and your markup &amp; tax apply on top of it.</span>
+              </div>
+              <div className="qb-b2b-fields">
+                <Input value={opt.b2bSupplier || ''} onChange={(e) => setOpt({ b2bSupplier: e.target.value })} placeholder="Supplier — e.g. local DMC" />
+                <div className="qb-unit-input"><input type="number" min="0" value={opt.b2bCost || ''} onChange={(e) => setOpt({ b2bCost: e.target.value })} placeholder="Package cost" /><span>₹</span></div>
+              </div>
+              {num(opt.b2bCost) > 0 && <div className="qb-b2b-on"><Icon name="check" size={12} /> Costing from the B2B package price — {inr(num(opt.b2bCost))}{opt.b2bSupplier ? ` · ${opt.b2bSupplier}` : ''}. Per-item costs above are ignored for this option.</div>}
             </div>
 
             <div className="qb-sell-table">
@@ -1512,7 +1538,7 @@ const sectorsFrom = (destStr, nights) => {
 }
 
 function blankOption(name) {
-  return { id: uid(), name, sameCab: false, sameCabId: '', sameCabName: '', sameCabType: '', stays: [], services: [], flights: [], extras: [], sellingOverride: '' }
+  return { id: uid(), name, sameCab: false, sameCabId: '', sameCabName: '', sameCabType: '', stays: [], services: [], flights: [], extras: [], sellingOverride: '', b2bCost: '', b2bSupplier: '' }
 }
 function blankStay(q, opt) {
   return {
@@ -1623,7 +1649,10 @@ function optionTotals(opt, q) {
   const flightSell = opt.flights.reduce((s, f) => s + num(f.sell), 0)
   const extraCost = opt.extras.reduce((s, e) => s + num(e.cost), 0)
   const extraSell = opt.extras.reduce((s, e) => s + num(e.sell), 0)
-  const costPrice = hotelCost + transportCost + activityCost + flightCost + extraCost
+  // one COMPLETE B2B package price from a DMC replaces the summed cost —
+  // the agent then only adds markup on top of what they actually pay
+  const b2bCost = num(opt.b2bCost)
+  const costPrice = b2bCost > 0 ? b2bCost : hotelCost + transportCost + activityCost + flightCost + extraCost
   const sellSum = hotelSell + transportSell + activitySell + flightSell + extraSell
   // ---- Markup → Tax → Rounding engine (selling built up from cost) ----
   const markup = q.markupMode === 'flat' ? num(q.markupValue) : costPrice * num(q.markupValue) / 100
@@ -1635,7 +1664,7 @@ function optionTotals(opt, q) {
   const sellingPrice = grandTotal
   const multiplier = costPrice ? (grandTotal / costPrice) : 0
   const profit = grandTotal - costPrice - tax
-  return { hotelCost, hotelSell, transportCost, transportSell, activityCost, activitySell, flightCost, flightSell, extraCost, extraSell, costPrice, sellSum, markup, taxBase, tax, preRound, roundTo, sellingPrice, multiplier, grandTotal, profit }
+  return { hotelCost, hotelSell, transportCost, transportSell, activityCost, activitySell, flightCost, flightSell, extraCost, extraSell, b2bCost, costPrice, sellSum, markup, taxBase, tax, preRound, roundTo, sellingPrice, multiplier, grandTotal, profit }
 }
 
 /* ---------- per-destination inclusions / exclusions ---------- */
@@ -1661,8 +1690,9 @@ function seedIE(sectors, presets, legacy) {
   return out
 }
 
-/* ---------- init (new / edit / from-template) ---------- */
-function init(editing, preClient, tpl, hotels, presets) {
+/* ---------- init (new / edit / from-template / from-past-quote) ---------- */
+function init(editing, preClient, tpl, hotels, presets, fromPkg) {
+  if (!editing && fromPkg) return fromExistingQuote(fromPkg, preClient, hotels, presets)
   if (!editing && tpl) return fromTemplate(tpl, preClient, hotels, presets)
   if (editing?.builderV2) {
     const b = editing.builderV2
@@ -1716,6 +1746,24 @@ function fromLegacy(pkg, presets) {
     options: [option],
     ieByDest: seedIE(legSectors, presets, pkg), dayNotes: {},
     ...PRICING_DEFAULTS, taxPercent: pkg.pricing?.gstPercent ?? 5, comments: pkg.comments || '',
+  }
+}
+
+/* ---------- clone one of the agency's own past quotes for a NEW client ----------
+   A builder-made quote clones at full fidelity via its builderV2 (all options,
+   day notes, pricing knobs); anything older maps through the legacy path. Only
+   the client, dates and comments change — the itinerary work is reused as-is. */
+function fromExistingQuote(pkg, preClient, hotels, presets) {
+  const base = init(pkg, preClient, null, hotels, presets)
+  const c = preClient
+  return {
+    ...base,
+    clientId: c?.id || '', clientName: c?.name || '', clientPhone: c?.phone || '', clientEmail: c?.email || '',
+    startDate: c?.query?.startDate || base.startDate || '',
+    adults: c?.query?.adults || base.adults,
+    children: c?.query?.children ?? base.children,
+    infants: c?.query?.infants ?? base.infants ?? 0,
+    comments: `Started from quote ${pkg.code || ''}`.trim(),
   }
 }
 

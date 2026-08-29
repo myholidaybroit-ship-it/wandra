@@ -16,7 +16,7 @@ export default function CabCreate() {
   }
   return (
     <div className="master-page">
-      <PageHeader title="Add New Cab Type" subtitle="Vehicle with per-km and per-day rates — the builder auto-fills from here." />
+      <PageHeader title="Add New Cab Type" subtitle="Vehicle with a flat per-day rent — the builder auto-fills from here. Nothing is calculated per kilometre." />
       <Card>
         <div className="form-grid">
           <Field label="Cab type name" required><Input value={f.name} onChange={set('name')} placeholder="e.g. Swift Dzire" /></Field>
@@ -30,8 +30,8 @@ export default function CabCreate() {
           <Field label="City" hint="Optional — filters the builder's cab picker city-wise">
             <CityPicker value={f.city} cities={cities} destination={f.destination} onChange={(v) => setF({ ...f, city: v })} allLabel="Any city" />
           </Field>
-          <Field label="Rate per KM (₹)"><Input value={f.ratePerKm} onChange={set('ratePerKm')} placeholder="20" /></Field>
-          <Field label="Rate per Day (₹)" hint="Auto-fills transport pricing in the quote builder"><Input value={f.ratePerDay} onChange={set('ratePerDay')} placeholder="3800" /></Field>
+          <Field label="Rent / day (₹)" hint="the flat price for this vehicle — auto-fills transport pricing in the builder"><Input value={f.ratePerDay} onChange={set('ratePerDay')} placeholder="3800" /></Field>
+          <Field label="Rate per KM (₹)" hint="optional — for your own reference only, never used in a calculation"><Input value={f.ratePerKm} onChange={set('ratePerKm')} placeholder="Optional" /></Field>
           <Field label="Contact"><Input value={f.contact} onChange={set('contact')} placeholder="Driver / vendor phone" /></Field>
           <div className="field-full"><ImageInput label="Main vehicle photo" hint="Shown on lists & the quote builder" value={f.image} onChange={(v) => setF({ ...f, image: v })} folder="cabs" /></div>
           <div className="field-full"><GalleryInput label="More vehicle photos" hint="Interior, luggage space… for a richer PDF" value={f.gallery} onChange={(v) => setF({ ...f, gallery: v })} folder="cabs" /></div>

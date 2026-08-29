@@ -31,8 +31,8 @@ export default function CabDetail() {
           <div className="kv-grid">
             <KV k="Type" v={c.type || 'Universal'} /><KV k="AC" v={c.acType} />
             <KV k="City" v={c.city || 'Any'} />
-            <KV k="Capacity" v={`${Number(c.capacity) || 0} pax`} /><KV k="Rate / KM" v={inr(c.ratePerKm)} />
-            <KV k="Rate / Day" v={inr(c.ratePerDay || 0)} /><KV k="Status" v={c.status} />
+            <KV k="Capacity" v={`${Number(c.capacity) || 0} pax`} />
+            <KV k="Rent / Day" v={inr(c.ratePerDay || 0)} /><KV k="Status" v={c.status} />
             <KV k="Contact" v={c.contact} />
           </div>
         </Card>
@@ -55,8 +55,7 @@ export default function CabDetail() {
               onChange={(v) => setF({ ...f, destination: v === 'Any destination' ? '' : v })} />
           </Field>
           <Field label="City"><CityPicker value={f.city || ''} cities={cities} destination={f.destination} onChange={(v) => setF({ ...f, city: v })} allLabel="Any city" /></Field>
-          <Field label="Rate / KM"><Input value={f.ratePerKm || ''} onChange={(e) => setF({ ...f, ratePerKm: e.target.value })} /></Field>
-          <Field label="Rate / Day" hint="Auto-fills the quote builder"><Input value={f.ratePerDay || ''} onChange={(e) => setF({ ...f, ratePerDay: e.target.value })} /></Field>
+                    <Field label="Rent / day (₹)" hint="flat price — auto-fills the quote builder"><Input value={f.ratePerDay || ''} onChange={(e) => setF({ ...f, ratePerDay: e.target.value })} /></Field>
           <div className="field-full"><ImageInput label="Main vehicle photo" value={f.image || ''} onChange={(v) => setF({ ...f, image: v })} folder="cabs" /></div>
           <div className="field-full"><GalleryInput label="More vehicle photos" hint="Interior, luggage space…" value={f.gallery || []} onChange={(v) => setF({ ...f, gallery: v })} folder="cabs" /></div>
           <Field label="Contact"><Input value={f.contact || ''} onChange={(e) => setF({ ...f, contact: e.target.value })} /></Field>

@@ -449,6 +449,23 @@
   padding: 12px; border: 1px dashed var(--color-hairline); border-radius: var(--radius-md);
   background: var(--color-surface-soft);
 }
+.qb-supplier-link { align-self: flex-start; text-align: left; }
+.qb-supplier-link .qb-opt { font-weight: 500; }
+
+/* one complete B2B package cost — replaces the summed cost for the option */
+.qb-b2b {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px 24px;
+  margin-top: 16px; padding: 14px 16px; border: 1px dashed var(--color-hairline); border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+.qb-b2b-copy { display: grid; gap: 4px; max-width: 480px; }
+.qb-b2b-hint { font-size: 11.5px; color: var(--color-stone); line-height: 1.5; }
+.qb-b2b-fields { display: flex; gap: 10px; align-items: center; }
+.qb-b2b-fields > * { min-width: 170px; }
+.qb-b2b-on {
+  flex-basis: 100%; display: flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 600; color: var(--color-ink);
+}
 
 /* extra-bed block header with its auto-fill action */
 .qb-beds-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }

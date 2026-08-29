@@ -85,6 +85,14 @@
 .bk-supplier-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
 /* ---------- Payment schedule (instalments on a confirmed trip) ---------- */
+/* schedule at-a-glance: pending count · to collect · settled */
+.bk-inst-sum {
+  display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 12px; margin-bottom: 6px;
+  border: 1px solid var(--color-hairline-soft); border-radius: var(--radius-md);
+  background: var(--color-surface-soft); font-size: 12px; color: var(--color-slate);
+}
+.bk-inst-sum b { color: var(--color-ink); font-weight: 700; }
+.bk-inst-sum .due b { color: var(--color-error); }
 .bk-inst { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--color-hairline-soft); }
 .bk-inst:last-of-type { border-bottom: none; }
 .bk-inst-dot { flex: none; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-muted-soft); }

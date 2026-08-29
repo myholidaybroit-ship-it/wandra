@@ -27,8 +27,7 @@ export default function CabList() {
     ) },
     { key: 'type', head: 'Type', render: (r) => <Badge tone="neutral">{r.type || 'Universal'}</Badge> },
     { key: 'city', head: 'City', render: (r) => <span className="cell-sub">{r.city || '—'}</span> },
-    { key: 'ratePerKm', head: 'Rate / KM', align: 'right', render: (r) => inr(r.ratePerKm) },
-    { key: 'ratePerDay', head: 'Rate / Day', align: 'right', render: (r) => <span className="cell-strong">{inr(r.ratePerDay || 0)}</span> },
+    { key: 'ratePerDay', head: 'Rent / Day', align: 'right', render: (r) => <span className="cell-strong">{inr(r.ratePerDay || 0)}</span> },
     { key: 'contact', head: 'Contact', render: (r) => <span className="cell-sub">{r.contact}</span> },
     { key: 'status', head: 'Status', render: (r) => <Badge tone={r.status}>{r.status}</Badge> },
     { key: 'actions', head: '', align: 'right', render: (r) => (
@@ -40,7 +39,7 @@ export default function CabList() {
   ]
   return (
     <div>
-      <PageHeader title="Cab Types" subtitle="Fleet with per-km and per-day rates — the builder auto-fills from here."
+      <PageHeader title="Cab Types" subtitle="Fleet with a flat per-day rent — the builder auto-fills from here."
         actions={<><Button variant="secondary" onClick={exportCsv}>Export CSV</Button><Link to="/app/cabs/new"><Button>+ Add New Cab Type</Button></Link></>} />
       <div className="list-toolbar">
         <ListSearch value={q} onChange={setQ} placeholder="Search cabs by name, contact…" count={rows.length} />

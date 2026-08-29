@@ -13,7 +13,7 @@ const fmtDate = (iso, opts = { day: 'numeric', month: 'short', year: 'numeric' }
 export default function PackageStart() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { clients, hotels, packageTemplates } = useApp()
+  const { clients, hotels, packages, packageTemplates } = useApp()
   const c = clients.find((x) => x.id === id)
 
   const [showAll, setShowAll] = useState(false)
@@ -24,26 +24,47 @@ export default function PackageStart() {
 
   const wanted = (c?.interest || '').split(',').map((s) => s.trim()).filter((s) => s && s !== 'General Inquiry')
 
+  // every quote the agency has already built is a suggestion too — 30 Bali
+  // quotes means 30 ready starting points, not just the curated templates
+  const ownQuotes = useMemo(() => (packages || [])
+    .filter((p) => p.id !== undefined && ((p.hotelsAlloc || []).length || (p.itinerary || []).length))
+    .map((p) => ({
+      id: p.id, own: true, code: p.code || '',
+      name: `${(p.destination || '').split(' - ')[0] || 'Trip'} · ${p.nights || 0}N / ${p.days || (p.nights || 0) + 1}D`,
+      destination: (p.destination || '').split(' - ')[0],
+      nights: p.nights || 0, days: p.days || (p.nights || 0) + 1,
+      itinerary: p.itinerary || [], hotelsAlloc: p.hotelsAlloc || [],
+      cabs: p.cabs || [], categories: p.categories || [], pricing: p.pricing,
+      summary: `A quote you built earlier${p.clientName ? ` for ${p.clientName}` : ''} — reuse it as-is or tweak anything.`,
+      highlights: [], tag: 'Your quote', usedCount: 0,
+      clientName: p.clientName || '', status: p.status || '',
+      _at: p.createdAt || p.updatedAt || '',
+    }))
+    .sort((a, b) => String(b._at).localeCompare(String(a._at))), [packages])
+
   const matched = useMemo(() => {
-    let list = packageTemplates
+    let list = [...packageTemplates, ...ownQuotes]
     if (!showAll && wanted.length) {
       list = list.filter((t) => wanted.some((w) => {
-        const a = w.toLowerCase(), b = t.destination.toLowerCase()
-        return a === b || a.includes(b) || b.includes(a)
+        const a = w.toLowerCase(), b = (t.destination || '').toLowerCase()
+        return b && (a === b || a.includes(b) || b.includes(a))
       }))
     }
     const query = search.trim().toLowerCase()
-    if (query) list = list.filter((t) => t.name.toLowerCase().includes(query) || t.destination.toLowerCase().includes(query) || t.id.toLowerCase().includes(query))
+    if (query) list = list.filter((t) => t.name.toLowerCase().includes(query) || (t.destination || '').toLowerCase().includes(query) || String(t.code || t.id).toLowerCase().includes(query) || (t.clientName || '').toLowerCase().includes(query))
     return list
-  }, [packageTemplates, wanted.join('|'), showAll, search])
+  }, [packageTemplates, ownQuotes, wanted.join('|'), showAll, search])
 
   if (!c) return <div className="pstart-missing">Client not found. <Link className="c-link" to="/app/clients">Back to clients</Link></div>
 
   const scopeLabel = wanted.length ? wanted.join(', ') : 'this trip'
   const nights = c.query?.nights
   const goManual = () => nav(`/app/packages/new?client=${c.id}`)
-  // open the builder pre-filled from the template so the agent can edit before creating
-  const useTemplate = (tpl) => nav(`/app/packages/new?client=${c.id}&template=${tpl.id}`)
+  // open the builder pre-filled — from a curated template, or cloned from one
+  // of the agency's own past quotes
+  const useTemplate = (tpl) => nav(tpl.own
+    ? `/app/packages/new?client=${c.id}&from=${tpl.id}`
+    : `/app/packages/new?client=${c.id}&template=${tpl.id}`)
 
   const addComment = () => {
     const text = draft.trim(); if (!text) return
@@ -160,14 +181,17 @@ export default function PackageStart() {
 function SuggestionCard({ t, hotels, onUse }) {
   const [tab, setTab] = useState('itinerary')
   const cities = useMemo(() => cityNights(t, hotels), [t, hotels])
-  const price = useMemo(() => computePricing({ cabs: t.cabs, hotelsAlloc: t.hotelsAlloc, categories: t.categories, pricing: t.pricing }).grandTotal, [t])
+  // builder-made quotes carry their price in pricing.grandTotal; the legacy
+  // engine prices template-shaped records
+  const price = useMemo(() => Number(t.pricing?.grandTotal) || computePricing({ cabs: t.cabs, hotelsAlloc: t.hotelsAlloc, categories: t.categories, pricing: t.pricing }).grandTotal, [t])
 
   return (
     <div className="scard">
       <div className="scard-head">
         <div className="scard-id">
-          <span className="scard-code">{t.id.replace('tpl-', '').toUpperCase()}</span>
+          <span className="scard-code">{t.own ? (t.code || 'QUOTE') : t.id.replace('tpl-', '').toUpperCase()}</span>
           <span className="scard-name">{t.name}</span>
+          {t.own && <span className="scard-own">Your quote{t.clientName ? ` · ${t.clientName}` : ''}</span>}
         </div>
         <div className="scard-pills">
           {cities.map((cn, i) => (
@@ -251,7 +275,7 @@ function DetailsTab({ t, price }) {
         <div className="sdet-row"><span>Add-ons</span><span>{t.categories.map((c) => c.name).join(', ') || '—'}</span></div>
         <div className="sdet-row total"><span>Package price</span><span>{inr(price)}</span></div>
       </div>
-      <div className="sdet-tag"><Badge tone="new">{t.tag}</Badge><span className="sdet-uses">{t.usedCount} uses</span></div>
+      <div className="sdet-tag"><Badge tone="new">{t.tag}</Badge><span className="sdet-uses">{t.own ? (t.status || 'Past quote') : `${t.usedCount} uses`}</span></div>
     </div>
   )
 }

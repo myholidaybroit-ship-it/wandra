@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useApp, AUTO_ASSIGNEE } from '../../../store/AppContext'
+import { useApp, AUTO_ASSIGNEE, inr } from '../../../store/AppContext'
 import { Card, Button, Field, Input, Textarea, PillSelect, PillMultiSelect, DatePicker, formatDate } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import { useLeadSources } from '../../../utils/sources'
@@ -28,7 +28,7 @@ export default function ClientCreate() {
 
   const [f, setF] = useState({
     source: SOURCES[0] || 'Website', refId: '', assignee: AUTO_ASSIGNEE,
-    dests: [], startDate: '', nights: 1, adults: 2, children: 0, childAges: [],
+    dests: [], startDate: '', nights: 1, adults: 2, children: 0, childAges: [], budget: '',
     salutation: 'Mr.', name: '', email: '', city: '', comments: '',
     phones: [{ code: '+91 IN', number: '' }],
   })
@@ -94,7 +94,7 @@ export default function ClientCreate() {
       interest: f.dests.length ? f.dests.join(', ') : 'General Inquiry',
       source: f.source,
       note: f.comments || 'New Inquiry',
-      budget: 0,
+      budget: Number(f.budget) || 0,
       query: {
         refId: f.refId, assignee: f.assignee,
         startDate: f.startDate, nights, adults: Number(f.adults) || 0,
@@ -167,6 +167,9 @@ export default function ClientCreate() {
               </Field>
               <Field label="Start Date">
                 <DatePicker value={f.startDate} onChange={set('startDate')} placeholder="Pick a start date" />
+              </Field>
+              <Field label="Budget (₹)" hint="what they plan to spend — optional">
+                <Input type="number" min="0" value={f.budget} onChange={(e) => set('budget')(e.target.value)} placeholder="e.g. 80000" />
               </Field>
             </div>
             <div className="form-grid-3 mt-md">
@@ -276,6 +279,7 @@ export default function ClientCreate() {
                 <ReviewRow k="Start Date" v={formatDate(f.startDate)} />
                 <ReviewRow k="Duration" v={`${nights} ${nights === 1 ? 'Night' : 'Nights'}, ${nights + 1} Days`} />
                 <ReviewRow k="Travelers" v={paxLine} />
+                <ReviewRow k="Budget" v={Number(f.budget) ? inr(Number(f.budget)) : ''} />
               </div>
             </div>
 

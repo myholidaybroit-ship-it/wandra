@@ -10,7 +10,7 @@ import { useLeadSources } from '../../../utils/sources'
 import '../packages/detail.css'
 import './client-hub.css'
 
-const TABS = ['Overview', 'Packages', 'Bookings', 'Invoices', 'Quotations', 'Documents']
+const TABS = ['Overview', 'Packages', 'Bookings', 'Payments', 'Invoices', 'Quotations', 'Documents']
 const TRIP_STATUSES = ['New Query', 'In Progress', 'Converted', 'On Trip', 'Past Trips', 'Canceled', 'Dropped']
 const DOC_TYPES = ['Passport', 'PAN / Aadhaar', 'Visa', 'Flight Ticket', 'Hotel Voucher', 'Travel Insurance', 'Itinerary', 'Other']
 
@@ -67,7 +67,11 @@ export default function ClientDetail() {
     } catch { toast('Could not upload that document') } finally { setDocSaving(false) }
   }
 
-  const counts = { Packages: cPkgs.length, Bookings: cBookings.length, Invoices: cInvoices.length, Quotations: cQuotes.length, Documents: docs.length }
+  // every instalment across this client's bookings — the Payments tab lists
+  // them as one ledger: what's been collected, what's still pending
+  const instalments = cBookings.flatMap((b) => (b.schedule || []).map((r, i) => ({ ...r, _b: b, _i: i, id: `${b.id}-${i}` })))
+  const instPending = instalments.filter((r) => r.status !== 'Paid')
+  const counts = { Packages: cPkgs.length, Bookings: cBookings.length, Payments: instPending.length, Invoices: cInvoices.length, Quotations: cQuotes.length, Documents: docs.length }
 
   return (
     <div className="client-hub">
@@ -198,6 +202,36 @@ export default function ClientDetail() {
               ]} rows={cBookings} />
             )
           )}
+
+          {tab === 'Payments' && (() => {
+            const N = (v) => Number(v) || 0
+            const today = new Date().toISOString().slice(0, 10)
+            if (!instalments.length) return <HubEmpty text="No payment plans yet — a confirmed booking carries its advance & balance instalments here." cta="Go to bookings" onClick={() => setTab('Bookings')} />
+            const toCollect = instPending.reduce((a, r) => a + N(r.amount), 0)
+            const collected = instalments.reduce((a, r) => a + (r.status === 'Paid' ? N(r.amount) : 0), 0)
+            return (
+              <>
+                {canSeePricing && (
+                  <div className="ch-pay-sum">
+                    <span><b>{instPending.length}</b> instalment{instPending.length === 1 ? '' : 's'} pending</span>
+                    <span className="due"><b>{inr(toCollect)}</b> still to collect</span>
+                    <span><b>{inr(collected)}</b> collected on plan</span>
+                  </div>
+                )}
+                <DataTable columns={[
+                  { key: 'label', head: 'Instalment', render: (r) => <div><span className="cell-strong">{r.label || `Instalment ${r._i + 1}`}</span><div className="cell-sub mono">{r._b.code}</div></div> },
+                  { key: 'due', head: 'Due date', render: (r) => <span className="cell-sub">{r.status === 'Paid' ? (r.paidDate ? `Paid · ${r.paidDate}` : 'Paid') : (r.dueDate || '—')}</span> },
+                  { key: 'status', head: 'Status', render: (r) => (
+                    r.status === 'Paid'
+                      ? <span className="cell-strong c-success">✓ Paid</span>
+                      : <span className={`cell-strong ${r.dueDate && r.dueDate < today ? 'c-error' : ''}`}>{r.dueDate && r.dueDate < today ? 'Overdue' : 'Due'}</span>
+                  ) },
+                  ...(canSeePricing ? [{ key: 'amount', head: 'Amount', align: 'right', render: (r) => <span className="cell-strong">{inr(N(r.amount))}</span> }] : []),
+                  { key: 'open', head: '', align: 'right', render: (r) => <Link to={`/app/bookings/${r._b.id}`}><Button variant="tertiary" size="sm">Open booking</Button></Link> },
+                ]} rows={instalments} />
+              </>
+            )
+          })()}
 
           {tab === 'Invoices' && (
             cInvoices.length === 0 ? (

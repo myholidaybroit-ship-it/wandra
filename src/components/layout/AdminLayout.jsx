@@ -15,6 +15,11 @@ import './layout.css'
 const NAV_TOP = [
   { to: '/app', label: 'Dashboard', icon: 'dashboard', end: true, feature: 'dashboard.view', perm: 'dashboard' },
   { to: '/app/clients', label: 'Trips & Clients', icon: 'clients', feature: 'crm.view', perm: 'clients' },
+  // the money trail gets its own doors — quotes, bookings, invoices and
+  // vouchers were only reachable through a client before
+  { to: '/app/packages', label: 'Quotes & Packages', icon: 'packages', feature: 'builder.access', perm: 'builder' },
+  { to: '/app/bookings', label: 'Bookings', icon: 'bookings', feature: 'bookings.view', perm: 'bookings' },
+  { to: '/app/invoices', label: 'Invoices', icon: 'invoices', feature: 'invoices.view', perm: 'invoices' },
   { to: '/app/followups', label: 'Follow-ups', icon: 'clock', feature: 'tasks.view', perm: 'tasks', badge: 'tasks' },
 ]
 const MASTER_DATA = [
