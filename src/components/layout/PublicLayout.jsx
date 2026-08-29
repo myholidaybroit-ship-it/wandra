@@ -6,6 +6,8 @@ import './layout.css'
 export default function PublicLayout() {
   const loc = useLocation()
   const onLanding = loc.pathname === '/'
+  // the marketing page brings its own nav + full footer — no double chrome
+  if (onLanding) return <Outlet />
   return (
     <div className="public-shell">
       <nav className="public-nav">
