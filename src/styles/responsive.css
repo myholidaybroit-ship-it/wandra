@@ -1,0 +1,84 @@
+/* ============================================================
+   Mobile & tablet pass — loaded LAST so it wins over page styles.
+   The CRM must be workable from a phone or iPad on the road:
+   tables scroll sideways instead of clipping, grids collapse,
+   tap targets grow, and sticky bars wrap.
+   ============================================================ */
+
+/* ---- Tables: never clip — scroll sideways inside their card ---- */
+@media (max-width: 1024px) {
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-wrap .data-table { min-width: 640px; }
+  .rp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rp-table { min-width: 640px; }
+}
+
+/* ---- Tablet (≤1024px) ---- */
+@media (max-width: 1024px) {
+  .content-inner { max-width: 100%; }
+  /* segmented tabs (client hub, payments, bookings) scroll instead of squeeze */
+  .seg-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .seg-tabs::-webkit-scrollbar { display: none; }
+  .seg-tabs .seg-tab { white-space: nowrap; flex-shrink: 0; }
+}
+
+/* ---- Phone (≤640px) ---- */
+@media (max-width: 640px) {
+  /* iOS zooms into inputs under 16px — keep fields zoom-free */
+  input.control, select.control, textarea.control, .control input, .qb-unit-input input { font-size: 16px; }
+
+  .page-header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .page-header .row, .page-header > div:last-child { flex-wrap: wrap; }
+
+  /* toolbars & pagers stack */
+  .list-toolbar { flex-wrap: wrap; gap: 10px; }
+  .list-pager { flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  /* client hub header */
+  .ch-head { flex-wrap: wrap; }
+  .ch-actions { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+  .ch-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  /* reports KPI bands wrap into a grid */
+  .rp-band { display: grid !important; grid-template-columns: repeat(2, 1fr); gap: 10px 18px; }
+  .rp-band-period { grid-column: 1 / -1; }
+  .rp-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .rp-controls { flex-wrap: wrap; }
+
+  /* invoice create: main + summary stack */
+  .ic-grid { grid-template-columns: 1fr !important; }
+  .ic-items-head { display: none; }
+  .ic-item { grid-template-columns: 1fr 1fr !important; }
+  .ic-item > *:first-child { grid-column: 1 / -1; }
+
+  /* new-query wizard stepper scrolls */
+  .q-steps { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 4px; }
+  .q-steps::-webkit-scrollbar { display: none; }
+  .q-step { flex-shrink: 0; }
+
+  /* quote builder sticky pricing bar wraps */
+  .qb-pricing-inner { flex-wrap: wrap; gap: 10px; padding: 10px 14px; }
+  .qb-price-final { margin-left: auto; }
+  .qb-pricing-inner .btn { width: 100%; }
+
+  /* quote builder sell table scrolls */
+  .qb-sell-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .qb-sell-row { min-width: 560px; }
+
+  /* generic two-column detail grids stack */
+  .kv-grid-3, .kv-grid { grid-template-columns: 1fr 1fr !important; }
+  .inv-totals { margin-left: 0; }
+
+  /* modals hug the screen */
+  .modal { width: calc(100vw - 24px) !important; max-width: calc(100vw - 24px) !important; }
+
+  /* bigger touch targets in the sidebar */
+  .side-link { padding: 13px 12px; font-size: 13.5px; }
+}
+
+/* ---- Small phone (≤420px) ---- */
+@media (max-width: 420px) {
+  .ch-stats { grid-template-columns: repeat(2, 1fr); }
+  .kv-grid-3, .kv-grid { grid-template-columns: 1fr !important; }
+  .rp-band { grid-template-columns: 1fr 1fr; }
+}

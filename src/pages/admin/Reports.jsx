@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useApp, inr, computePricing } from '../../store/AppContext'
+import { useApp, inr } from '../../store/AppContext'
 import { Button, DonutChart, Funnel, HBars, StackBar } from '../../components/ui/UI'
 import { Icon } from '../../components/ui/icons'
 import { downloadCsv } from '../../utils/csv'
@@ -46,9 +46,8 @@ export default function Reports() {
     const quoted = quotations.filter((qt) => pPkgs.some((p) => p.id === qt.packageId))
     const quotedValue = quoted.reduce((s, x) => s + (x.amount || 0), 0)
     const pBk = bookings.filter((b) => b.status !== 'Cancelled' && hit(b.travelDate))
-    const bookedValue = pBk.reduce((s, b) => s + b.value, 0)
+    const bookedValue = pBk.reduce((s, b) => s + (b.value || 0), 0)
     const collected = pBk.reduce((s, b) => s + (b.paid || 0), 0)
-    const profit = pPkgs.reduce((s, p) => s + (computePricing(p).profit || 0), 0)
 
     // breakdown by active dimension
     const of = DIMS.find((d) => d.key === dim).of
@@ -85,9 +84,32 @@ export default function Reports() {
       { label: 'Booked', value: bookedValue },
       { label: 'Collected', value: collected },
       { label: 'Outstanding', value: Math.max(0, bookedValue - collected) },
-      { label: 'Est. profit', value: profit },
     ]
-    return { leads, stat, total, movedPlus, lost, convPct, quoted: quoted.length, quotedValue, bookings: pBk.length, bookedValue, collected, profit, rows, donut, dests, funnel, mix, revenue }
+
+    // ---- sales team performance (per team member) ----
+    const byId = new Map(leads.map((c) => [c.id, c.query?.assignee || 'Unassigned']))
+    const byName = new Map(leads.map((c) => [c.name, c.query?.assignee || 'Unassigned']))
+    const team = {}
+    const trow = (n) => (team[n] = team[n] || { name: n || 'Unassigned', leads: 0, converted: 0, quoted: 0, booked: 0, collected: 0 })
+    leads.forEach((c) => {
+      const t = trow(c.query?.assignee || 'Unassigned')
+      t.leads++
+      if (['Converted', 'On Trip', 'Past Trips'].includes(c.tripStatus)) t.converted++
+    })
+    quoted.forEach((qt) => {
+      const p = pPkgs.find((x) => x.id === qt.packageId)
+      if (p) trow(byId.get(p.clientId) || byName.get(p.clientName) || 'Unassigned').quoted += qt.amount || 0
+    })
+    pBk.forEach((b) => {
+      const t = trow(byName.get(b.clientName) || 'Unassigned')
+      t.booked += b.value || 0
+      t.collected += b.paid || 0
+    })
+    const salesTeam = Object.values(team)
+      .map((t) => ({ ...t, conv: t.leads ? Math.round((t.converted / t.leads) * 100) : 0 }))
+      .sort((a, b) => b.booked - a.booked || b.leads - a.leads)
+
+    return { leads, stat, total, movedPlus, lost, convPct, quoted: quoted.length, quotedValue, bookings: pBk.length, bookedValue, collected, rows, donut, dests, funnel, mix, revenue, salesTeam }
   }, [clients, packages, bookings, quotations, mode, period, dim])
 
   const shown = R.rows.filter((r) => r.name.toLowerCase().includes(q.trim().toLowerCase()))
@@ -97,6 +119,10 @@ export default function Reports() {
   const exportSummary = () => downloadCsv(`report-${dim}-${periodTag}`,
     [dimLabel, 'Total', ...PIPE, 'Lost', 'Conversion %'],
     shown.map((r) => [r.name, r.total, ...PIPE.map((s) => r[s]), r.lost, `${r.conv}%`]))
+
+  const exportTeam = () => downloadCsv(`sales-team-${periodTag}`,
+    ['Team member', 'Leads', 'Converted', 'Conversion %', 'Quoted value', 'Booked value', 'Collected'],
+    R.salesTeam.map((t) => [t.name, t.leads, t.converted, `${t.conv}%`, t.quoted, t.booked, t.collected]))
 
   const exportLeads = () => downloadCsv(`leads-${periodTag}`,
     ['Name', 'Phone', 'Email', 'Status', 'Source', 'Sales person', 'Destination', 'Start date', 'Nights', 'Adults', 'Children', 'Created'],
@@ -147,7 +173,6 @@ export default function Reports() {
         <Kpi k={`Bookings (${R.bookings})`} v={inr(R.bookedValue)} />
         <Kpi k="Collected" v={inr(R.collected)} good />
         <Kpi k="Outstanding" v={inr(Math.max(0, R.bookedValue - R.collected))} bad />
-        <Kpi k="Est. Profit" v={inr(R.profit)} good />
       </div>
       )}
 
@@ -184,6 +209,43 @@ export default function Reports() {
             <HBars data={R.revenue} color="#111113" formatV={inr} />
           </div>
         )}
+      </div>
+
+      {/* ---------- sales team performance ---------- */}
+      <div className="rp-break rp-team">
+        <div className="rp-break-main">
+          <div className="rp-break-bar">
+            <span className="rp-chart-t" style={{ margin: 0 }}>Sales team performance</span>
+            <span className="rp-break-count">{R.salesTeam.length} member{R.salesTeam.length === 1 ? '' : 's'}</span>
+            <Button size="sm" variant="secondary" onClick={exportTeam}><Icon name="file" size={13} /> Export CSV</Button>
+          </div>
+          <div className="rp-table-wrap">
+            <table className="rp-table">
+              <thead>
+                <tr>
+                  <th>Team member</th><th>Leads</th><th>Converted</th><th>Conv.</th>
+                  {canSeePricing && <><th>Quoted</th><th>Booked</th><th>Collected</th></>}
+                </tr>
+              </thead>
+              <tbody>
+                {R.salesTeam.length === 0 && <tr><td colSpan={canSeePricing ? 7 : 4} className="rp-empty-cell">No activity in this period.</td></tr>}
+                {R.salesTeam.map((t) => (
+                  <tr key={t.name}>
+                    <td className="rp-td-name">{t.name}</td>
+                    <td className="rp-td-strong">{t.leads}</td>
+                    <td>{t.converted}</td>
+                    <td><span className="rp-conv"><i style={{ width: `${t.conv}%` }} />{t.conv}%</span></td>
+                    {canSeePricing && <>
+                      <td>{inr(t.quoted)}</td>
+                      <td className="rp-td-strong">{inr(t.booked)}</td>
+                      <td>{inr(t.collected)}</td>
+                    </>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {/* ---------- breakdown ---------- */}

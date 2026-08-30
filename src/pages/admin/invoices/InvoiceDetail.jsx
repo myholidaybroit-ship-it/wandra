@@ -5,6 +5,7 @@ import { PageHeader, Card, Button, Badge, Modal, Field, Input, Select } from '..
 import { AgencyLogo } from '../../../components/ui/AgencyBrand'
 import { PayTo } from '../../../components/ui/PayTo'
 import FollowUpPanel from '../../../components/ui/FollowUpPanel'
+import { invoiceBreakup } from '../../../utils/invoiceMath'
 import { preloadAndDownload } from '../../../utils/pdf'
 import './invoice.css'
 
@@ -19,10 +20,8 @@ export default function InvoiceDetail() {
   const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
   if (!inv) return <div>Invoice not found.</div>
   const client = clients.find((c) => c.id === inv.clientId)
-  const subtotal = inv.items.reduce((s, it) => s + it.qty * it.rate, 0)
-  const tax = inv.items.reduce((s, it) => s + it.qty * it.rate * (it.tax / 100), 0)
-  const total = subtotal + tax
-  const paid = (inv.payments || []).reduce((s, p) => s + p.amount, 0)
+  const { subtotal, itemTax, gst, tcs, total, paid } = invoiceBreakup(inv)
+  const gstPct = Number(inv.gstPercent) || Math.max(0, ...inv.items.map((it) => Number(it.tax) || 0))
   const invSettings = { ...DEFAULT_INVOICE_SETTINGS, ...(agency.invoiceSettings || {}) }
 
   const record = () => {
@@ -64,7 +63,13 @@ export default function InvoiceDetail() {
 
           <div className="inv-totals">
             <div className="fin-line"><span className="c-body">Subtotal</span><span>{inr(subtotal)}</span></div>
-            <div className="fin-line"><span className="c-body">Tax</span><span>{inr(tax)}</span></div>
+            {/* govt-format: GST and TCS as their own labelled lines, never merged */}
+            {(inv.gst || gst > 0)
+              ? <div className="fin-line"><span className="c-body">GST{gstPct ? ` (${gstPct}%)` : ''}</span><span>{inr(gst + itemTax)}</span></div>
+              : <div className="fin-line"><span className="c-body">Tax</span><span>{inr(itemTax)}</span></div>}
+            {(inv.tcs || tcs > 0) && (
+              <div className="fin-line"><span className="c-body">TCS{Number(inv.tcsPercent) ? ` (${Number(inv.tcsPercent)}%)` : ''}</span><span>{inr(tcs)}</span></div>
+            )}
             <div className="fin-line total"><span>Total</span><span>{inr(total)}</span></div>
             <div className="fin-line"><span className="c-success">Paid</span><span className="c-success">{inr(paid)}</span></div>
             <div className="fin-line"><span className="c-error">Balance</span><span className="c-error">{inr(total - paid)}</span></div>

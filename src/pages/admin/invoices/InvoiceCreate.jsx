@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp, inr, computePricing } from '../../../store/AppContext'
 import { PageHeader, Button, Field, Input, PillSelect, DatePicker } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
+import { invoiceBreakup } from '../../../utils/invoiceMath'
 import './invoice.css'
 
 const TYPES = ['Booking', 'Package', 'Service']
@@ -29,9 +30,24 @@ function packageLines(p) {
   ].filter((it) => it.rate > 0)
 }
 
-/** The whole trip on one line — description built from what the trip actually is. */
+/** The quote's own GST/TCS — carried onto the invoice as separate labelled
+ *  lines (govt format), with the exact amounts the builder computed. */
+function packageTaxFields(p) {
+  const pr = p?.pricing || {}
+  const gstOn = pr.taxEnabled === true && Number(pr.taxPercent) > 0
+  const tcsOn = pr.tcsEnabled === true && Number(pr.tcsPercent) > 0
+  return {
+    gst: gstOn, gstPercent: gstOn ? Number(pr.taxPercent) || 0 : 5, gstAmount: gstOn ? Number(pr.tax ?? pr.gstAmount) || 0 : null,
+    tcs: tcsOn, tcsPercent: tcsOn ? Number(pr.tcsPercent) || 0 : 2, tcsAmount: tcsOn ? Number(pr.tcsAmount) || 0 : null,
+  }
+}
+
+/** The whole trip on one line — description built from what the trip actually is.
+ *  The rate is the PRE-TAX base, so GST/TCS show separately yet the total still
+ *  equals the quoted grand total. */
 function packageSingleLine(p) {
   const pr = computePricing(p)
+  const tf = packageTaxFields(p)
   const dest = (p.destination || '').split(' - ')[0]
   const pax = p.pax || {}
   const who = [
@@ -40,16 +56,22 @@ function packageSingleLine(p) {
     Number(pax.infants) ? `${Number(pax.infants)} infant${Number(pax.infants) > 1 ? 's' : ''}` : '',
   ].filter(Boolean).join(', ')
   const desc = `Travel package ${p.code} — ${dest} (${p.nights}N / ${p.days}D)${who ? ` · ${who}` : ''}`
-  return [{ description: desc, qty: 1, rate: Math.round(Number(p.pricing?.grandTotal) || pr.grandTotal || 0), tax: 0 }]
+  const grand = Math.round(Number(p.pricing?.grandTotal) || pr.grandTotal || 0)
+  const rate = Math.max(0, grand - (tf.gst ? tf.gstAmount : 0) - (tf.tcs ? tf.tcsAmount : 0))
+  return [{ description: desc, qty: 1, rate, tax: 0 }]
 }
 
 export default function InvoiceCreate() {
   const { clients, packages, bookings, agency, addInvoice, toast } = useApp()
   const nav = useNavigate()
-  const [f, setF] = useState({ clientId: '', type: 'Booking', bookingId: '', packageId: '', issueDate: today(), dueDate: '', gst: false })
+  const [f, setF] = useState({ clientId: '', type: 'Booking', bookingId: '', packageId: '', issueDate: today(), dueDate: '', gst: false, gstPercent: 5, gstAmount: null, tcs: false, tcsPercent: 2, tcsAmount: null })
   const [billMode, setBillMode] = useState('single')
   const [items, setItems] = useState([blankItem()])
-  const setItem = (i, k, v) => setItems(items.map((it, idx) => (idx === i ? { ...it, [k]: v } : it)))
+  const setItem = (i, k, v) => {
+    setItems(items.map((it, idx) => (idx === i ? { ...it, [k]: v } : it)))
+    // hand-edited items invalidate the quote's exact GST/TCS amounts — fall back to % math
+    setF((s) => (s.gstAmount != null || s.tcsAmount != null ? { ...s, gstAmount: null, tcsAmount: null } : s))
+  }
   const addItem = () => setItems([...items, blankItem()])
   const rmItem = (i) => setItems(items.length > 1 ? items.filter((_, idx) => idx !== i) : [blankItem()])
 
@@ -67,7 +89,10 @@ export default function InvoiceCreate() {
   const loadFromPackage = (pid) => {
     const p = packages.find((x) => x.id === pid)
     if (!p) { setF((s) => ({ ...s, packageId: '' })); return }
-    setF((s) => ({ ...s, packageId: pid, clientId: p.clientId || s.clientId }))
+    // the quote's GST/TCS ride along as separate lines (single-line mode only —
+    // the itemised breakdown keeps its own component amounts)
+    const tf = billMode === 'single' ? packageTaxFields(p) : {}
+    setF((s) => ({ ...s, packageId: pid, clientId: p.clientId || s.clientId, ...tf }))
     fillFromPackage(p, billMode)
     toast(`Loaded ${p.code} — ${BILL_LABEL[billMode].toLowerCase()}`)
   }
@@ -102,9 +127,7 @@ export default function InvoiceCreate() {
   }, [bookings, packages, clients]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const lineAmt = (it) => (Number(it.qty) || 0) * (Number(it.rate) || 0) * (1 + (Number(it.tax) || 0) / 100)
-  const subtotal = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.rate) || 0), 0)
-  const tax = items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.rate) || 0) * ((Number(it.tax) || 0) / 100), 0)
-  const grand = subtotal + tax
+  const bk = invoiceBreakup({ ...f, items })
 
   const create = async () => {
     if (!f.clientId) return toast('Pick a client first')
@@ -146,9 +169,33 @@ export default function InvoiceCreate() {
               <Field label="Issue Date"><DatePicker value={f.issueDate} onChange={(v) => setF({ ...f, issueDate: v })} /></Field>
               <Field label="Due Date"><DatePicker value={f.dueDate} onChange={(v) => setF({ ...f, dueDate: v })} placeholder="Pick a due date" /></Field>
               <Field label="Tax Treatment">
-                <div className="qs-toggle ic-gst">
-                  <button className={`qs-pill ${!f.gst ? 'on' : ''}`} onClick={() => setF({ ...f, gst: false })}>Non-GST</button>
-                  <button className={`qs-pill ${f.gst ? 'on' : ''}`} onClick={() => setF({ ...f, gst: true })}>GST</button>
+                <div className="row gap-sm wrap">
+                  <div className="qs-toggle ic-gst">
+                    <button className={`qs-pill ${!f.gst ? 'on' : ''}`} onClick={() => setF({ ...f, gst: false, gstAmount: null })}>Non-GST</button>
+                    <button className={`qs-pill ${f.gst ? 'on' : ''}`} onClick={() => setF({ ...f, gst: true, gstAmount: null })}>GST</button>
+                  </div>
+                  {f.gst && (
+                    <div className="ic-taxpct">
+                      <Input type="number" min="0" value={f.gstPercent}
+                        onChange={(e) => setF({ ...f, gstPercent: e.target.value, gstAmount: null })} />
+                      <span>%</span>
+                    </div>
+                  )}
+                </div>
+              </Field>
+              <Field label="TCS" hint="Tax collected at source — shown as its own line (govt format)">
+                <div className="row gap-sm wrap">
+                  <div className="qs-toggle ic-gst">
+                    <button className={`qs-pill ${!f.tcs ? 'on' : ''}`} onClick={() => setF({ ...f, tcs: false, tcsAmount: null })}>No TCS</button>
+                    <button className={`qs-pill ${f.tcs ? 'on' : ''}`} onClick={() => setF({ ...f, tcs: true, tcsAmount: null })}>TCS</button>
+                  </div>
+                  {f.tcs && (
+                    <div className="ic-taxpct">
+                      <Input type="number" min="0" value={f.tcsPercent}
+                        onChange={(e) => setF({ ...f, tcsPercent: e.target.value, tcsAmount: null })} />
+                      <span>%</span>
+                    </div>
+                  )}
                 </div>
               </Field>
             </div>
@@ -189,10 +236,12 @@ export default function InvoiceCreate() {
               </div>
             )}
             <div className="ic-line"><span>Items</span><span>{items.filter((it) => it.description.trim()).length}</span></div>
-            <div className="ic-line"><span>Subtotal</span><span>{inr(subtotal)}</span></div>
-            <div className="ic-line"><span>Tax</span><span>{inr(tax)}</span></div>
-            <div className="ic-line total"><span>Total</span><span>{inr(grand)}</span></div>
-            <div className="ic-gst-note">{f.gst ? `GST invoice — under GSTIN ${agency.gstin}` : 'Non-GST invoice'}</div>
+            <div className="ic-line"><span>Subtotal</span><span>{inr(bk.subtotal)}</span></div>
+            {bk.itemTax > 0 && <div className="ic-line"><span>Item tax</span><span>{inr(bk.itemTax)}</span></div>}
+            {f.gst && <div className="ic-line"><span>GST ({Number(f.gstPercent) || 0}%)</span><span>{inr(bk.gst)}</span></div>}
+            {f.tcs && <div className="ic-line"><span>TCS ({Number(f.tcsPercent) || 0}%)</span><span>{inr(bk.tcs)}</span></div>}
+            <div className="ic-line total"><span>Total</span><span>{inr(bk.total)}</span></div>
+            <div className="ic-gst-note">{f.gst ? `GST invoice${agency.gstin ? ` — under GSTIN ${agency.gstin}` : ''}` : 'Non-GST invoice'}{f.tcs ? ' · TCS collected at source' : ''}</div>
             <Button className="w-full mt-base" onClick={create}>Create Invoice</Button>
             <Button variant="tertiary" className="w-full mt-xs" onClick={() => nav('/app/invoices')}>Cancel</Button>
           </div>

@@ -26,6 +26,9 @@ export const ROUTE_ACCESS = [
   ['/app/activities', 'master.activities', 'master'],
   ['/app/bookings', 'bookings.view', 'bookings'],
   ['/app/invoices', 'invoices.view', 'invoices'],
+  // payments & ledger ride on the invoices module (same money-trail access)
+  ['/app/payments', 'invoices.view', 'invoices'],
+  ['/app/calendar', 'bookings.view', 'bookings'],
   ['/app/quotations', 'quotations.view', 'builder'],
   ['/app/vouchers', 'vouchers.view', 'vouchers'],
   ['/app/followups/rules', 'tasks.automation', 'tasks'],

@@ -37,6 +37,9 @@
 .ic-card { background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-xl); padding: 22px 24px; }
 .ic-card-title { font-size: 13.5px; font-weight: 800; margin-bottom: 18px; }
 .ic-gst { align-self: flex-start; }
+.ic-taxpct { display: inline-flex; align-items: center; gap: 6px; }
+.ic-taxpct .control, .ic-taxpct input { width: 74px; }
+.ic-taxpct > span { font-size: 12px; font-weight: 600; color: var(--color-stone); }
 
 /* items table */
 .ic-items { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }

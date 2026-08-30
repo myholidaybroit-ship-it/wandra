@@ -15,7 +15,7 @@ const SERVICE_TYPES = ['Arrival Transfer', 'Departure Transfer', 'Intercity Tran
 const COMP_CHILD = ['No comp', 'Upto 5y (0C)', 'Upto 6y (0C)', 'Upto 8y (0C)', 'Upto 11y (0C)']
 const STARS = ['3 Star', '4 Star', '5 Star', 'Luxury']
 const ROUND_OPTS = [0, 100, 500, 1000]
-const PRICING_DEFAULTS = { markupMode: 'percent', markupValue: 0, taxOn: 'cost_markup', taxEnabled: true, taxPercent: 5, roundTo: 0, customerRemarks: '' }
+const PRICING_DEFAULTS = { markupMode: 'percent', markupValue: 0, taxOn: 'cost_markup', taxEnabled: true, taxPercent: 5, tcsEnabled: false, tcsPercent: 2, roundTo: 0, customerRemarks: '' }
 // A package that has already moved past the quote stage must never be pulled
 // back to Draft/Quoted by re-saving the builder.
 const LOCKED_STATUSES = ['Booked', 'Confirmed', 'Completed', 'Cancelled']
@@ -379,7 +379,7 @@ export default function QuoteBuilder() {
   const setExtra = (i, patch) => setOpt({ extras: opt.extras.map((e, x) => (x === i ? { ...e, ...patch } : e)) })
 
   /* ---------- live totals for the active option ---------- */
-  const t = useMemo(() => optionTotals(opt, q), [opt, q.markupMode, q.markupValue, q.taxOn, q.taxEnabled, q.taxPercent, q.roundTo])
+  const t = useMemo(() => optionTotals(opt, q), [opt, q.markupMode, q.markupValue, q.taxOn, q.taxEnabled, q.taxPercent, q.tcsEnabled, q.tcsPercent, q.roundTo])
 
   /* ---------- save ----------
      A quote can always be saved — partial data just stays a Draft. Once every
@@ -938,6 +938,12 @@ export default function QuoteBuilder() {
                   <div className="qb-unit-input"><input type="number" min="0" value={q.taxPercent} disabled={!q.taxEnabled} onChange={(e) => upd({ taxPercent: e.target.value })} /><span>%</span></div>
                 </div>
               </Field>
+              <Field label="TCS" hint="Collected at source — on the total incl. tax">
+                <div className="qb-tax-pair">
+                  <label className="qb-toggle-line"><input type="checkbox" checked={!!q.tcsEnabled} onChange={(e) => upd({ tcsEnabled: e.target.checked })} /><span className="qb-check-box"><Icon name="check" size={12} strokeWidth={2.6} /></span></label>
+                  <div className="qb-unit-input"><input type="number" min="0" value={q.tcsPercent} disabled={!q.tcsEnabled} onChange={(e) => upd({ tcsPercent: e.target.value })} /><span>%</span></div>
+                </div>
+              </Field>
               <Field label="Round to"><PillSelect value={q.roundTo ? `Nearest ${q.roundTo}` : 'No rounding'} options={['No rounding', 'Nearest 100', 'Nearest 500', 'Nearest 1000']} onChange={(v) => upd({ roundTo: v === 'No rounding' ? 0 : Number(v.replace('Nearest ', '')) })} /></Field>
             </div>
 
@@ -956,7 +962,7 @@ export default function QuoteBuilder() {
             </div>
 
             <div className="qb-sell-table">
-              <div className="qb-sell-row head"><span>Option</span><span>Cost</span><span>Markup</span><span>Tax</span><span>Selling</span><span>Profit</span></div>
+              <div className="qb-sell-row head"><span>Option</span><span>Cost</span><span>Markup</span><span>Tax{q.tcsEnabled ? ' + TCS' : ''}</span><span>Selling</span><span>Profit</span></div>
               {q.options.map((o, i) => {
                 const ot = optionTotals(o, q)
                 return (
@@ -964,7 +970,7 @@ export default function QuoteBuilder() {
                     <span className="qb-sell-name">Opt {i + 1}{o.name ? ': ' + o.name : ''}</span>
                     <span>{inr(ot.costPrice)}</span>
                     <span className="qb-sell-markup">+{inr(ot.markup)}</span>
-                    <span>{inr(ot.tax)}</span>
+                    <span>{inr(ot.tax + ot.tcs)}</span>
                     <span className="qb-sell-total">{inr(ot.grandTotal)}</span>
                     <span className="qb-sell-profit">{inr(ot.profit)}</span>
                   </div>
@@ -1112,6 +1118,13 @@ export default function QuoteBuilder() {
             <span className="qb-price-k">Tax {q.taxEnabled ? `${num(q.taxPercent)}%` : 'off'}</span>
             <span className="qb-price-v sm">{inr(t.tax)}</span>
           </div>
+          {q.tcsEnabled && <>
+            <span className="qb-price-op">+</span>
+            <div className="qb-price-cell narrow">
+              <span className="qb-price-k">TCS {num(q.tcsPercent)}%</span>
+              <span className="qb-price-v sm">{inr(t.tcs)}</span>
+            </div>
+          </>}
           <span className="qb-price-arrow"><Icon name="chevron" size={16} className="qb-arrow-r" /></span>
           <div className="qb-price-final">
             <span className="qb-final-k">Option {oi + 1} selling {t.roundTo ? `· round ${t.roundTo}` : ''}</span>
@@ -1667,17 +1680,20 @@ function optionTotals(opt, q) {
   const b2bCost = num(opt.b2bCost)
   const costPrice = b2bCost > 0 ? b2bCost : hotelCost + transportCost + activityCost + flightCost + extraCost
   const sellSum = hotelSell + transportSell + activitySell + flightSell + extraSell
-  // ---- Markup → Tax → Rounding engine (selling built up from cost) ----
+  // ---- Markup → Tax → TCS → Rounding engine (selling built up from cost) ----
   const markup = q.markupMode === 'flat' ? num(q.markupValue) : costPrice * num(q.markupValue) / 100
   const taxBase = q.taxOn === 'cost_markup' ? costPrice + markup : costPrice
   const tax = q.taxEnabled ? Math.round(taxBase * num(q.taxPercent) / 100 * 100) / 100 : 0
-  const preRound = costPrice + markup + tax
+  // TCS is collected on the whole invoice value (cost + markup + GST) — the
+  // govt-format quote/invoice shows it as its own line, never merged with GST
+  const tcs = q.tcsEnabled ? Math.round((costPrice + markup + tax) * num(q.tcsPercent) / 100 * 100) / 100 : 0
+  const preRound = costPrice + markup + tax + tcs
   const roundTo = num(q.roundTo)
   const grandTotal = roundTo ? Math.round(preRound / roundTo) * roundTo : Math.round(preRound)
   const sellingPrice = grandTotal
   const multiplier = costPrice ? (grandTotal / costPrice) : 0
-  const profit = grandTotal - costPrice - tax
-  return { hotelCost, hotelSell, transportCost, transportSell, activityCost, activitySell, flightCost, flightSell, extraCost, extraSell, b2bCost, costPrice, sellSum, markup, taxBase, tax, preRound, roundTo, sellingPrice, multiplier, grandTotal, profit }
+  const profit = grandTotal - costPrice - tax - tcs
+  return { hotelCost, hotelSell, transportCost, transportSell, activityCost, activitySell, flightCost, flightSell, extraCost, extraSell, b2bCost, costPrice, sellSum, markup, taxBase, tax, tcs, preRound, roundTo, sellingPrice, multiplier, grandTotal, profit }
 }
 
 /* ---------- per-destination inclusions / exclusions ---------- */
@@ -1958,11 +1974,12 @@ function serialize(q, oi, t, destinations, presets) {
       mode: 'Builder', costPrice: t.costPrice, sellingPrice: t.grandTotal, grandTotal: t.grandTotal, profit: t.profit,
       markupMode: q.markupMode, markupValue: num(q.markupValue), markup: t.markup,
       taxOn: q.taxOn, taxEnabled: q.taxEnabled, taxPercent: num(q.taxPercent), tax: t.tax, roundTo: num(q.roundTo),
+      tcsEnabled: !!q.tcsEnabled, tcsPercent: num(q.tcsPercent), tcsAmount: t.tcs,
       gstPercent: num(q.taxPercent), gstAmount: t.tax, // legacy aliases for downstream detail/invoice
       hotelSell: t.hotelSell, transportSell: t.transportSell, activitySell: t.activitySell, flightSell: t.flightSell, extraSell: t.extraSell,
     },
     comments: q.comments, customerRemarks: q.customerRemarks || '',
     optionCount: q.options.length, activeOption: oi,
-    builderV2: { clientId: q.clientId, adults: q.adults, children: q.children, infants: q.infants, rooms: q.rooms, sectors: q.sectors, options: q.options, ieByDest: q.ieByDest, dayNotes: q.dayNotes || {}, markupMode: q.markupMode, markupValue: q.markupValue, taxOn: q.taxOn, taxEnabled: q.taxEnabled, taxPercent: q.taxPercent, roundTo: q.roundTo, customerRemarks: q.customerRemarks || '' },
+    builderV2: { clientId: q.clientId, adults: q.adults, children: q.children, infants: q.infants, rooms: q.rooms, sectors: q.sectors, options: q.options, ieByDest: q.ieByDest, dayNotes: q.dayNotes || {}, markupMode: q.markupMode, markupValue: q.markupValue, taxOn: q.taxOn, taxEnabled: q.taxEnabled, taxPercent: q.taxPercent, tcsEnabled: !!q.tcsEnabled, tcsPercent: q.tcsPercent, roundTo: q.roundTo, customerRemarks: q.customerRemarks || '' },
   }
 }

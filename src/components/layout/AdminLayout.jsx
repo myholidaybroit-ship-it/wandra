@@ -20,6 +20,8 @@ const NAV_TOP = [
   { to: '/app/packages', label: 'Quotes & Packages', icon: 'packages', feature: 'builder.access', perm: 'builder' },
   { to: '/app/bookings', label: 'Bookings', icon: 'bookings', feature: 'bookings.view', perm: 'bookings' },
   { to: '/app/invoices', label: 'Invoices', icon: 'invoices', feature: 'invoices.view', perm: 'invoices' },
+  { to: '/app/payments', label: 'Payments & Ledger', icon: 'billing', feature: 'invoices.view', perm: 'invoices' },
+  { to: '/app/calendar', label: 'Calendar', icon: 'calendar', feature: 'bookings.view', perm: 'bookings' },
   { to: '/app/followups', label: 'Follow-ups', icon: 'clock', feature: 'tasks.view', perm: 'tasks', badge: 'tasks' },
 ]
 const MASTER_DATA = [

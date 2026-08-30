@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useApp } from '../../store/AppContext'
-import { PageHeader, Card, Button, Field, Input } from '../../components/ui/UI'
+import { useApp, CURRENCIES } from '../../store/AppContext'
+import { PageHeader, Card, Button, Field, Input, Select } from '../../components/ui/UI'
 import { Icon } from '../../components/ui/icons'
 import { ImageInput } from '../../components/ui/ImageInput'
 import { DEFAULT_LEAD_SOURCES } from '../../utils/sources'
@@ -12,6 +12,8 @@ export default function Settings() {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const save = () => {
     setAgency({ ...agency, name: f.name, legalName: f.legalName || '', logo: f.logo || '', paymentQr: f.paymentQr || '', email: f.email, phone: f.phone, website: f.website, address: f.address, gstin: f.gstin,
+      // only send currency when it changed — it's gated by its own plan feature
+      ...(f.currency && f.currency !== agency.currency ? { currency: f.currency } : {}),
       bank: { accountName: f.accountName, bankName: f.bankName, accountNumber: f.accountNumber, ifsc: f.ifsc } })
     toast('Settings saved — these details now appear on all itineraries, vouchers & invoices')
   }
@@ -33,6 +35,11 @@ export default function Settings() {
             <Field label="Website"><Input value={f.website} onChange={set('website')} /></Field>
             <Field label="Address"><Input value={f.address} onChange={set('address')} /></Field>
             <Field label="GSTIN / Tax No."><Input value={f.gstin} onChange={set('gstin')} /></Field>
+            <Field label="Currency" hint="All prices, quotes & invoices show in this currency — handy when working with international DMCs">
+              <Select value={f.currency || 'INR'} onChange={set('currency')}>
+                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
+              </Select>
+            </Field>
           </div>
         </Card>
         <div className="col gap-base">

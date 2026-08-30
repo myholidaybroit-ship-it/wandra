@@ -352,7 +352,8 @@
 /* Markup, Tax & Rounding */
 .qb-markup { margin-top: 20px; border-top: 1px solid var(--color-hairline-soft); padding-top: 18px; }
 .qb-markup-title { font-size: 12.5px; font-weight: 700; margin-bottom: 14px; }
-.qb-markup-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; align-items: end; }
+.qb-markup-controls { display: grid; grid-template-columns: 1.3fr 1.1fr 1fr 1fr 1fr; gap: 16px; align-items: end; }
+@media (max-width: 1100px) { .qb-markup-controls { grid-template-columns: 1fr 1fr 1fr; } }
 @media (max-width: 860px) { .qb-markup-controls { grid-template-columns: 1fr 1fr; } }
 .qb-markup-pair { display: flex; gap: 8px; }
 .qb-markup-pair .pill-select-wrap { flex: 1; }

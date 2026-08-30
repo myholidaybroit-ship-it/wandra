@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useApp, inr } from '../../../store/AppContext'
 import { PageHeader, DataTable, Badge, Button, ConfirmDelete } from '../../../components/ui/UI'
-
-const total = (i) => i.items.reduce((s, it) => s + it.qty * it.rate * (1 + it.tax / 100), 0)
-const paid = (i) => (i.payments || []).reduce((s, p) => s + p.amount, 0)
+import { invoiceTotal as total, invoicePaid as paid } from '../../../utils/invoiceMath'
 
 export default function InvoiceList() {
   const { invoices, canSeePricing, removeInvoice, toast } = useApp()

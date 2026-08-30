@@ -56,6 +56,8 @@ import InvoiceCreate from './pages/admin/invoices/InvoiceCreate'
 import InvoiceDetail from './pages/admin/invoices/InvoiceDetail'
 import InvoiceSettings from './pages/admin/invoices/InvoiceSettings'
 import QuotationList from './pages/admin/quotations/QuotationList'
+import PaymentsLedger from './pages/admin/payments/PaymentsLedger'
+import CalendarPage from './pages/admin/calendar/CalendarPage'
 import Reports from './pages/admin/Reports'
 import Gallery from './pages/admin/Gallery'
 import Settings from './pages/admin/Settings'
@@ -65,6 +67,9 @@ import UpgradePro from './pages/admin/UpgradePro'
 import HelpSupport from './pages/admin/HelpSupport'
 import FollowUps from './pages/admin/tasks/FollowUps'
 import FollowupRules from './pages/admin/tasks/FollowupRules'
+
+// loaded last so its mobile/tablet overrides win over every page stylesheet
+import './styles/responsive.css'
 
 export default function App() {
   return (
@@ -135,6 +140,8 @@ export default function App() {
           <Route path="invoices/settings" element={<InvoiceSettings />} />
           <Route path="invoices/:id" element={<InvoiceDetail />} />
           <Route path="quotations" element={<QuotationList />} />
+          <Route path="payments" element={<PaymentsLedger />} />
+          <Route path="calendar" element={<CalendarPage />} />
           <Route path="followups" element={<FollowUps />} />
           <Route path="followups/rules" element={<FollowupRules />} />
           <Route path="reports" element={<Reports />} />

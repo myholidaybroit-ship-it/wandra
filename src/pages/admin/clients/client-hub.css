@@ -105,3 +105,7 @@
 }
 .ch-pay-sum b { color: var(--color-ink); font-weight: 700; }
 .ch-pay-sum .due b { color: var(--color-error); }
+
+/* Direct WhatsApp button in the client header */
+.ch-wa { color: #128c4b !important; border-color: #bfe8cd !important; background: #e9f9ef !important; display: inline-flex; align-items: center; gap: 6px; }
+.ch-wa:hover { background: #d4f3e0 !important; }

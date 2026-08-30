@@ -5,6 +5,7 @@ import { PageHeader, Button, DataTable, Badge, formatDate, ListSearch, Modal, Pi
 import { Icon } from '../../../components/ui/icons'
 import { downloadCsv } from '../../../utils/csv'
 import { useLeadSources } from '../../../utils/sources'
+import { waLink } from '../../../utils/whatsapp'
 import './query.css'
 
 const STATUSES = ['New Query', 'In Progress', 'Converted', 'On Trip', 'Past Trips', 'Canceled', 'Dropped']
@@ -16,8 +17,9 @@ const storedPageSize = () => {
   try { const v = Number(localStorage.getItem(PAGE_SIZE_KEY)); return PAGE_SIZES.includes(v) ? v : 50 } catch { return 50 }
 }
 
+const PRIORITIES = ['High', 'Medium', 'Low']
 const EMPTY_FILTERS = {
-  statuses: [], sources: [], assignees: [], interests: [], tags: [],
+  statuses: [], priorities: [], sources: [], assignees: [], interests: [], tags: [],
   budgetMin: '', budgetMax: '', travelFrom: '', travelTo: '', createdFrom: '', createdTo: '',
 }
 
@@ -60,6 +62,7 @@ export default function ClientList() {
     const hay = (c.name + c.email + c.phone + (c.interest || '') + (c.query?.refId || c.code || '')).toLowerCase()
     if (q && !hay.includes(q.toLowerCase())) return false
     if (f.statuses.length && !f.statuses.includes(c.tripStatus)) return false
+    if (f.priorities.length && !f.priorities.includes(c.priority || 'Medium')) return false
     if (f.sources.length && !f.sources.includes(c.source)) return false
     if (f.assignees.length && !f.assignees.includes(c.query?.assignee)) return false
     if (f.interests.length && !f.interests.includes(c.interest)) return false
@@ -83,6 +86,7 @@ export default function ClientList() {
     const f = filters, out = []
     const push = (key, label, reset) => out.push({ key, label, reset })
     f.statuses.forEach((v) => push('statuses', `Status: ${v}`, () => setFilters((s) => ({ ...s, statuses: s.statuses.filter((x) => x !== v) }))))
+    f.priorities.forEach((v) => push('priorities', `Priority: ${v}`, () => setFilters((s) => ({ ...s, priorities: s.priorities.filter((x) => x !== v) }))))
     f.sources.forEach((v) => push('sources', `Source: ${v}`, () => setFilters((s) => ({ ...s, sources: s.sources.filter((x) => x !== v) }))))
     f.assignees.forEach((v) => push('assignees', `Owner: ${v}`, () => setFilters((s) => ({ ...s, assignees: s.assignees.filter((x) => x !== v) }))))
     f.interests.forEach((v) => push('interests', `Interest: ${v}`, () => setFilters((s) => ({ ...s, interests: s.interests.filter((x) => x !== v) }))))
@@ -95,9 +99,9 @@ export default function ClientList() {
   const activeCount = chips.length
 
   const exportCsv = () => {
-    const headers = ['Code', 'Name', 'Email', 'Phone', 'Status', 'Source', 'Interest', 'Budget', 'Owner', 'Travel Date', 'Nights', 'Adults', 'Children', 'From City', 'Tags', 'Added']
+    const headers = ['Code', 'Name', 'Email', 'Phone', 'Status', 'Priority', 'Source', 'Interest', 'Budget', 'Owner', 'Travel Date', 'Nights', 'Adults', 'Children', 'From City', 'Tags', 'Added']
     const data = rows.map((r) => [
-      r.query?.refId || r.code || '', r.name || '', r.email || '', r.phone || '', r.tripStatus || '',
+      r.query?.refId || r.code || '', r.name || '', r.email || '', r.phone || '', r.tripStatus || '', r.priority || 'Medium',
       r.source || '', r.interest || '', r.budget || 0, r.query?.assignee || '',
       r.query?.startDate || '', r.query?.nights || '', r.query?.adults || '', r.query?.children || '',
       r.query?.fromCity || '', (r.tags || []).join('; '), day(r.createdAt),
@@ -126,9 +130,17 @@ export default function ClientList() {
       </div>
     ) },
     { key: 'contact', head: 'Contact', render: (r) => (
-      <div>
-        <div>{r.phone || '—'}</div>
-        <div className="cell-sub">{r.source || r.email}</div>
+      <div className="row gap-sm">
+        <div>
+          <div>{r.phone || '—'}</div>
+          <div className="cell-sub">{r.source || r.email}</div>
+        </div>
+        {waLink(r.phone) && (
+          <a className="wa-chip" href={waLink(r.phone)} target="_blank" rel="noreferrer"
+            title={`WhatsApp ${r.name}`} onClick={(e) => e.stopPropagation()}>
+            <Icon name="whatsapp" size={14} />
+          </a>
+        )}
       </div>
     ) },
     { key: 'details', head: 'Details', render: (r) => (
@@ -137,7 +149,14 @@ export default function ClientList() {
         <div className="cell-sub">{detailsLine(r)}</div>
       </div>
     ) },
-    { key: 'status', head: 'Status', render: (r) => <Badge tone={r.tripStatus}>{r.tripStatus}</Badge> },
+    { key: 'status', head: 'Status', render: (r) => (
+      <div className="col gap-xs">
+        <Badge tone={r.tripStatus}>{r.tripStatus}</Badge>
+        <span className={`prio prio-${(r.priority || 'Medium').toLowerCase()}`}>
+          {r.priority === 'High' ? '🔥 High' : r.priority || 'Medium'}
+        </span>
+      </div>
+    ) },
     { key: 'team', head: 'Team', render: (r) => (
       <div>
         <div>{r.query?.assignee || '—'}</div>
@@ -234,6 +253,9 @@ function ClientFilters({ open, onClose, initial, options, total, onApply }) {
       <div className="cf-grid">
         <Field label="Status" full>
           <PillMultiSelect value={f.statuses} options={STATUSES} onChange={(v) => set({ statuses: v })} placeholder="Any status" />
+        </Field>
+        <Field label="Priority" full>
+          <PillMultiSelect value={f.priorities} options={PRIORITIES} onChange={(v) => set({ priorities: v })} placeholder="Any priority — pick High to see the hot leads" />
         </Field>
         <Field label="Source">
           <PillMultiSelect value={f.sources} options={options.sources} onChange={(v) => set({ sources: v })} placeholder="Any source" searchable />

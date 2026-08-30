@@ -6,16 +6,18 @@ import { fileToUploadable } from '../../../utils/image'
 import { Card, Button, Badge, Modal, Field, Input, Select, Textarea, DataTable, EmptyState, PillSelect } from '../../../components/ui/UI'
 import { Icon } from '../../../components/ui/icons'
 import FollowUpPanel from '../../../components/ui/FollowUpPanel'
+import { invoiceTotal, invoicePaid } from '../../../utils/invoiceMath'
+import { waLink } from '../../../utils/whatsapp'
 import { useLeadSources } from '../../../utils/sources'
 import '../packages/detail.css'
 import './client-hub.css'
+import './query.css'
 
 const TABS = ['Overview', 'Packages', 'Bookings', 'Payments', 'Invoices', 'Quotations', 'Documents']
 const TRIP_STATUSES = ['New Query', 'In Progress', 'Converted', 'On Trip', 'Past Trips', 'Canceled', 'Dropped']
 const DOC_TYPES = ['Passport', 'PAN / Aadhaar', 'Visa', 'Flight Ticket', 'Hotel Voucher', 'Travel Insurance', 'Itinerary', 'Other']
 
-const invoiceTotal = (i) => (i.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.rate) || 0), 0)
-const invoicePaid = (i) => (i.payments || []).reduce((s, p) => s + p.amount, 0)
+// shared invoice math — the total includes item tax + the GST/TCS lines
 const fmtSize = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
 
 export default function ClientDetail() {
@@ -83,6 +85,9 @@ export default function ClientDetail() {
             <div className="row gap-sm wrap">
               <h1 className="t-heading-md c-ink">{c.name}</h1>
               <Badge tone={c.tripStatus}>{c.tripStatus}</Badge>
+              <span className={`prio prio-${(c.priority || 'Medium').toLowerCase()}`}>
+                {c.priority === 'High' ? '🔥 High priority' : `${c.priority || 'Medium'} priority`}
+              </span>
             </div>
             <div className="ch-meta">
               <span className="mono">{c.code}</span>
@@ -93,6 +98,12 @@ export default function ClientDetail() {
           </div>
           <div className="ch-actions">
             <Link to="/app/clients"><Button variant="tertiary" size="sm">← Back</Button></Link>
+            {waLink(c.phone) && (
+              <Button as="a" variant="secondary" size="sm" className="ch-wa" target="_blank" rel="noreferrer"
+                href={waLink(c.phone, `Hi ${c.name.replace(/^(Mr|Mrs|Ms|Dr)\.?\s*/i, '')}, `)}>
+                <Icon name="whatsapp" size={15} /> WhatsApp
+              </Button>
+            )}
             <Button variant="tertiary" size="sm" onClick={() => { setF(c); setEdit(true) }}>Edit</Button>
             <Link to={newPkgTo}><Button size="sm">+ New Package</Button></Link>
           </div>
@@ -335,6 +346,7 @@ export default function ClientDetail() {
           <Field label="Budget"><Input value={f.budget || ''} onChange={(e) => setF({ ...f, budget: Number(e.target.value) || 0 })} /></Field>
           <Field label="Source"><Select value={f.source || ''} onChange={(e) => setF({ ...f, source: e.target.value })}><option value="">—</option>{(sources.includes(f.source) || !f.source ? sources : [f.source, ...sources]).map((s) => <option key={s}>{s}</option>)}</Select></Field>
           <Field label="Trip Status"><Select value={f.tripStatus || 'New Query'} onChange={(e) => setF({ ...f, tripStatus: e.target.value })}>{TRIP_STATUSES.map((s) => <option key={s}>{s}</option>)}</Select></Field>
+          <Field label="Priority"><Select value={f.priority || 'Medium'} onChange={(e) => setF({ ...f, priority: e.target.value })}>{['High', 'Medium', 'Low'].map((s) => <option key={s}>{s}</option>)}</Select></Field>
           <Field label="Note"><Input value={f.note || ''} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
           <Field label="Address" full><Textarea value={f.address || ''} onChange={(e) => setF({ ...f, address: e.target.value })} /></Field>
         </div>

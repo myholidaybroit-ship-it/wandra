@@ -1,0 +1,23 @@
+/* ===== Payments & Ledger ===== */
+.pay-band {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 0;
+  background: var(--color-canvas); border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xl); overflow: hidden;
+}
+.pay-kpi {
+  display: flex; flex-direction: column; gap: 4px; padding: 16px 18px;
+  border-left: 1px solid var(--color-hairline-soft);
+}
+.pay-kpi:first-child { border-left: none; }
+.pay-kpi.strong { background: var(--color-surface-soft); }
+.pay-kpi-k { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--color-stone); }
+.pay-kpi-v { font-size: 17px; font-weight: 800; color: var(--color-ink); font-variant-numeric: tabular-nums; letter-spacing: -.3px; }
+.pay-kpi-v.good { color: var(--color-success, #167d4f); }
+.pay-kpi-v.bad { color: var(--color-error, #b42318); }
+
+.pay-tabs { border-bottom: 1px solid var(--color-hairline-soft); padding: 0 12px; }
+.pay-body { padding: 16px 18px 20px; }
+.pay-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+
+@media (max-width: 1024px) { .pay-band { grid-template-columns: repeat(3, 1fr); } .pay-kpi:nth-child(4) { border-left: none; } .pay-kpi { border-top: 1px solid var(--color-hairline-soft); } .pay-kpi:nth-child(-n+3) { border-top: none; } }
+@media (max-width: 560px) { .pay-band { grid-template-columns: 1fr 1fr; } .pay-kpi { border-left: none; } }

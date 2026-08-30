@@ -52,6 +52,7 @@
 
 /* breakdown */
 .rp-break { display: grid; grid-template-columns: 190px 1fr; gap: 0; background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: var(--radius-xl); overflow: hidden; }
+.rp-break.rp-team { grid-template-columns: 1fr; margin-bottom: 18px; }
 @media (max-width: 820px) { .rp-break { grid-template-columns: 1fr; } }
 .rp-break-side { border-right: 1px solid var(--color-hairline-soft); padding: 18px 14px; display: flex; flex-direction: column; gap: 6px; background: var(--color-surface-soft); }
 @media (max-width: 820px) { .rp-break-side { flex-direction: row; align-items: center; border-right: none; border-bottom: 1px solid var(--color-hairline-soft); } }

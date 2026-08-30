@@ -91,7 +91,8 @@ function optionGrandTotal(opt, s = {}) {
   const markup = s.markupMode === 'flat' ? nn(s.markupValue) : costPrice * nn(s.markupValue) / 100
   const taxBase = s.taxOn === 'cost_markup' ? costPrice + markup : costPrice
   const tax = s.taxEnabled ? Math.round(taxBase * nn(s.taxPercent) / 100 * 100) / 100 : 0
-  const preRound = costPrice + markup + tax
+  const tcs = s.tcsEnabled ? Math.round((costPrice + markup + tax) * nn(s.tcsPercent) / 100 * 100) / 100 : 0
+  const preRound = costPrice + markup + tax + tcs
   const roundTo = nn(s.roundTo)
   return roundTo ? Math.round(preRound / roundTo) * roundTo : Math.round(preRound)
 }

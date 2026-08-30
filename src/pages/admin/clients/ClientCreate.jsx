@@ -27,7 +27,7 @@ export default function ClientCreate() {
   const [step, setStep] = useState(1)
 
   const [f, setF] = useState({
-    source: SOURCES[0] || 'Website', refId: '', assignee: AUTO_ASSIGNEE,
+    source: SOURCES[0] || 'Website', refId: '', assignee: AUTO_ASSIGNEE, priority: 'Medium',
     dests: [], startDate: '', nights: 1, adults: 2, children: 0, childAges: [], budget: '',
     salutation: 'Mr.', name: '', email: '', city: '', comments: '',
     phones: [{ code: '+91 IN', number: '' }],
@@ -93,6 +93,7 @@ export default function ClientCreate() {
       phone: f.phones.map((p) => p.number.trim()).filter(Boolean).join(', '),
       interest: f.dests.length ? f.dests.join(', ') : 'General Inquiry',
       source: f.source,
+      priority: f.priority || 'Medium',
       note: f.comments || 'New Inquiry',
       budget: Number(f.budget) || 0,
       query: {
@@ -137,6 +138,10 @@ export default function ClientCreate() {
               <Field label="Sales Team" hint="Auto follows your assignment rules — round robin between matching members">
                 <PillSelect value={f.assignee} options={[AUTO_ASSIGNEE, ...users.map((u) => u.name)]}
                   format={(v) => (v === AUTO_ASSIGNEE ? 'Auto — assignment rules' : v)} onChange={set('assignee')} />
+              </Field>
+              <Field label="Lead Priority" hint="Mark the hot leads so they surface first">
+                <PillSelect value={f.priority} options={['High', 'Medium', 'Low']} onChange={set('priority')}
+                  format={(v) => (v === 'High' ? '🔥 High' : v)} />
               </Field>
               <Field label="Reference ID" hint="6 characters, for your own tracking — hit generate or type your own">
                 <div className="input-action-row">
@@ -265,6 +270,7 @@ export default function ClientCreate() {
               <div className="q-review-grid">
                 <ReviewRow k="Query Source" v={f.source} />
                 <ReviewRow k="Sales Team" v={f.assignee === AUTO_ASSIGNEE ? 'Auto — assignment rules' : f.assignee} />
+                <ReviewRow k="Priority" v={f.priority} />
                 <ReviewRow k="Reference ID" v={f.refId} />
               </div>
             </div>

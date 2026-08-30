@@ -281,7 +281,8 @@ export default function PackageDetail() {
               <>
                 <div className="pd-pc-row"><span>Cost price</span><span>{inr(p.costPrice)}</span></div>
                 <div className="pd-pc-row"><span>Markup{p.markupMode === 'percent' ? ` (${p.markupValue}%)` : ''}</span><span>+{inr(p.markup)}</span></div>
-                {p.taxEnabled !== false && <div className="pd-pc-row"><span>Tax ({p.taxPercent || 0}%)</span><span>{inr(p.tax)}</span></div>}
+                {p.taxEnabled !== false && <div className="pd-pc-row"><span>GST ({p.taxPercent || 0}%)</span><span>{inr(p.tax)}</span></div>}
+                {p.tcsEnabled === true && <div className="pd-pc-row"><span>TCS ({p.tcsPercent || 0}%)</span><span>{inr(p.tcsAmount)}</span></div>}
               </>
             ) : (
               <>

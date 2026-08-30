@@ -20,8 +20,31 @@ const EMPTY_DASH = {
 // sentinel: "let the assignment rules decide" (used by the New Query form)
 export const AUTO_ASSIGNEE = '__auto__'
 
+/* ---- Currency (agency-level; INR default) ----
+   `inr` is the money formatter the whole CRM imports — it follows the agency's
+   configured currency so agencies working with international DMCs can run in
+   USD/AED/etc. without touching any other screen. */
+export const CURRENCIES = [
+  { code: 'INR', symbol: '₹', locale: 'en-IN', label: 'Indian Rupee (₹)' },
+  { code: 'USD', symbol: '$', locale: 'en-US', label: 'US Dollar ($)' },
+  { code: 'EUR', symbol: '€', locale: 'de-DE', label: 'Euro (€)' },
+  { code: 'GBP', symbol: '£', locale: 'en-GB', label: 'British Pound (£)' },
+  { code: 'AED', symbol: 'AED ', locale: 'en-AE', label: 'UAE Dirham (AED)' },
+  { code: 'SGD', symbol: 'S$', locale: 'en-SG', label: 'Singapore Dollar (S$)' },
+  { code: 'THB', symbol: '฿', locale: 'en-IN', label: 'Thai Baht (฿)' },
+  { code: 'VND', symbol: '₫', locale: 'en-IN', label: 'Vietnamese Dong (₫)' },
+  { code: 'IDR', symbol: 'Rp ', locale: 'en-IN', label: 'Indonesian Rupiah (Rp)' },
+  { code: 'LKR', symbol: 'Rs ', locale: 'en-IN', label: 'Sri Lankan Rupee (Rs)' },
+  { code: 'MYR', symbol: 'RM ', locale: 'en-IN', label: 'Malaysian Ringgit (RM)' },
+]
+let ACTIVE_CURRENCY = CURRENCIES[0]
+export const setActiveCurrency = (code) => {
+  ACTIVE_CURRENCY = CURRENCIES.find((c) => c.code === code) || CURRENCIES[0]
+}
+export const activeCurrency = () => ACTIVE_CURRENCY
+
 export const inr = (n) =>
-  '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+  ACTIVE_CURRENCY.symbol + Number(n || 0).toLocaleString(ACTIVE_CURRENCY.locale, { maximumFractionDigits: 0 })
 
 export const DEFAULT_INVOICE_SETTINGS = {
   defaultGst: 18,
@@ -71,6 +94,7 @@ export function computePricing(pkg) {
  */
 function normalizeAgency(ag) {
   if (!ag) return ag
+  setActiveCurrency(ag.currency || 'INR')   // every money label follows the agency currency
   const clientLimit = ag.limits?.clients
   return {
     ...ag,
@@ -104,6 +128,7 @@ export function AppProvider({ children }) {
   const [packages, setPackages] = useState([])
   const [bookings, setBookings] = useState([])
   const [invoices, setInvoices] = useState([])
+  const [expenses, setExpenses] = useState([])   // money out — supplier payments
   const [quotations, setQuotations] = useState([])
   const [vouchers, setVouchers] = useState([])
   const [gallery, setGallery] = useState([])
@@ -154,6 +179,7 @@ export function AppProvider({ children }) {
     packages: () => api.get('/packages').then((r) => setPackages(r.items)),
     bookings: () => api.get('/bookings').then((r) => setBookings(r.items)),
     invoices: () => api.get('/invoices').then((r) => setInvoices(r.items)),
+    expenses: () => api.get('/expenses').then((r) => setExpenses(r.items)),
     quotations: () => api.get('/quotations').then((r) => setQuotations(r.items)),
     vouchers: () => api.get('/vouchers').then((r) => setVouchers(r.items)),
     gallery: () => api.get('/stories').then((r) => setGallery(r.items)),
@@ -184,6 +210,7 @@ export function AppProvider({ children }) {
     packages: ['builder.access', 'builder'],
     bookings: ['bookings.view', 'bookings'],
     invoices: ['invoices.view', 'invoices'],
+    expenses: ['invoices.view', 'invoices'],
     quotations: ['quotations.view', 'builder'],
     vouchers: ['vouchers.view', 'vouchers'],
     gallery: ['reviews.view', null],
@@ -242,7 +269,7 @@ export function AppProvider({ children }) {
     api.logout(); setAuthed(false); setSession(null)
     setAgencyState(null); setFeatures({}); setLimitsMap({})
     setCities([])
-    setClients([]); setPackages([]); setBookings([]); setInvoices([]); setQuotations([])
+    setClients([]); setPackages([]); setBookings([]); setInvoices([]); setExpenses([]); setQuotations([])
     setVouchers([]); setGallery([]); setUsers([]); setRoles([])
     setTasks([]); setTaskSummary({ overdue: 0, today: 0, week: 0, total: 0, doneToday: 0, due: 0, next: [] })
   }
@@ -333,6 +360,11 @@ export function AppProvider({ children }) {
     try { const r = await api.get('/bookings'); setBookings(r.items) } catch { /* refreshes on next load */ }
   }
   const removeInvoice = async (id) => { await api.del(`/invoices/${id}`); setInvoices((l) => l.filter((i) => i.id !== id)) }
+
+  /* ---------- expenses (money out — supplier payments) ---------- */
+  const addExpense = async (e) => { const rec = await api.post('/expenses', e); prepend(setExpenses)(rec); return rec }
+  const updateExpense = async (id, patch) => replace(setExpenses)(await api.patch(`/expenses/${id}`, patch))
+  const removeExpense = async (id) => { await api.del(`/expenses/${id}`); setExpenses((l) => l.filter((e) => e.id !== id)) }
 
   /* ---------- quotations ---------- */
   const setQuotationStatus = async (id, status) => replace(setQuotations)(await api.patch(`/quotations/${id}/status`, { status }))
@@ -434,6 +466,7 @@ export function AppProvider({ children }) {
     bookings, createBookingFromPackage, cancelBooking, removeBooking, addBookingPayment, setBookingStatus,
     setBookingSchedule, generateBookingSchedule,
     invoices, addInvoice, addPayment, removeInvoice,
+    expenses, addExpense, updateExpense, removeExpense,
     quotations, setQuotationStatus, removeQuotation,
     tasks, taskScope, taskSummary, tasksFor, reloadTasks, addTask, updateTask,
     completeTask, reopenTask, snoozeTask, removeTask,
