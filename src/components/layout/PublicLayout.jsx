@@ -12,7 +12,7 @@ export default function PublicLayout() {
     <div className="public-shell">
       <nav className="public-nav">
         <Link to="/" className="brand">
-          <img className="logo-lockup logo-nav" src="/brand/wandra-logo.png" alt="Wandra — Travel Software" />
+          <img className="logo-lockup logo-nav" src="/brand/wandra-logo.jpg" alt="Wandra — Travel Software" />
         </Link>
         <div className="pnav-links">
           <a className="pnav-link" href="/#product">Product</a>
@@ -29,7 +29,7 @@ export default function PublicLayout() {
 
       <footer className="public-footer">
         <div className="public-foot-inner foot-min">
-          <img className="logo-lockup logo-foot" src="/brand/wandra-logo.png" alt="Wandra — Travel Software" />
+          <img className="logo-lockup logo-foot" src="/brand/wandra-logo.jpg" alt="Wandra — Travel Software" />
           <p className="foot-tagline">The operating system &amp; CRM for travel agencies — run your entire agency from one connected dashboard.</p>
           <span className="foot-copy">© 2026 Wandra. All rights reserved.</span>
         </div>

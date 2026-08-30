@@ -132,7 +132,7 @@ export default function Landing() {
       <header className="wl-nav">
         <div className="wl-nav-inner">
           <a className="wl-nav-brand" href="#top" aria-label="Wandra">
-            <img src="/brand/wandra-logo.png" alt="Wandra" />
+            <img src="/brand/wandra-logo.jpg" alt="Wandra" />
           </a>
           <nav className="wl-nav-links">
             <a href="#product">Product</a>
@@ -446,7 +446,7 @@ export default function Landing() {
       <footer className="wl-footer">
         <div className="wl-footer-inner">
           <div className="wl-footer-brand">
-            <img src="/brand/wandra-logo.png" alt="Wandra" />
+            <img src="/brand/wandra-logo.jpg" alt="Wandra" />
             <p>The operating system for travel agencies — enquiries, itineraries, bookings, invoices and payments in one clear workspace.</p>
           </div>
           <div className="wl-footer-cols">
@@ -509,7 +509,7 @@ function CrmDashboardMock() {
   return (
     <div className="crm-screen">
       <aside className="crm-screen-sidebar">
-        <img src="/brand/wandra-logo.png" alt="Wandra" />
+        <img src="/brand/wandra-logo.jpg" alt="Wandra" />
         {NAV.map(([icon, label, group], i) => (
           <span className={i === 0 ? 'active' : ''} key={label}>
             <Icon name={icon} size={14} />{label}
@@ -569,5 +569,5 @@ function ItineraryMock() {
 }
 
 function InvoiceMock() {
-  return <div className="mini-screen invoice-mini"><div className="mini-invoice-brand"><span><img src="/brand/wandra-mark.png" alt="" /> WANDRA</span><em>INVOICE<br /><b>INV-2026-0092</b></em></div><div className="mini-invoice-client"><small>Bill to</small><b>Rahul Sharma</b><span>rahul@example.com · +91 98765 43210</span></div><div className="mini-invoice-lines"><div><span>Kashmir 6N / 7D package</span><b>₹84,500</b></div><div><span>Airport transfer · private cab</span><b>₹4,500</b></div><div><span>GST 5%</span><b>₹4,450</b></div></div><div className="mini-total"><span>Total</span><b>₹93,450</b></div><small className="mini-invoice-footer"><Icon name="check" size={12} /> Payment terms and footer included</small></div>
+  return <div className="mini-screen invoice-mini"><div className="mini-invoice-brand"><span><img src="/brand/wandra-logo.jpg" alt="Wandra" /></span><em>INVOICE<br /><b>INV-2026-0092</b></em></div><div className="mini-invoice-client"><small>Bill to</small><b>Rahul Sharma</b><span>rahul@example.com · +91 98765 43210</span></div><div className="mini-invoice-lines"><div><span>Kashmir 6N / 7D package</span><b>₹84,500</b></div><div><span>Airport transfer · private cab</span><b>₹4,500</b></div><div><span>GST 5%</span><b>₹4,450</b></div></div><div className="mini-total"><span>Total</span><b>₹93,450</b></div><small className="mini-invoice-footer"><Icon name="check" size={12} /> Payment terms and footer included</small></div>
 }

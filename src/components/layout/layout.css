@@ -53,7 +53,7 @@
   position: sticky; top: 0; height: 100vh; overflow-y: auto; overflow-x: hidden;
   transition: width .2s ease;
 }
-.logo-mark-side { height: 30px; width: auto; display: block; }
+.logo-mark-side { width: 56px; height: auto; display: block; }
 .side-txt { white-space: nowrap; }
 
 /* Collapse toggle (desktop only) */
@@ -82,8 +82,8 @@
 .agency-side-logo { display: block; width: 154px; height: 46px; object-fit: contain; object-position: left center; }
 .agency-side-logo.collapsed { width: 34px; height: 34px; object-position: center; }
 .logo-nav { height: 42px; }
-.logo-side { height: 64px; }
-.logo-foot { height: 84px; filter: brightness(0) invert(1); }
+.logo-side { height: 46px; }
+.logo-foot { height: 64px; border-radius: 4px; }
 .brand-name { font-size: 16px; font-weight: 600; letter-spacing: -.3px; color: var(--color-ink); }
 .sidebar-nav { display: flex; flex-direction: column; padding: 4px 14px 12px; gap: 2px; flex: 1; }
 .side-label {
@@ -200,11 +200,11 @@
 .acct-menu-logout:hover { background: var(--color-error-bg); color: var(--color-error); }
 .acct-menu-logout:hover .side-ic { color: var(--color-error); }
 .acct-avatar {
-  width: 34px; height: 34px; border-radius: var(--radius-full); flex-shrink: 0;
-  background: var(--color-primary);
+  width: 56px; height: 24px; border-radius: 4px; flex-shrink: 0;
+  overflow: hidden; background: #f8f8f8;
   display: grid; place-items: center;
 }
-.acct-avatar img { width: 17px; height: auto; display: block; filter: brightness(0) invert(1); }
+.acct-avatar img { width: 52px; height: auto; display: block; }
 .acct-meta { display: flex; flex-direction: column; align-items: flex-start; text-align: left; line-height: 1.2; gap: 3px; }
 .acct-name { font-size: 11.5px; font-weight: 600; color: var(--color-ink); white-space: nowrap; }
 .acct-role {

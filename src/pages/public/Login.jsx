@@ -30,7 +30,7 @@ export default function Login() {
     <div className="lg">
       <div className="lg-panel">
         <div className="lg-box">
-          <Link to="/"><img className="lg-logo" src="/brand/wandra-logo.png" alt="Wandra — Travel Software" /></Link>
+          <Link to="/"><img className="lg-logo" src="/brand/wandra-logo.jpg" alt="Wandra — Travel Software" /></Link>
 
           <div className="lg-card">
             <div className="lg-card-head">

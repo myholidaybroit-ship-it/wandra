@@ -64,8 +64,8 @@ function Logo({ collapsed, agency, isPro }) {
   return (
     <Link to="/app" className="brand" title="Wandra — Travel Software">
       {collapsed
-        ? <img className="logo-mark-side" src="/brand/wandra-mark.png" alt="Wandra" />
-        : <img className="logo-lockup logo-side" src="/brand/wandra-logo.png" alt="Wandra — Travel Software" />}
+        ? <img className="logo-mark-side" src="/brand/wandra-logo.jpg" alt="Wandra" />
+        : <img className="logo-lockup logo-side" src="/brand/wandra-logo.jpg" alt="Wandra — Travel Software" />}
     </Link>
   )
 }
@@ -380,7 +380,7 @@ export default function AdminLayout() {
             </div>
             <div className="acct-wrap">
               <button className="acct" onClick={() => setAcctOpen((o) => !o)}>
-                <span className="acct-avatar"><img src="/brand/wandra-mark.png" alt="" /></span>
+                <span className="acct-avatar"><img src="/brand/wandra-logo.jpg" alt="" /></span>
                 <div className="acct-meta">
                   <span className="acct-name">{currentUser?.name || agency.name}</span>
                   <span className="acct-role">{currentUser?.role || 'Admin'}</span>
@@ -392,7 +392,7 @@ export default function AdminLayout() {
                   <div className="acct-scrim" onClick={() => setAcctOpen(false)} />
                   <div className="acct-menu">
                     <div className="acct-menu-head">
-                      <span className="acct-avatar"><img src="/brand/wandra-mark.png" alt="" /></span>
+                      <span className="acct-avatar"><img src="/brand/wandra-logo.jpg" alt="" /></span>
                       <div>
                         <div className="acct-name">{currentUser?.name || agency.name}</div>
                         <div className="acct-menu-email">{currentUser?.email || agency.email} · {currentUser?.role || 'Admin'}</div>
