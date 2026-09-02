@@ -16,16 +16,17 @@ const DIMS = [
 ]
 
 const monthLabel = (p) => new Date(p.y, p.m, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+// createdAt is a full ISO timestamp, travel dates are bare YYYY-MM-DD — accept both
 const inMonth = (iso, p) => {
   if (!iso) return false
-  const d = new Date(iso + 'T00:00:00')
-  return d.getFullYear() === p.y && d.getMonth() === p.m
+  const d = new Date(iso.length > 10 ? iso : iso + 'T00:00:00')
+  return !Number.isNaN(d.getTime()) && d.getFullYear() === p.y && d.getMonth() === p.m
 }
 
 export default function Reports() {
   const { clients, packages, bookings, quotations, canSeePricing } = useApp()
   const [mode, setMode] = useState('all')            // 'all' | 'month'
-  const [period, setPeriod] = useState({ y: 2026, m: 5 }) // June 2026 — where the demo data lives
+  const [period, setPeriod] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } }) // opens on the current month
   const [dim, setDim] = useState('assignee')
   const [q, setQ] = useState('')
 
@@ -45,7 +46,9 @@ export default function Reports() {
     const pPkgs = packages.filter((p) => hit(p.createdAt))
     const quoted = quotations.filter((qt) => pPkgs.some((p) => p.id === qt.packageId))
     const quotedValue = quoted.reduce((s, x) => s + (x.amount || 0), 0)
-    const pBk = bookings.filter((b) => b.status !== 'Cancelled' && hit(b.travelDate))
+    // monthly lens = bookings MADE that month (same lens as leads created / quotes raised);
+    // upcoming trips by travel date live on the Calendar
+    const pBk = bookings.filter((b) => b.status !== 'Cancelled' && hit(b.createdAt || b.travelDate))
     const bookedValue = pBk.reduce((s, b) => s + (b.value || 0), 0)
     const collected = pBk.reduce((s, b) => s + (b.paid || 0), 0)
 

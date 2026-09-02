@@ -9,6 +9,8 @@ import { invoiceBreakup } from '../../../utils/invoiceMath'
 import { preloadAndDownload } from '../../../utils/pdf'
 import './invoice.css'
 
+const today = () => new Date().toISOString().slice(0, 10)
+
 export default function InvoiceDetail() {
   const { id } = useParams()
   const { invoices, agency, clients, addPayment, toast } = useApp()
@@ -17,7 +19,7 @@ export default function InvoiceDetail() {
   const [busy, setBusy] = useState(false)
   const docRef = useRef(null)
   const download = async () => { if (!docRef.current) return; setBusy(true); try { await preloadAndDownload(docRef.current, `${inv.code}.pdf`) } finally { setBusy(false) } }
-  const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
+  const [pay, setPay] = useState({ amount: '', method: 'Online', reference: '', date: today() })
   if (!inv) return <div>Invoice not found.</div>
   const client = clients.find((c) => c.id === inv.clientId)
   const { subtotal, itemTax, gst, tcs, total, paid } = invoiceBreakup(inv)
@@ -27,7 +29,7 @@ export default function InvoiceDetail() {
   const record = () => {
     if (!pay.amount) return toast('Enter an amount')
     addPayment(inv.id, { ...pay, amount: Number(pay.amount) })
-    toast('Payment processed and synchronized'); setOpen(false); setPay({ amount: '', method: 'Online', reference: '', date: '2026-06-26' })
+    toast('Payment processed and synchronized'); setOpen(false); setPay({ amount: '', method: 'Online', reference: '', date: today() })
   }
 
   return (

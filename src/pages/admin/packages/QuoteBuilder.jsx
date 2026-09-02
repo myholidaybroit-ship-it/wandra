@@ -1728,7 +1728,7 @@ function init(editing, preClient, tpl, hotels, presets, fromPkg) {
     const sectors = b.sectors?.length ? b.sectors.map((s) => ({ ...s, id: s.id || uid() })) : sectorsFrom((editing.destination || '').split(' - ')[0], editing.nights)
     const nights = Math.max(1, sectors.reduce((s, x) => s + num(x.nights), 0))
     const options = (b.options || []).map((o) => ({ ...o, name: o.name || o.star || 'Option' }))
-    return { ...PRICING_DEFAULTS, taxPercent: editing.pricing?.gstPercent ?? PRICING_DEFAULTS.taxPercent, infants: 0, dayNotes: {}, ...b, ieByDest: b.ieByDest || seedIE(sectors, presets, editing), dayNotes: b.dayNotes || {}, options, sectors, clientId: editing.clientId, clientName: editing.clientName, clientPhone: editing.clientPhone, clientEmail: editing.clientEmail, destShort: sectors[0]?.destination || '', destination: sectors.map((s) => s.destination).filter(Boolean).join(', ') || editing.destination, startDate: editing.startDate, nights, days: nights + 1, comments: editing.comments || '' }
+    return { ...PRICING_DEFAULTS, taxPercent: editing.pricing?.gstPercent ?? PRICING_DEFAULTS.taxPercent, infants: 0, ...b, ieByDest: b.ieByDest || seedIE(sectors, presets, editing), dayNotes: b.dayNotes || {}, options, sectors, clientId: editing.clientId, clientName: editing.clientName, clientPhone: editing.clientPhone, clientEmail: editing.clientEmail, destShort: sectors[0]?.destination || '', destination: sectors.map((s) => s.destination).filter(Boolean).join(', ') || editing.destination, startDate: editing.startDate, nights, days: nights + 1, comments: editing.comments || '' }
   }
   if (editing) return fromLegacy(editing, presets)
   const c = preClient

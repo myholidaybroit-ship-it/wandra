@@ -93,6 +93,58 @@ const QUALITY_LADDER = [
   { scale: 1, quality: 0.5 },
 ]
 
+/* ---- the "did it actually download?" safety net ----
+   Browsers only fully trust a download that starts inside the user's click.
+   Rendering takes seconds, so the eventual anchor click runs outside that
+   activation window and Chrome/Safari can quietly block it as an "automatic
+   download" (a tiny icon in the address bar, nothing on the page). JS cannot
+   detect a blocked download, so after every export we show a small bar with a
+   real link — a fresh click always works — and on failure the same bar says
+   why and offers Print → Save as PDF. The bar is plain DOM so every document
+   page (invoice, voucher, itinerary, studio) gets it without React plumbing. */
+let bar = null
+let barTimer = null
+let barCleanup = null
+function hideBar() {
+  clearTimeout(barTimer); barTimer = null
+  if (bar) { bar.remove(); bar = null }
+  if (barCleanup) { const f = barCleanup; barCleanup = null; f() }
+}
+function showBar({ text, link, filename, actionLabel, onAction, tone = 'ink', ttl = 60000, cleanup }) {
+  hideBar()
+  barCleanup = cleanup || null
+  bar = document.createElement('div')
+  bar.className = 'no-print'
+  bar.setAttribute('data-no-pdf', '1')
+  bar.setAttribute('role', 'status')
+  bar.style.cssText = [
+    'position:fixed', 'left:50%', 'bottom:20px', 'transform:translateX(-50%)', 'z-index:9999',
+    'display:flex', 'align-items:center', 'gap:12px', 'max-width:calc(100vw - 32px)',
+    'padding:10px 12px 10px 16px', 'border-radius:12px',
+    `background:${tone === 'error' ? '#d45656' : '#111113'}`, 'color:#fff',
+    'font:500 13px/1.4 Inter,system-ui,sans-serif', 'box-shadow:0 12px 32px rgba(0,0,0,.28)',
+  ].join(';')
+  const msg = document.createElement('span'); msg.textContent = text; bar.appendChild(msg)
+  const btnCss = 'appearance:none;border:0;cursor:pointer;white-space:nowrap;padding:7px 12px;border-radius:8px;background:#fff;color:#111113;font:600 13px Inter,system-ui,sans-serif;text-decoration:none'
+  if (link) {
+    const a = document.createElement('a')
+    a.href = link; a.download = filename || 'document.pdf'; a.target = '_blank'; a.rel = 'noopener'
+    a.textContent = actionLabel || 'Open PDF'; a.style.cssText = btnCss
+    bar.appendChild(a)
+  } else if (onAction) {
+    const b = document.createElement('button'); b.type = 'button'
+    b.textContent = actionLabel || 'Retry'; b.style.cssText = btnCss
+    b.onclick = () => { hideBar(); onAction() }
+    bar.appendChild(b)
+  }
+  const x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', 'Dismiss')
+  x.textContent = '×'; x.style.cssText = 'appearance:none;border:0;background:transparent;color:#fff;opacity:.7;font-size:18px;line-height:1;cursor:pointer;padding:0 2px'
+  x.onclick = hideBar
+  bar.appendChild(x)
+  document.body.appendChild(bar)
+  barTimer = setTimeout(hideBar, ttl)
+}
+
 const saveBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -101,13 +153,40 @@ const saveBlob = (blob, filename) => {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 5000)
+  // keep the blob alive while the fallback link is on screen, then release it
+  showBar({
+    text: `${filename} is ready. Didn't download?`,
+    link: url, filename, actionLabel: 'Open PDF',
+    cleanup: () => URL.revokeObjectURL(url),
+  })
+}
+
+/* html2pdf is a lazy chunk. After a deploy, a tab opened before it still asks
+   for the OLD chunk name, which no longer exists → the import rejects and the
+   button silently does nothing. One reload picks up the new build; the flag
+   stops a reload loop if something else is wrong. */
+const RELOAD_KEY = 'wandra-pdf-reloaded'
+async function loadHtml2pdf() {
+  try {
+    const mod = await import('html2pdf.js')
+    try { sessionStorage.removeItem(RELOAD_KEY) } catch { /* private mode */ }
+    return mod.default || mod
+  } catch (e) {
+    let reloaded = false
+    try { reloaded = !!sessionStorage.getItem(RELOAD_KEY); if (!reloaded) sessionStorage.setItem(RELOAD_KEY, '1') } catch { /* ignore */ }
+    if (!reloaded && /import|fetch|chunk|module|load/i.test(String(e?.message || e))) {
+      window.location.reload()
+      await new Promise(() => {})   // never resolves — the page is going away
+    }
+    throw e
+  }
 }
 
 export async function downloadElementPdf(el, filename = 'document.pdf') {
-  if (!el) return
-  const mod = await import('html2pdf.js')
-  const html2pdf = mod.default || mod
+  if (!el) return { ok: false }
+  hideBar()
+  let html2pdf
+  try { html2pdf = await loadHtml2pdf() } catch (e) { return failed(e, filename) }
 
   // A "flow" doc (premium Holiday/Coastal studio) is one continuous sheet whose
   // sections can be reordered freely — jsPDF slices it into A4 pages, so it needs
@@ -141,18 +220,37 @@ export async function downloadElementPdf(el, filename = 'document.pdf') {
       }).from(el).outputPdf('blob')
       if (blob && blob.size <= MAX_PDF_BYTES) break
     }
+    if (!blob || !blob.size) throw new Error('empty PDF')
     saveBlob(blob, filename)   // last ladder step is the floor — save whatever we have
+    return { ok: true, filename }
+  } catch (e) {
+    return failed(e, filename)
   } finally {
     pages.forEach((p, i) => { p.style.cssText = savedPages[i] })
     hidden.forEach((h, i) => { h.style.display = savedHidden[i] })
   }
 }
 
+// Never fail silently: say so on screen and offer the browser's own
+// Print → Save as PDF, which needs no library at all.
+function failed(e, filename) {
+  console.error('[pdf] export failed', e)
+  showBar({
+    tone: 'error', ttl: 90000,
+    text: `Couldn't generate ${filename}. Use Print → "Save as PDF" instead.`,
+    actionLabel: 'Print', onAction: () => window.print(),
+  })
+  return { ok: false, error: e }
+}
+
 // Inline remote images, preload, then download — the one call most pages use.
 export async function preloadAndDownload(el, filename) {
-  const restore = await inlineImages(el)
+  let restore = () => {}
   try {
+    restore = await inlineImages(el)
     await preloadImages(el)
-    await downloadElementPdf(el, filename)
+    return await downloadElementPdf(el, filename)
+  } catch (e) {
+    return failed(e, filename)   // image inlining/preload blew up — still tell the user
   } finally { restore() }
 }
